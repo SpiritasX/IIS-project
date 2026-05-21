@@ -1,0 +1,75 @@
+services:
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - app
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+    networks:
+      - iis_network
+
+  app:
+    build:
+      context: ./backend
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+      - neo4j
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/iis
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+
+      SPRING_NEO4J_URI: bolt://neo4j:7687
+      SPRING_NEO4J_AUTHENTICATION_USERNAME: neo4j
+      SPRING_NEO4J_AUTHENTICATION_PASSWORD: password
+    networks:
+      - iis_network
+  
+  pgadmin:
+    image: dpage/pgadmin4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "8090:80"
+    depends_on:
+      - postgres
+    networks:
+      - iis_network
+  
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: iis
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - postgres_data:/data
+    networks:
+      - iis_network
+
+  neo4j:
+    image: neo4j:5
+    environment:
+      NEO4J_AUTH: neo4j/password
+    ports:
+      - "7474:7474"
+    volumes:
+      - neo4j_data:/data
+    networks:
+      - iis_network
+
+volumes:
+  neo4j_data:
+  postgres_data:
+
+networks:
+  iis_network:
