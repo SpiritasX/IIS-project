@@ -14,8 +14,10 @@ public class HealthLog {
     private String healthGrade;
     private Date timestamp;
     private String description;
+
     @ManyToOne(fetch = FetchType.EAGER, optional = false)
     private Botanist botanist;
+
     @ManyToOne(fetch = FetchType.EAGER, optional = false)
     private Plant plant;
 
@@ -59,14 +61,24 @@ public class HealthLog {
         return plant;
     }
 
+    @PrePersist
+    void prePersist() {
+        if (timestamp == null) {
+            timestamp = new Date(System.currentTimeMillis());
+        }
+    }
+
     @Override
     public boolean equals(Object o) {
-        if (!(o instanceof HealthLog healthLog)) return false;
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        HealthLog healthLog = (HealthLog) o;
+        if (id == null || healthLog.id == null) return false;
         return Objects.equals(id, healthLog.id);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(id);
+        return getClass().hashCode();
     }
 }

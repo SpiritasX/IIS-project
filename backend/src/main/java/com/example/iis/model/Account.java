@@ -10,16 +10,23 @@ public class Account {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
     @Column(unique = true, nullable = false)
     private String username;
+
     @Column(nullable = false)
     private String password;
+
     @Column(nullable = false)
     private String firstName;
+
     @Column(nullable = false)
     private String lastName;
+
     @Column(unique = true, nullable = false)
     private String email;
+
+    private String address;
 
     public Account() {
     }
@@ -32,12 +39,21 @@ public class Account {
         this.email = email;
     }
 
+    public Account(String username, String password, String firstName, String lastName, String email, String address) {
+        this(username, password, firstName, lastName, email);
+        this.address = address;
+    }
+
     public Long getId() {
         return id;
     }
 
     public String getUsername() {
         return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
     }
 
     public String getPassword() {
@@ -72,14 +88,25 @@ public class Account {
         this.email = email;
     }
 
+    public String getAddress() {
+        return address;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
+    }
+
     @Override
     public boolean equals(Object o) {
-        if (!(o instanceof Account account)) return false;
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Account account = (Account) o;
+        if (id == null || account.id == null) return false;
         return Objects.equals(id, account.id);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(id);
+        return getClass().hashCode();
     }
 }

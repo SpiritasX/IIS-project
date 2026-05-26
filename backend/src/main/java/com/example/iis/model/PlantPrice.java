@@ -2,6 +2,7 @@ package com.example.iis.model;
 
 import jakarta.persistence.*;
 
+import java.math.BigDecimal;
 import java.util.Date;
 import java.util.Objects;
 
@@ -10,28 +11,36 @@ public class PlantPrice {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
     @Column(nullable = false)
-    private Double price;
+    private BigDecimal price;
+
     @Column(nullable = false)
     private Date startTime;
+
     private Date endTime;
+
     @ManyToOne(fetch = FetchType.EAGER, optional = false)
     private Plant plant;
 
     public PlantPrice() {
     }
 
-    public PlantPrice(Double price, Plant plant) {
+    public PlantPrice(BigDecimal price, Plant plant) {
         this.price = price;
         this.startTime = new Date(System.currentTimeMillis());
         this.plant = plant;
+    }
+
+    public PlantPrice(Double price, Plant plant) {
+        this(BigDecimal.valueOf(price), plant);
     }
 
     public Long getId() {
         return id;
     }
 
-    public Double getPrice() {
+    public BigDecimal getPrice() {
         return price;
     }
 
@@ -51,14 +60,28 @@ public class PlantPrice {
         return plant;
     }
 
+    public void setPlant(Plant plant) {
+        this.plant = plant;
+    }
+
+    @PrePersist
+    void prePersist() {
+        if (startTime == null) {
+            startTime = new Date(System.currentTimeMillis());
+        }
+    }
+
     @Override
     public boolean equals(Object o) {
-        if (!(o instanceof PlantPrice that)) return false;
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        PlantPrice that = (PlantPrice) o;
+        if (id == null || that.id == null) return false;
         return Objects.equals(id, that.id);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(id);
+        return getClass().hashCode();
     }
 }

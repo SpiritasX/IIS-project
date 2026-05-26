@@ -2,7 +2,9 @@ package com.example.iis.model;
 
 import jakarta.persistence.*;
 
+import java.util.LinkedHashSet;
 import java.util.Objects;
+import java.util.Set;
 
 @Entity
 public class PlantVariety {
@@ -14,8 +16,12 @@ public class PlantVariety {
     private Double humidity;
     private String soil;
     private String instructions;
+
     @ManyToOne(fetch = FetchType.EAGER, optional = false)
     private PlantSpecies species;
+
+    @OneToMany(mappedBy = "variety")
+    private Set<Plant> plants = new LinkedHashSet<>();
 
     public PlantVariety() {
     }
@@ -64,14 +70,25 @@ public class PlantVariety {
         return species;
     }
 
+    public void setSpecies(PlantSpecies species) {
+        this.species = species;
+    }
+
+    public Set<Plant> getPlants() {
+        return plants;
+    }
+
     @Override
     public boolean equals(Object o) {
-        if (!(o instanceof PlantVariety that)) return false;
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        PlantVariety that = (PlantVariety) o;
+        if (id == null || that.id == null) return false;
         return Objects.equals(id, that.id);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(id);
+        return getClass().hashCode();
     }
 }

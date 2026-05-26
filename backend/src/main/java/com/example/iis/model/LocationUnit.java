@@ -11,12 +11,18 @@ public class LocationUnit {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
     @Column(nullable = false)
     private String name;
+
     @Column(nullable = false)
     private String type;
-    @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER)
-    private final List<NurserySite> site = new ArrayList<>();
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    private LocationParcel parcel;
+
+    @OneToMany(mappedBy = "unit", cascade = CascadeType.ALL, fetch = FetchType.EAGER, orphanRemoval = true)
+    private List<NurserySite> sites = new ArrayList<>();
 
     public LocationUnit() {
     }
@@ -38,26 +44,43 @@ public class LocationUnit {
         return type;
     }
 
+    public LocationParcel getParcel() {
+        return parcel;
+    }
+
+    public void setParcel(LocationParcel parcel) {
+        this.parcel = parcel;
+    }
+
+    public List<NurserySite> getSites() {
+        return sites;
+    }
+
     public List<NurserySite> getSite() {
-        return site;
+        return sites;
     }
 
     public void addSite(NurserySite site) {
-        this.site.add(site);
+        this.sites.add(site);
+        site.setUnit(this);
     }
 
     public void removeSite(NurserySite site) {
-        this.site.remove(site);
+        this.sites.remove(site);
+        site.setUnit(null);
     }
 
     @Override
     public boolean equals(Object o) {
-        if (!(o instanceof LocationUnit that)) return false;
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        LocationUnit that = (LocationUnit) o;
+        if (id == null || that.id == null) return false;
         return Objects.equals(id, that.id);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(id);
+        return getClass().hashCode();
     }
 }

@@ -11,13 +11,20 @@ public class LocationParcel {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
     @Column(nullable = false)
     private String name;
+
     @Column(nullable = false)
     private String type;
+
     private Long capacity;
-    @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER)
-    private final List<LocationUnit> units = new ArrayList<>();
+
+    @OneToMany(mappedBy = "parcel", cascade = CascadeType.ALL, fetch = FetchType.EAGER, orphanRemoval = true)
+    private List<LocationUnit> units = new ArrayList<>();
+
+    @OneToMany(mappedBy = "locationParcel")
+    private List<RelocationHistory> relocationHistory = new ArrayList<>();
 
     public LocationParcel() {
     }
@@ -54,20 +61,29 @@ public class LocationParcel {
 
     public void addUnit(LocationUnit unit) {
         units.add(unit);
+        unit.setParcel(this);
     }
 
     public void removeUnit(LocationUnit unit) {
         units.remove(unit);
+        unit.setParcel(null);
+    }
+
+    public List<RelocationHistory> getRelocationHistory() {
+        return relocationHistory;
     }
 
     @Override
     public boolean equals(Object o) {
-        if (!(o instanceof LocationParcel that)) return false;
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        LocationParcel that = (LocationParcel) o;
+        if (id == null || that.id == null) return false;
         return Objects.equals(id, that.id);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(id);
+        return getClass().hashCode();
     }
 }

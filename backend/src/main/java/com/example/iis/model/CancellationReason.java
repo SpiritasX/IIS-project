@@ -7,20 +7,21 @@ import java.util.Objects;
 import java.util.Set;
 
 @Entity
-public class PlantCategory {
+public class CancellationReason {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
     @Column(unique = true, nullable = false)
     private String name;
 
-    @OneToMany(mappedBy = "category")
-    private Set<PlantType> types = new LinkedHashSet<>();
+    @OneToMany(mappedBy = "cancellationReason")
+    private Set<Cancellation> cancellations = new LinkedHashSet<>();
 
-    public PlantCategory() {
+    public CancellationReason() {
     }
 
-    public PlantCategory(String name) {
+    public CancellationReason(String name) {
         this.name = name;
     }
 
@@ -32,15 +33,15 @@ public class PlantCategory {
         return name;
     }
 
-    public Set<PlantType> getTypes() {
-        return types;
+    public Set<Cancellation> getCancellations() {
+        return cancellations;
     }
 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        PlantCategory that = (PlantCategory) o;
+        CancellationReason that = (CancellationReason) o;
         if (id == null || that.id == null) return false;
         return Objects.equals(id, that.id);
     }

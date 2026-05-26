@@ -7,20 +7,22 @@ import java.util.Objects;
 import java.util.Set;
 
 @Entity
-public class PlantCategory {
+@Table(name = "phase_type")
+public class PhaseType {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
     @Column(unique = true, nullable = false)
     private String name;
 
-    @OneToMany(mappedBy = "category")
-    private Set<PlantType> types = new LinkedHashSet<>();
+    @OneToMany(mappedBy = "type")
+    private Set<Phase> phases = new LinkedHashSet<>();
 
-    public PlantCategory() {
+    public PhaseType() {
     }
 
-    public PlantCategory(String name) {
+    public PhaseType(String name) {
         this.name = name;
     }
 
@@ -32,17 +34,17 @@ public class PlantCategory {
         return name;
     }
 
-    public Set<PlantType> getTypes() {
-        return types;
+    public Set<Phase> getPhases() {
+        return phases;
     }
 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        PlantCategory that = (PlantCategory) o;
-        if (id == null || that.id == null) return false;
-        return Objects.equals(id, that.id);
+        PhaseType phaseType = (PhaseType) o;
+        if (id == null || phaseType.id == null) return false;
+        return Objects.equals(id, phaseType.id);
     }
 
     @Override

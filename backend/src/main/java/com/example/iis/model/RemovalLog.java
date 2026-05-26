@@ -15,9 +15,11 @@ public class RemovalLog {
     @Column(nullable = false)
     private Date timestamp;
     private Long quantity;
+
     @ManyToOne(fetch = FetchType.EAGER, optional = false)
     private Botanist botanist;
-    @ManyToOne(fetch = FetchType.EAGER, optional = false)
+
+    @OneToOne(fetch = FetchType.EAGER, optional = false)
     private Plant plant;
 
     public RemovalLog() {
@@ -55,14 +57,24 @@ public class RemovalLog {
         return plant;
     }
 
+    @PrePersist
+    void prePersist() {
+        if (timestamp == null) {
+            timestamp = new Date(System.currentTimeMillis());
+        }
+    }
+
     @Override
     public boolean equals(Object o) {
-        if (!(o instanceof RemovalLog that)) return false;
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        RemovalLog that = (RemovalLog) o;
+        if (id == null || that.id == null) return false;
         return Objects.equals(id, that.id);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(id);
+        return getClass().hashCode();
     }
 }
