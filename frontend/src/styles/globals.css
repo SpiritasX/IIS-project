@@ -1,0 +1,51 @@
+@import url('https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;600;700&display=swap');
+
+:root {
+  --color-page: #f9fff9;
+  --color-surface: #e9f6e0;
+  --color-primary: #22523a;
+  --color-secondary: #77b24e;
+  --color-text: #000000;
+  --color-text-secondary: #444444;
+  --color-danger: #9f2424;
+  --font-display: 'Work Sans', system-ui, 'Segoe UI', Roboto, sans-serif;
+  --font-body: 'Work Sans', system-ui, 'Segoe UI', Roboto, sans-serif;
+
+  background: var(--color-page);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: 16px;
+  font-synthesis: none;
+  line-height: 1.4;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+}
+
+#root {
+  min-height: 100svh;
+}
+
+button,
+input {
+  font-family: inherit;
+}
+
+p,
+h1 {
+  margin: 0;
+}
