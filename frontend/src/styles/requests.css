@@ -1,23 +1,6 @@
-.requests-title-row {
-  align-items: center;
-  display: flex;
-  gap: 20px;
-  margin: 35px auto 58px;
-  max-width: 900px;
-  width: calc(100% - 540px);
-}
-
-.requests-title-row h1 {
-  font-family: var(--font-display);
-  font-size: clamp(56px, 8vw, 80px);
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  line-height: 1;
-}
-
 .requests-shell {
   min-height: 620px;
-  padding: 0 40px 70px;
+  padding: 0 var(--layout-gutter) 70px;
   position: relative;
 }
 
@@ -31,15 +14,15 @@
   flex-direction: column;
   gap: 14px;
   margin: 0 auto;
-  max-width: 900px;
-  width: calc(100% - 540px);
+  max-width: var(--layout-content-width);
+  width: calc(100% - var(--layout-sidebar-offset));
 }
 
 .request-card {
   align-items: center;
   background: var(--color-surface);
   border-radius: 48px;
-  box-shadow: 4px 4px 4px rgba(0, 0, 0, 0.25);
+  box-shadow: var(--shadow-surface);
   display: grid;
   gap: 54px;
   grid-template-columns: 220px minmax(0, 1fr) 205px;
@@ -78,7 +61,7 @@
 
 .request-items p {
   color: var(--color-text);
-  font-size: 23px;
+  font-size: 27px;
   line-height: 1.15;
   margin: 0;
 }
@@ -86,7 +69,7 @@
 .request-copy strong {
   color: var(--color-text);
   display: block;
-  font-size: 22px;
+  font-size: 26px;
   line-height: 1;
 }
 
@@ -94,8 +77,8 @@
   align-items: center;
   background: var(--color-primary);
   border: 0;
-  border-radius: 50px;
-  box-shadow: 4px 4px 4px rgba(0, 0, 0, 0.25);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-surface);
   color: var(--color-secondary);
   cursor: pointer;
   display: inline-flex;
@@ -105,7 +88,7 @@
   height: 66px;
   justify-content: center;
   justify-self: end;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
   min-width: 205px;
   padding: 0 28px;
   transition:
@@ -120,16 +103,16 @@
 
 .request-details-button:focus-visible,
 .request-modal-button:focus-visible {
-  outline: 3px solid rgba(119, 178, 78, 0.75);
+  outline: var(--focus-ring);
   outline-offset: 3px;
 }
 
 .requests-empty {
   background: var(--color-surface);
-  border-radius: 42px;
-  box-shadow: 4px 4px 4px rgba(0, 0, 0, 0.18);
+  border-radius: var(--radius-surface);
+  box-shadow: var(--shadow-soft);
   color: var(--color-primary);
-  font-size: 20px;
+  font-size: 24px;
   font-weight: 700;
   padding: 48px;
   text-align: center;
@@ -167,7 +150,7 @@
 .request-modal strong {
   color: var(--color-text);
   display: block;
-  font-size: 20px;
+  font-size: 24px;
   margin: 0;
 }
 
@@ -185,18 +168,18 @@
   align-items: center;
   background: var(--color-primary);
   border: 0;
-  border-radius: 50px;
-  box-shadow: 4px 4px 4px rgba(0, 0, 0, 0.25);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-surface);
   color: var(--color-secondary);
   cursor: pointer;
   display: inline-flex;
   font: inherit;
   font-size: 20px;
-  font-weight: 700;
-  height: 50px;
+  font-weight: var(--text-button-weight);
+  height: var(--button-height);
   justify-content: center;
   margin-top: 28px;
-  min-width: 130px;
+  min-width: var(--button-min-width);
   padding: 0 30px;
 }
 
@@ -213,7 +196,6 @@
 }
 
 @media (max-width: 1100px) {
-  .requests-title-row,
   .requests-list {
     margin-left: 220px;
     margin-right: 24px;
@@ -222,7 +204,7 @@
   }
 
   .requests-shell {
-    padding-inline: 24px;
+    padding-inline: var(--layout-gutter-tablet);
   }
 
   .requests-shell .user-sidebar {
@@ -245,7 +227,7 @@
 }
 
 @media (max-width: 760px) {
-  .requests-title-row {
+  .requests-page .page-title-row {
     margin-bottom: 28px;
   }
 
@@ -259,16 +241,15 @@
   }
 
   .request-items p {
-    font-size: 18px;
+    font-size: 22px;
   }
 }
 
 @media (max-width: 640px) {
-  .requests-title-row,
   .requests-list {
     margin-left: 0;
     margin-right: 0;
-    padding-inline: 18px;
+    padding-inline: var(--layout-gutter-mobile);
     width: auto;
   }
 
@@ -282,7 +263,7 @@
 }
 
 @media (max-width: 520px) {
-  .requests-title-row h1 {
+  .requests-page .page-title-row h1 {
     font-size: 48px;
   }
 

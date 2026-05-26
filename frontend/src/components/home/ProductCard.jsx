@@ -18,7 +18,7 @@ function ProductCard({ onAddToCart, onRemoveFromCart, product, quantity }) {
           <button
             aria-label={`Remove one ${product.name}`}
             className="product-quantity-button"
-            onClick={() => onRemoveFromCart(product.id)}
+            onClick={() => onRemoveFromCart(product.priceId)}
             type="button"
           >
             -
@@ -29,7 +29,7 @@ function ProductCard({ onAddToCart, onRemoveFromCart, product, quantity }) {
           <button
             aria-label={`Add one more ${product.name}`}
             className="product-quantity-button"
-            onClick={() => onAddToCart(product.id)}
+            onClick={() => onAddToCart(product.priceId)}
             type="button"
           >
             +
@@ -39,7 +39,7 @@ function ProductCard({ onAddToCart, onRemoveFromCart, product, quantity }) {
         <button
           className="product-add-button"
           disabled={!product.available}
-          onClick={() => onAddToCart(product.id)}
+          onClick={() => onAddToCart(product.priceId)}
           type="button"
         >
           Add to cart

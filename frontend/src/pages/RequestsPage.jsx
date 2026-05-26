@@ -1,10 +1,10 @@
-import ArrowBackIcon from '@mui/icons-material/ArrowBack'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import api from '../api/client'
 import HomeHeader from '../components/home/HomeHeader'
+import PageTitle from '../components/home/PageTitle'
 import UserSidebar from '../components/home/UserSidebar'
 import RequestCard from '../components/requests/RequestCard'
-import { mockOrders } from '../data/orders'
 import { useCart } from '../hooks/useCart'
 import '../styles/home.css'
 import '../styles/requests.css'
@@ -17,19 +17,87 @@ const sortOptions = [
   { label: 'Low to high', value: 'low-high' },
 ]
 
+function formatDate(value) {
+  if (!value) {
+    return 'Request Date'
+  }
+
+  const date = new Date(value)
+
+  if (Number.isNaN(date.getTime())) {
+    return value
+  }
+
+  return new Intl.DateTimeFormat('en', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  }).format(date)
+}
+
+function normalizeOrder(order) {
+  return {
+    ...order,
+    date: formatDate(order.date),
+    id: String(order.id),
+    imageAlt: 'Order preview placeholder',
+    rawDate: order.date,
+    total: Number(order.total),
+    items: (order.items || []).map((item) => ({
+      ...item,
+      price: Number(item.price),
+      quantity: Number(item.quantity),
+    })),
+  }
+}
+
 function RequestsPage() {
   const navigate = useNavigate()
   const { cartCount } = useCart()
+  const [requestOrders, setRequestOrders] = useState([])
+  const [loadingOrders, setLoadingOrders] = useState(true)
+  const [ordersError, setOrdersError] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
   const [filterOpen, setFilterOpen] = useState(false)
   const [status, setStatus] = useState('All')
   const [sort, setSort] = useState('newest')
   const [selectedOrder, setSelectedOrder] = useState(null)
 
+  useEffect(() => {
+    let ignore = false
+
+    async function loadOrders() {
+      setLoadingOrders(true)
+      setOrdersError('')
+
+      try {
+        const response = await api.get('/api/orders')
+
+        if (!ignore) {
+          setRequestOrders(response.data.map(normalizeOrder))
+        }
+      } catch {
+        if (!ignore) {
+          setOrdersError('Unable to load requests from the backend.')
+        }
+      } finally {
+        if (!ignore) {
+          setLoadingOrders(false)
+        }
+      }
+    }
+
+    loadOrders()
+
+    return () => {
+      ignore = true
+    }
+  }, [])
+
   const orders = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase()
 
-    const filtered = mockOrders.filter((order) => {
+    const filtered = requestOrders.filter((order) => {
       const itemText = order.items.map((item) => item.name).join(' ')
       const matchesStatus = status === 'All' || order.status === status
       const matchesSearch =
@@ -42,7 +110,11 @@ function RequestsPage() {
     })
 
     if (sort === 'oldest') {
-      return [...filtered].reverse()
+      return [...filtered].sort((first, second) => new Date(first.rawDate) - new Date(second.rawDate))
+    }
+
+    if (sort === 'newest') {
+      return [...filtered].sort((first, second) => new Date(second.rawDate) - new Date(first.rawDate))
     }
 
     if (sort === 'high-low') {
@@ -54,12 +126,21 @@ function RequestsPage() {
     }
 
     return filtered
-  }, [searchTerm, sort, status])
+  }, [requestOrders, searchTerm, sort, status])
 
   function handleResetFilters() {
     setStatus('All')
     setSort('newest')
     setFilterOpen(false)
+  }
+
+  async function handleViewDetails(order) {
+    try {
+      const response = await api.get(`/api/orders/${order.id}`)
+      setSelectedOrder(normalizeOrder(response.data))
+    } catch {
+      setSelectedOrder(order)
+    }
   }
 
   return (
@@ -82,20 +163,19 @@ function RequestsPage() {
         sortOptions={sortOptions}
       />
 
-      <section className="requests-title-row">
-        <button className="home-back-button" onClick={() => navigate('/home')} type="button" aria-label="Back">
-          <ArrowBackIcon fontSize="inherit" />
-        </button>
-        <h1>Requests</h1>
-      </section>
+      <PageTitle label="Requests" onBack={() => navigate('/home')} />
 
       <section className="requests-shell">
         <UserSidebar />
 
         <div className="requests-list" aria-live="polite">
-          {orders.length > 0 ? (
+          {loadingOrders ? (
+            <div className="requests-empty">Loading requests...</div>
+          ) : ordersError ? (
+            <div className="requests-empty">{ordersError}</div>
+          ) : orders.length > 0 ? (
             orders.map((order) => (
-              <RequestCard key={order.id} onViewDetails={setSelectedOrder} order={order} />
+              <RequestCard key={order.id} onViewDetails={handleViewDetails} order={order} />
             ))
           ) : (
             <div className="requests-empty">No requests match your filters.</div>

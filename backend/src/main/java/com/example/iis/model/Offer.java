@@ -34,6 +34,9 @@ public class Offer {
     @OneToMany(mappedBy = "offer")
     private Set<Phase> phases = new LinkedHashSet<>();
 
+    @OneToMany(mappedBy = "offer", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<OrderItem> items = new LinkedHashSet<>();
+
     public Offer() {
     }
 
@@ -81,6 +84,20 @@ public class Offer {
 
     public Set<Phase> getPhases() {
         return phases;
+    }
+
+    public Set<OrderItem> getItems() {
+        return items;
+    }
+
+    public void addItem(OrderItem item) {
+        items.add(item);
+        item.setOffer(this);
+    }
+
+    public void removeItem(OrderItem item) {
+        items.remove(item);
+        item.setOffer(null);
     }
 
     @PrePersist

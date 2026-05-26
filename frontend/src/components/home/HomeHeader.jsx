@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom'
 import CartButton from './CartButton'
 import FilterPanel from './FilterPanel'
 import SearchBar from './SearchBar'
@@ -19,11 +20,18 @@ function HomeHeader({
   sortLabel,
   sortOptions,
 }) {
+  const navigate = useNavigate()
+
   return (
     <header className="home-header">
-      <div className="home-logo-placeholder" aria-hidden="true">
-        <span />
-      </div>
+      <button
+        aria-label="Go to home"
+        className="home-logo-placeholder"
+        onClick={() => navigate('/home')}
+        type="button"
+      >
+        <span aria-hidden="true" />
+      </button>
 
       <div className="home-header-controls">
         <SearchBar onChange={onSearchChange} onClear={onClearSearch} value={searchTerm} />

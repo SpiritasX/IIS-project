@@ -1,7 +1,8 @@
 import { useLocation, useNavigate } from 'react-router-dom'
 
 const sidebarItems = [
-  { activePath: '/home', label: 'Profile', path: '/home' },
+  { activePath: '/home', label: 'Home', path: '/home' },
+  { activePath: '/profile', label: 'Profile', path: '/profile' },
   { activePath: '/requests', label: 'Requests', path: '/requests' },
   { activePath: '/reports', label: 'Reports', path: '/home' },
 ]

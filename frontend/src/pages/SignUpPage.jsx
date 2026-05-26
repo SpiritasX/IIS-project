@@ -39,6 +39,7 @@ function SignUpPage() {
   const navigate = useNavigate()
   const [values, setValues] = useState(initialValues)
   const [errors, setErrors] = useState({})
+  const [formError, setFormError] = useState('')
   const [submitted, setSubmitted] = useState(false)
 
   function handleChange(event) {
@@ -62,13 +63,20 @@ function SignUpPage() {
 
     const nextErrors = validate(values)
     setErrors(nextErrors)
+    setFormError('')
     setSubmitted(true)
 
     if (Object.keys(nextErrors).length > 0) {
       return
     }
 
-    await signup({ email: values.email, password: values.password })
+    const result = await signup({ email: values.email, password: values.password })
+
+    if (!result.ok) {
+      setFormError(result.message)
+      return
+    }
+
     navigate('/home')
   }
 
@@ -115,6 +123,11 @@ function SignUpPage() {
           />
 
           <AuthButton type="submit">Sign up</AuthButton>
+          {formError ? (
+            <p className="auth-message auth-message-error auth-form-error" role="alert">
+              {formError}
+            </p>
+          ) : null}
         </form>
 
         {isAuthenticated ? (
