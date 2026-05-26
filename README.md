@@ -4,7 +4,7 @@
 - [Docker](https://www.docker.com/) installed
 
 ## Quick links
-  - [Frontend](http://localhost:5173)
+  - [Frontend](http://localhost)
   - [Postgres dashboard](http://localhost:8090)
     - Email: admin@example.com
     - Password: admin
