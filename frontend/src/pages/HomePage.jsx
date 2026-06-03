@@ -41,7 +41,7 @@ function HomePage() {
       setProductError('')
 
       try {
-        const response = await api.get('/api/plants')
+        const response = await api.get('/plants')
 
         if (!ignore) {
           setCatalogProducts(response.data.map(normalizeProduct))

@@ -9,7 +9,7 @@ const api = axios.create({
 })
 
 const unsafeMethods = new Set(['post', 'put', 'patch', 'delete'])
-const authMutationPaths = new Set(['/api/auth/login', '/api/auth/logout', '/api/auth/signup'])
+const authMutationPaths = new Set(['/auth/login', '/auth/logout', '/auth/signup'])
 let csrfTokenRequest = null
 
 function readCookie(name) {
@@ -37,7 +37,7 @@ function requestPath(config) {
 async function fetchCsrfToken() {
   if (!csrfTokenRequest) {
     csrfTokenRequest = api
-      .get('/api/auth/csrf', { skipCsrf: true })
+      .get('/auth/csrf', { skipCsrf: true })
       .then((response) => readCookie('XSRF-TOKEN') || response.data.token)
       .finally(() => {
         csrfTokenRequest = null
