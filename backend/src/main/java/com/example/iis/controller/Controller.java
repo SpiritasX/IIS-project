@@ -4,14 +4,14 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/")
+@RequestMapping("/api")
 public class Controller {
-    @GetMapping
+    @GetMapping("/")
     public ResponseEntity<?> helloWorld() {
         return ResponseEntity.ok("Hello, World!");
     }
 
-    @PostMapping
+    @PostMapping("/")
     public ResponseEntity<?> post(@RequestBody String body) {
         return ResponseEntity.ok(body);
     }

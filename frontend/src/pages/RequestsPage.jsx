@@ -71,7 +71,7 @@ function RequestsPage() {
       setOrdersError('')
 
       try {
-        const response = await api.get('/api/orders')
+        const response = await api.get('/orders')
 
         if (!ignore) {
           setRequestOrders(response.data.map(normalizeOrder))

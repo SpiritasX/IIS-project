@@ -20,7 +20,7 @@ function AuthProvider({ children }) {
 
     async function loadSessionUser() {
       try {
-        const response = await api.get('/api/auth/me')
+        const response = await api.get('/auth/me')
 
         if (!ignore) {
           setUser(response.data)
@@ -51,7 +51,7 @@ function AuthProvider({ children }) {
 
   async function login({ email, password }) {
     try {
-      const response = await api.post('/api/auth/login', { email, password })
+      const response = await api.post('/auth/login', { email, password })
 
       setUser(response.data)
 
@@ -66,7 +66,7 @@ function AuthProvider({ children }) {
 
   async function signup({ email, password }) {
     try {
-      const response = await api.post('/api/auth/signup', { email, password })
+      const response = await api.post('/auth/signup', { email, password })
 
       setUser(response.data)
 
@@ -81,7 +81,7 @@ function AuthProvider({ children }) {
 
   async function logout() {
     try {
-      await api.post('/api/auth/logout')
+      await api.post('/auth/logout')
     } finally {
       setUser(null)
     }

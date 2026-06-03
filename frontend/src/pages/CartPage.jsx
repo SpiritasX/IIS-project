@@ -111,7 +111,7 @@ function CartPage() {
       setProductError('')
 
       try {
-        const response = await api.get('/api/plants')
+        const response = await api.get('/plants')
 
         if (!ignore) {
           setCatalogProducts(response.data.map(normalizeProduct))
@@ -189,7 +189,7 @@ function CartPage() {
     setPlacingOrder(true)
 
     try {
-      await api.post('/api/orders', {
+      await api.post('/orders', {
         deliveryAddress,
         items: Object.entries(cartItems).map(([plantPriceId, quantity]) => ({
           plantPriceId: Number(plantPriceId),
@@ -220,7 +220,7 @@ function CartPage() {
     setSavingAddress(true)
 
     try {
-      const response = await api.patch('/api/auth/profile/address', addressForm)
+      const response = await api.patch('/auth/profile/address', addressForm)
       updateUser(response.data)
       setAddressModalOpen(false)
     } catch (error) {
