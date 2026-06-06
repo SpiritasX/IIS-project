@@ -54,6 +54,9 @@ class OrderServiceTest {
     @Mock
     private ProcessRepository processRepository;
 
+    @Mock
+    private RecommendationClient recommendationClient;
+
     private OrderService orderService;
 
     @BeforeEach
@@ -64,7 +67,8 @@ class OrderServiceTest {
                 offerStatusRepository,
                 phaseTypeRepository,
                 plantPriceRepository,
-                processRepository
+                processRepository,
+                recommendationClient
         );
     }
 

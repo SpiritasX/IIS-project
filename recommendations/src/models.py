@@ -19,6 +19,10 @@ class PlantCreate(BaseModel):
     id: int
     name: str
 
+class PlantVarietyCreate(BaseModel):
+    id: int
+    name: str
+
 class SearchCreate(BaseModel):
     customer_id: int
     query: str

@@ -16,6 +16,7 @@ import com.example.iis.repository.PlantRepository;
 import com.example.iis.repository.PlantSpeciesRepository;
 import com.example.iis.repository.PlantTypeRepository;
 import com.example.iis.repository.PlantVarietyRepository;
+import com.example.iis.service.RecommendationClient;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -33,9 +34,12 @@ public class DataSeeder {
             PlantSpeciesRepository plantSpeciesRepository,
             PlantVarietyRepository plantVarietyRepository,
             PlantRepository plantRepository,
-            PlantPriceRepository plantPriceRepository
+            PlantPriceRepository plantPriceRepository,
+            RecommendationClient recommendationClient
     ) {
         return args -> {
+            Thread.sleep(10000);
+
             seedOrderStatuses(offerStatusRepository);
             seedPhaseTypes(phaseTypeRepository);
 
@@ -93,9 +97,16 @@ public class DataSeeder {
                     roseSpecies
             ));
 
+            recommendationClient.createPlantVariety(lavender.getId(), lavender.getName());
+            recommendationClient.createPlantVariety(basil.getId(), basil.getName());
+            recommendationClient.createPlantVariety(olive.getId(), olive.getName());
+            recommendationClient.createPlantVariety(mint.getId(), mint.getName());
+            recommendationClient.createPlantVariety(rose.getId(), rose.getName());
+
             savePlantWithPrice(
                     plantRepository,
                     plantPriceRepository,
+                    recommendationClient,
                     new Plant(
                             "Lavender starter",
                             "Hardy young lavender plant with rich fragrance and strong roots.",
@@ -108,6 +119,7 @@ public class DataSeeder {
             savePlantWithPrice(
                     plantRepository,
                     plantPriceRepository,
+                    recommendationClient,
                     new Plant(
                             "Basil seedling",
                             "Fresh culinary basil seedling ready for a sunny kitchen window.",
@@ -120,6 +132,7 @@ public class DataSeeder {
             savePlantWithPrice(
                     plantRepository,
                     plantPriceRepository,
+                    recommendationClient,
                     new Plant(
                             "Olive sapling",
                             "Mediterranean olive sapling suited for patios and warm gardens.",
@@ -132,6 +145,7 @@ public class DataSeeder {
             savePlantWithPrice(
                     plantRepository,
                     plantPriceRepository,
+                    recommendationClient,
                     new Plant(
                             "Mint pot",
                             "Fast-growing mint in a compact nursery pot for easy transplanting.",
@@ -144,6 +158,7 @@ public class DataSeeder {
             savePlantWithPrice(
                     plantRepository,
                     plantPriceRepository,
+                    recommendationClient,
                     new Plant(
                             "Rose bush",
                             "Classic rose bush with seasonal blooms and balanced growth.",
@@ -177,10 +192,12 @@ public class DataSeeder {
     private void savePlantWithPrice(
             PlantRepository plantRepository,
             PlantPriceRepository plantPriceRepository,
+            RecommendationClient recommendationClient,
             Plant plant,
             BigDecimal price
     ) {
         Plant savedPlant = plantRepository.save(plant);
+        recommendationClient.createPlant(savedPlant.getId(), savedPlant.getName());
         plantPriceRepository.save(new PlantPrice(price, savedPlant));
     }
 }

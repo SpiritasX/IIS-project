@@ -3,6 +3,7 @@ package com.example.iis.controller;
 import com.example.iis.dto.ProductResponse;
 import com.example.iis.service.CatalogService;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -20,5 +21,10 @@ public class CatalogController {
     @GetMapping
     public List<ProductResponse> getProducts() {
         return catalogService.getProducts();
+    }
+
+    @GetMapping("/{id}")
+    public ProductResponse getProduct(@PathVariable Long id) {
+        return catalogService.getProduct(id);
     }
 }

@@ -38,7 +38,7 @@ class RecommendationService:
                 RecommendationRepository.create_view,
                 customer_id,
                 plant_id,
-                time.strftime("%Y-%m-%dT%H:%M:%S+%z"),
+                time.strftime("%Y-%m-%dT%H:%M:%S%z"),
             )
 
         if not records:
@@ -47,13 +47,31 @@ class RecommendationService:
         return {"status": "created" if summary.counters.relationships_created > 0 else "updated"}
 
     @staticmethod
+    def get_customer_like(customer_id: int, plant_id: int):
+        with Neo4jDB.driver.session() as session:
+            records, summary = session.execute_read(
+                RecommendationRepository.get_customer_like,
+                customer_id,
+                plant_id
+            )
+
+        if not records:
+            raise HTTPException(status_code=404, detail="Customer or plant not found")
+
+        if len(records) == 0:
+            raise HTTPException(status_code=404, detail="Customer not liked plant")
+
+        return {"status": "liked"}
+
+
+    @staticmethod
     def create_customer_like(customer_id: int, plant_id: int):
         with Neo4jDB.driver.session() as session:
             records, summary = session.execute_write(
                 RecommendationRepository.create_like,
                 customer_id,
                 plant_id,
-                time.strftime("%Y-%m-%dT%H:%M:%S+%z"),
+                time.strftime("%Y-%m-%dT%H:%M:%S%z"),
             )
 
         if not records:
@@ -100,6 +118,20 @@ class RecommendationService:
         return {"status": "deleted"}
 
     @staticmethod
+    def create_plant_variety(payload):
+        with Neo4jDB.driver.session() as session:
+            records, summary = session.execute_write(
+                RecommendationRepository.create_plant_variety,
+                payload.id,
+                payload.name,
+            )
+
+        if not records:
+            raise HTTPException(status_code=500, detail="Plant variety not created")
+
+        return {"status": "created" if summary.counters.nodes_created > 0 else "updated"}
+
+    @staticmethod
     def create_search(payload):
         with Neo4jDB.driver.session() as session:
             records, summary = session.execute_write(
@@ -111,7 +143,7 @@ class RecommendationService:
                 payload.variety,
                 payload.species,
                 payload.type,
-                time.strftime("%Y-%m-%dT%H:%M:%S+%z"),
+                time.strftime("%Y-%m-%dT%H:%M:%S%z"),
             )
 
         if not records:
@@ -126,7 +158,7 @@ class RecommendationService:
                 RecommendationRepository.create_purchase,
                 payload.customer_id,
                 payload.plant_id,
-                time.strftime("%Y-%m-%dT%H:%M:%S+%z"),
+                time.strftime("%Y-%m-%dT%H:%M:%S%z"),
                 payload.quantity,
             )
 

@@ -23,10 +23,12 @@ import java.util.stream.Stream;
 public class AuthService {
     private final CustomerRepository customerRepository;
     private final PasswordEncoder passwordEncoder;
+    private final RecommendationClient recommendationClient;
 
-    public AuthService(CustomerRepository customerRepository, PasswordEncoder passwordEncoder) {
+    public AuthService(CustomerRepository customerRepository, PasswordEncoder passwordEncoder, RecommendationClient recommendationClient) {
         this.customerRepository = customerRepository;
         this.passwordEncoder = passwordEncoder;
+        this.recommendationClient = recommendationClient;
     }
 
     @Transactional
@@ -48,7 +50,11 @@ public class AuthService {
                 email
         );
 
-        return toResponse(customerRepository.save(customer));
+        customer = customerRepository.save(customer);
+
+        recommendationClient.createCustomer(customer.getId(), customer.getFirstName(), customer.getLastName());
+
+        return toResponse(customer);
     }
 
     @Transactional(readOnly = true)

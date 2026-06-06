@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from src.models import CustomerCreate, PlantCreate, PlantUpdate, SearchCreate, PurchaseCreate, RecommendationUpdate
+from src.models import CustomerCreate, PlantCreate, PlantVarietyCreate, SearchCreate, PurchaseCreate, RecommendationUpdate
 from src.service.recommendation_service import RecommendationService
 
 router = APIRouter(prefix="/api/recommendations")
@@ -20,6 +20,11 @@ def create_customer_view(customer_id: int, plant_id: int):
     return RecommendationService.create_customer_view(customer_id, plant_id)
 
 
+@router.get("/customer/{customer_id}/like/{plant_id}")
+def get_customer_like(customer_id: int, plant_id: int):
+    return RecommendationService.get_customer_like(customer_id, plant_id)
+
+
 @router.post("/customer/{customer_id}/like/{plant_id}")
 def create_customer_like(customer_id: int, plant_id: int):
     return RecommendationService.create_customer_like(customer_id, plant_id)
@@ -38,6 +43,11 @@ def create_plant(payload: PlantCreate):
 @router.delete("/plant/{plant_id}")
 def delete_plant(plant_id: int):
     return RecommendationService.delete_plant(plant_id)
+
+
+@router.post("/plant/variety")
+def create_plant_variety(payload: PlantVarietyCreate):
+    return RecommendationService.create_plant_variety(payload)
 
 
 @router.post("/search")

@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import ImageOutlinedIcon from '@mui/icons-material/ImageOutlined'
 
 function ProductCard({ onAddToCart, onRemoveFromCart, product, quantity }) {
@@ -8,8 +9,16 @@ function ProductCard({ onAddToCart, onRemoveFromCart, product, quantity }) {
       </div>
 
       <div className="product-copy">
-        <h2>{product.name}</h2>
-        <p>{product.description}</p>
+        <h2>
+          <Link className="product-link" to={`/plants/${product.id}`}>
+            {product.name}
+          </Link>
+        </h2>
+        <p>
+          <Link className="product-link product-description-link" to={`/plants/${product.id}`}>
+            {product.description}
+          </Link>
+        </p>
         <strong>Price: {product.price}</strong>
       </div>
 

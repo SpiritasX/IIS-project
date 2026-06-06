@@ -4,8 +4,10 @@ import com.example.iis.dto.ProductResponse;
 import com.example.iis.model.Plant;
 import com.example.iis.model.PlantPrice;
 import com.example.iis.repository.PlantPriceRepository;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -23,6 +25,11 @@ public class CatalogService {
                 .stream()
                 .map(this::toResponse)
                 .toList();
+    }
+
+    public ProductResponse getProduct(Long id) {
+        return toResponse(plantPriceRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found")));
     }
 
     private ProductResponse toResponse(PlantPrice price) {

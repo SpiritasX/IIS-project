@@ -49,6 +49,20 @@ class RecommendationRepository:
             plant_id=plant_id,
         )
         return result.consume()
+
+    @staticmethod
+    def create_plant_variety(tx, id: int, name: str):
+        result = tx.run(
+            """
+            MERGE (p:PlantVariety {id: $id})
+            ON CREATE SET p.name = $name
+            ON MATCH SET p.name = $name
+            RETURN p
+            """,
+            id=id,
+            name=name,
+        )
+        return result.data(), result.consume()
     
     @staticmethod
     def create_view(tx, customer_id: int, plant_id: int, timestamp: str):
@@ -56,14 +70,32 @@ class RecommendationRepository:
             """
             MATCH (c:Customer {id: $customer_id})
             MATCH (p:Plant {id: $plant_id})
-            CREATE (c)-[rel:VIEWED {
-                timestamp: datetime($timestamp)
-            }]->(p)
+            MERGE (c)-[rel:VIEWED]->(p)
+            ON CREATE SET
+                rel.created_at = datetime($timestamp),
+                rel.updated_at = datetime($timestamp),
+                rel.count = 1
+            ON MATCH SET
+                rel.updated_at = datetime($timestamp),
+                rel.count = rel.count + 1
             RETURN rel
             """,
             customer_id=customer_id,
             plant_id=plant_id,
             timestamp=timestamp,
+        )
+        return result.data(), result.consume()
+
+
+    @staticmethod
+    def get_customer_like(tx, customer_id: int, plant_id: int):
+        result = tx.run(
+            """
+            MATCH (c:Customer {id: $customer_id})-[rel:LIKED]->(p:Plant {id: $plant_id})
+            RETURN rel
+            """,
+            customer_id=customer_id,
+            plant_id=plant_id,
         )
         return result.data(), result.consume()
 
