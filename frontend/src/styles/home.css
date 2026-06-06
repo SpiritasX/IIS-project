@@ -377,6 +377,18 @@
   max-width: 460px;
 }
 
+.product-link,
+.checkout-product-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.product-link:hover,
+.checkout-product-link:hover,
+.product-description-link:hover {
+  text-decoration: underline;
+}
+
 .product-copy strong {
   color: var(--color-text);
   display: block;

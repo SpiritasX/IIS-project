@@ -18,4 +18,5 @@ public interface PlantPriceRepository extends JpaRepository<PlantPrice, Long> {
             order by plant.name asc
             """)
     List<PlantPrice> findActiveCatalogPrices();
+//    List<PlantPrice> findAllByEndTimeIsNullOrderByPlantNameAsc();
 }

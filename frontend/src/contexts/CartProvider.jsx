@@ -11,6 +11,13 @@ function CartProvider({ children }) {
     }))
   }
 
+  function addNToCart(productId, quantity) {
+    setCartItems((current) => ({
+      ...current,
+      [productId]: (current[productId] || 0) + quantity,
+    }))
+  }
+
   function removeFromCart(productId) {
     setCartItems((current) => {
       const nextQuantity = (current[productId] || 0) - 1
@@ -35,6 +42,7 @@ function CartProvider({ children }) {
   const value = useMemo(
     () => ({
       addToCart,
+      addNToCart,
       cartCount,
       cartItems,
       clearCart,

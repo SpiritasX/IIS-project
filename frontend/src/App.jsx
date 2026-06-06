@@ -5,6 +5,7 @@ import CartProvider from './contexts/CartProvider'
 import CartPage from './pages/CartPage'
 import HomePage from './pages/HomePage'
 import LoginPage from './pages/LoginPage'
+import PlantViewPage from './pages/PlantViewPage'
 import ProfilePage from './pages/ProfilePage'
 import RequestsPage from './pages/RequestsPage'
 import SignUpPage from './pages/SignUpPage'
@@ -22,6 +23,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <HomePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/plants/:plantId"
+            element={
+              <ProtectedRoute>
+                <PlantViewPage />
               </ProtectedRoute>
             }
           />

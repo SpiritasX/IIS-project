@@ -41,6 +41,7 @@ public class OrderService {
     private final PhaseTypeRepository phaseTypeRepository;
     private final PlantPriceRepository plantPriceRepository;
     private final ProcessRepository processRepository;
+    private final RecommendationClient recommendationClient;
 
     public OrderService(
             CustomerRepository customerRepository,
@@ -48,14 +49,15 @@ public class OrderService {
             OfferStatusRepository offerStatusRepository,
             PhaseTypeRepository phaseTypeRepository,
             PlantPriceRepository plantPriceRepository,
-            ProcessRepository processRepository
-    ) {
+            ProcessRepository processRepository,
+            RecommendationClient recommendationClient) {
         this.customerRepository = customerRepository;
         this.offerRepository = offerRepository;
         this.offerStatusRepository = offerStatusRepository;
         this.phaseTypeRepository = phaseTypeRepository;
         this.plantPriceRepository = plantPriceRepository;
         this.processRepository = processRepository;
+        this.recommendationClient = recommendationClient;
     }
 
     @Transactional
@@ -88,6 +90,8 @@ public class OrderService {
         Process process = new Process(customer);
         process.addPhase(new Phase(process, orderPlacedType, savedOffer));
         processRepository.save(process);
+
+        offer.getItems().forEach(item -> recommendationClient.createPurchase(customer.getId(), item.getPlantPrice().getPlant().getId(), item.getQuantity()));
 
         return toResponse(savedOffer);
     }
