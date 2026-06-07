@@ -20,6 +20,7 @@ services:
     depends_on:
       - postgres
       - recommendations
+      - search
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/iis
       SPRING_DATASOURCE_USERNAME: postgres
@@ -41,6 +42,17 @@ services:
     networks:
       - iis_network
 
+  search:
+    build:
+      context: search
+    expose:
+      - "8001"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - iis_network
+
   nginx:
     image: nginx:latest
     ports:
@@ -51,6 +63,7 @@ services:
       - frontend
       - app
       - recommendations
+      - search
     networks:
       - iis_network
 
@@ -89,9 +102,38 @@ services:
     networks:
       - iis_network
 
+  elasticsearch:
+    image: elasticsearch:8.14.0
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    networks:
+      - iis_network
+
+  kibana:
+    image: kibana:8.14.0
+    ports:
+      - "5601:5601"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - iis_network
+
 volumes:
   neo4j_data:
   postgres_data:
+  elasticsearch_data:
 
 networks:
   iis_network:

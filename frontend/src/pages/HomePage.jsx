@@ -30,7 +30,12 @@ function HomePage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [filterOpen, setFilterOpen] = useState(false)
   const [category, setCategory] = useState('All')
-  const [sort, setSort] = useState('featured')
+  const [sort, setSort] = useState('price')
+  const [order, setOrder] = useState('asc')
+  const [species, setSpecies] = useState('')
+  const [variety, setVariety] = useState('')
+  const [minPrice, setMinPrice] = useState('')
+  const [maxPrice, setMaxPrice] = useState('')
   const { addToCart, cartCount, cartItems, removeFromCart } = useCart()
 
   useEffect(() => {
@@ -41,10 +46,21 @@ function HomePage() {
       setProductError('')
 
       try {
-        const response = await api.get('/plants')
+        const response = await api.get('/search/search/plants', {
+          params: {
+            query: searchTerm || undefined,
+            plant_type: category !== 'All' ? category : undefined,
+            species: species || undefined,
+            variety: variety || undefined,
+            min_price: minPrice || undefined,
+            max_price: maxPrice || undefined,
+            sort_by: sort,
+            order,
+          },
+        })
 
         if (!ignore) {
-          setCatalogProducts(response.data.map(normalizeProduct))
+          setCatalogProducts(response.data['hits'].map(normalizeProduct))
         }
       } catch {
         if (!ignore) {
@@ -62,36 +78,14 @@ function HomePage() {
     return () => {
       ignore = true
     }
-  }, [])
+  }, [searchTerm, category, species, variety, minPrice, maxPrice, sort, order])
 
   const categoryOptions = useMemo(() => {
     const categories = catalogProducts.map((product) => product.category).filter(Boolean)
     return ['All', ...new Set(categories)]
   }, [catalogProducts])
 
-  const products = useMemo(() => {
-    const normalizedSearch = searchTerm.trim().toLowerCase()
-
-    const filtered = catalogProducts.filter((product) => {
-      const matchesCategory = category === 'All' || product.category === category
-      const matchesSearch =
-        !normalizedSearch ||
-        product.name.toLowerCase().includes(normalizedSearch) ||
-        product.description.toLowerCase().includes(normalizedSearch)
-
-      return matchesCategory && matchesSearch
-    })
-
-    if (sort === 'low-high') {
-      return [...filtered].sort((first, second) => first.price - second.price)
-    }
-
-    if (sort === 'high-low') {
-      return [...filtered].sort((first, second) => second.price - first.price)
-    }
-
-    return filtered
-  }, [catalogProducts, category, searchTerm, sort])
+  const products = catalogProducts
 
   async function handleBack() {
     await logout()
@@ -100,7 +94,12 @@ function HomePage() {
 
   function handleResetFilters() {
     setCategory('All')
-    setSort('featured')
+    setSort('price')
+    setOrder('asc')
+    setSpecies('')
+    setVariety('')
+    setMinPrice('')
+    setMaxPrice('')
     setFilterOpen(false)
   }
 
@@ -116,9 +115,19 @@ function HomePage() {
         onResetFilters={handleResetFilters}
         onSearchChange={(event) => setSearchTerm(event.target.value)}
         onSortChange={(event) => setSort(event.target.value)}
+        onOrderChange={(event) => setOrder(event.target.value)}
+        onSpeciesChange={(event) => setSpecies(event.target.value)}
+        onVarietyChange={(event) => setVariety(event.target.value)}
+        onMinPriceChange={(event) => setMinPrice(event.target.value)}
+        onMaxPriceChange={(event) => setMaxPrice(event.target.value)}
         onToggleFilter={() => setFilterOpen((current) => !current)}
         searchTerm={searchTerm}
         sort={sort}
+        order={order}
+        species={species}
+        variety={variety}
+        minPrice={minPrice}
+        maxPrice={maxPrice}
       />
 
       <PageTitle label="Home" onBack={handleBack} />

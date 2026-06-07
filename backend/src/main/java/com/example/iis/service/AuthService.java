@@ -24,11 +24,13 @@ public class AuthService {
     private final CustomerRepository customerRepository;
     private final PasswordEncoder passwordEncoder;
     private final RecommendationClient recommendationClient;
+    private final SearchClient searchClient;
 
-    public AuthService(CustomerRepository customerRepository, PasswordEncoder passwordEncoder, RecommendationClient recommendationClient) {
+    public AuthService(CustomerRepository customerRepository, PasswordEncoder passwordEncoder, RecommendationClient recommendationClient, SearchClient searchClient) {
         this.customerRepository = customerRepository;
         this.passwordEncoder = passwordEncoder;
         this.recommendationClient = recommendationClient;
+        this.searchClient = searchClient;
     }
 
     @Transactional
@@ -53,6 +55,7 @@ public class AuthService {
         customer = customerRepository.save(customer);
 
         recommendationClient.createCustomer(customer.getId(), customer.getFirstName(), customer.getLastName());
+        searchClient.createCustomer(customer.getId(), customer.getUsername(), customer.getFirstName(), customer.getLastName(), customer.getEmail());
 
         return toResponse(customer);
     }

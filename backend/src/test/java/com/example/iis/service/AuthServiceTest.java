@@ -32,11 +32,14 @@ class AuthServiceTest {
     @Mock
     private RecommendationClient recommendationClient;
 
+    @Mock
+    private SearchClient searchClient;
+
     private AuthService authService;
 
     @BeforeEach
     void setUp() {
-        authService = new AuthService(customerRepository, passwordEncoder, recommendationClient);
+        authService = new AuthService(customerRepository, passwordEncoder, recommendationClient, searchClient);
     }
 
     @Test

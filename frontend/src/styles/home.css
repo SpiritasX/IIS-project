@@ -180,14 +180,14 @@
   background: var(--color-surface);
   border-radius: 28px;
   box-shadow: var(--shadow-panel);
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
   padding: 20px;
   position: absolute;
   right: 0;
   top: calc(100% + 14px);
-  width: 260px;
+  width: 360px;
   z-index: 5;
 }
 
@@ -198,9 +198,11 @@
   font-size: var(--text-body-secondary-size);
   font-weight: 700;
   gap: 6px;
+  min-width: 0;
 }
 
-.filter-field select {
+.filter-field select,
+.filter-field input {
   background: var(--color-page);
   border: 1px solid var(--color-primary);
   border-radius: 12px;
@@ -211,7 +213,8 @@
 }
 
 .filter-reset {
-  align-self: flex-start;
+  grid-column: 1 / -1;
+  align-self: start;
   background: transparent;
   border: 0;
   color: var(--color-primary);

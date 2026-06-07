@@ -14,9 +14,19 @@ function HomeHeader({
   onResetFilters,
   onSearchChange,
   onSortChange,
+  onOrderChange,
+  onSpeciesChange,
+  onVarietyChange,
+  onMinPriceChange,
+  onMaxPriceChange,
   onToggleFilter,
   searchTerm,
   sort,
+  order,
+  species,
+  variety,
+  minPrice,
+  maxPrice,
   sortLabel,
   sortOptions,
 }) {
@@ -50,10 +60,20 @@ function HomeHeader({
               category={category}
               categoryLabel={categoryLabel}
               categoryOptions={categoryOptions}
+              species={species}
+              onSpeciesChange={onSpeciesChange}
+              variety={variety}
+              onVarietyChange={onVarietyChange}
+              minPrice={minPrice}
+              onMinPriceChange={onMinPriceChange}
+              maxPrice={maxPrice}
+              onMaxPriceChange={onMaxPriceChange}
               onCategoryChange={onCategoryChange}
               onReset={onResetFilters}
               onSortChange={onSortChange}
               sort={sort}
+              onOrderChange={onOrderChange}
+              order={order}
               sortLabel={sortLabel}
               sortOptions={sortOptions}
             />

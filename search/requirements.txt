@@ -1,0 +1,6 @@
+fastapi
+uvicorn
+elasticsearch==8.14.0
+pydantic
+pydantic-settings
+faker
