@@ -1,21 +1,7 @@
 package com.example.iis.config;
 
-import com.example.iis.model.OfferStatus;
-import com.example.iis.model.PhaseType;
-import com.example.iis.model.Plant;
-import com.example.iis.model.PlantCategory;
-import com.example.iis.model.PlantPrice;
-import com.example.iis.model.PlantSpecies;
-import com.example.iis.model.PlantType;
-import com.example.iis.model.PlantVariety;
-import com.example.iis.repository.OfferStatusRepository;
-import com.example.iis.repository.PhaseTypeRepository;
-import com.example.iis.repository.PlantCategoryRepository;
-import com.example.iis.repository.PlantPriceRepository;
-import com.example.iis.repository.PlantRepository;
-import com.example.iis.repository.PlantSpeciesRepository;
-import com.example.iis.repository.PlantTypeRepository;
-import com.example.iis.repository.PlantVarietyRepository;
+import com.example.iis.model.*;
+import com.example.iis.repository.*;
 import com.example.iis.service.RecommendationClient;
 import com.example.iis.service.SearchClient;
 import org.springframework.boot.CommandLineRunner;
@@ -28,6 +14,7 @@ import java.math.BigDecimal;
 public class DataSeeder {
     @Bean
     CommandLineRunner seedData(
+            AdminRepository adminRepository,
             OfferStatusRepository offerStatusRepository,
             PhaseTypeRepository phaseTypeRepository,
             PlantCategoryRepository plantCategoryRepository,
@@ -46,6 +33,8 @@ public class DataSeeder {
             if (plantPriceRepository.count() > 0) {
                 return;
             }
+
+            adminRepository.save(new Admin("admin", "admin", "Pera", "Peric", "admin@example.com"));
 
             PlantCategory flowers = plantCategoryRepository.save(new PlantCategory("Flowers"));
             PlantCategory herbs = plantCategoryRepository.save(new PlantCategory("Herbs"));

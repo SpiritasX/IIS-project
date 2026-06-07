@@ -4,7 +4,7 @@ from src.schemas.user import UserCreate
 
 router = APIRouter(prefix="/users")
 
-@router.post("/")
+@router.post("")
 def create_user(user_in: UserCreate):
     get_user_service().create_user(user_in)
     return user_in
@@ -13,7 +13,7 @@ def create_user(user_in: UserCreate):
 def get_user(user_id: int):
     return get_user_service().get_user(user_id)
 
-@router.get("/")
+@router.get("")
 def get_users(skip: int = 0, limit: int = 10):
     return get_user_service().get_users(skip, limit)
 

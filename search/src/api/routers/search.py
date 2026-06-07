@@ -33,7 +33,9 @@ def search_users(
     min_purchases = None,
     min_reports = None,
     sort_by: str = "totalPurchases",
-    order: str = "desc"
+    order: str = "desc",
+    page = 1,
+    page_size = 10
 ):
     return get_user_service().search_users(
         query=query,
@@ -42,7 +44,9 @@ def search_users(
         min_purchases=min_purchases,
         min_reports=min_reports,
         sort_by=sort_by,
-        order=order
+        order=order,
+        page=page,
+        page_size=page_size
     )
 
 @router.get("/reports")

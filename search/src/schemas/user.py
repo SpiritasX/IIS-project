@@ -27,6 +27,11 @@ class UserBase(BaseModel):
     firstName: str
     lastName: str
     email: str
+
+class UserCreate(UserBase):
+    pass
+
+class User(UserBase):
     phoneNumber: str
     address: str
     city: str
@@ -36,9 +41,3 @@ class UserBase(BaseModel):
     totalReports: int
     createdAt: datetime
     reports: list[Report]
-
-class UserCreate(UserBase):
-    pass
-
-class User(UserBase):
-    pass

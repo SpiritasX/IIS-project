@@ -13,24 +13,53 @@ class UserRepository(BaseRepository):
         min_purchases = None,
         min_reports = None,
         sort_by = "totalPurchases",
-        order = "desc"
+        order = "desc",
+        page = 1,
+        page_size = 10,
     ):
         must = []
+        should = []
+
         if query:
-            must.append({
+            should.append({
+                "prefix": {
+                    "username": query
+                }
+            })
+
+            should.append({
                 "multi_match": {
                     "query": query,
-                    "fields": ["username", "firstName", "lastName", "email"]
+                    "fields": [
+                        "username^8",
+                        "email^4",
+                        "firstName^3",
+                        "lastName^3"
+                    ],
+                    "type": "best_fields",
+                    "fuzziness": "AUTO"
+                }
+            })
+
+            should.append({
+                "multi_match": {
+                    "query": query,
+                    "fields": [
+                        "firstName.ngram^2",
+                        "lastName.ngram^2"
+                    ],
+                    "type": "best_fields"
                 }
             })
         else:
             must.append({"match_all": {}})
 
         filters = []
+
         if city:
-            filters.append({"term": {"city": city}})
+            filters.append({"match": {"city": city}})
         if country:
-            filters.append({"term": {"country": country}})
+            filters.append({"match": {"country": country}})
         if min_purchases is not None:
             filters.append({"range": {"totalPurchases": {"gte": min_purchases}}})
         if min_reports is not None:
@@ -39,25 +68,28 @@ class UserRepository(BaseRepository):
         search_query = {
             "bool": {
                 "must": must,
+                "should": should,
+                "minimum_should_match": 1 if should else 0,
                 "filter": filters
             }
         }
 
-        aggregations = {
-            "users_by_city": {"terms": {"field": "city"}},
-            "users_by_country": {"terms": {"field": "country"}}
-        }
+        from_ = (int(page) - 1) * int(page_size)
 
         response = self.es.search(
             index=self.index,
             query=search_query,
-            aggs=aggregations,
-            sort=[{sort_by: {"order": order}}]
+            sort=[{sort_by: {"order": order}}],
+            from_=from_,
+            size=page_size
         )
         
         return {
             "hits": [hit["_source"] for hit in response["hits"]["hits"]],
-            "aggregations": response.get("aggregations", {})
+            "pagination": {
+                "page": int(page),
+                "page_size": int(page_size)
+            }
         }
 
     def search_reports(
