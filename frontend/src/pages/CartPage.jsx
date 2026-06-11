@@ -246,8 +246,8 @@ function CartPage() {
           setProductsExpanded(false)
         }}
         onResetFilters={handleResetFilters}
-        onSearchChange={(event) => {
-          setSearchTerm(event.target.value)
+        onSearch={(value) => {
+          setSearchTerm(value)
           setProductsExpanded(false)
         }}
         onSortChange={(event) => {

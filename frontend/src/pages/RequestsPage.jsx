@@ -154,7 +154,7 @@ function RequestsPage() {
         onCategoryChange={(event) => setStatus(event.target.value)}
         onClearSearch={() => setSearchTerm('')}
         onResetFilters={handleResetFilters}
-        onSearchChange={(event) => setSearchTerm(event.target.value)}
+        onSearch={setSearchTerm}
         onSortChange={(event) => setSort(event.target.value)}
         onToggleFilter={() => setFilterOpen((current) => !current)}
         searchTerm={searchTerm}

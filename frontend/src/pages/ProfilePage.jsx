@@ -87,7 +87,7 @@ function ProfilePage() {
         onCategoryChange={noop}
         onClearSearch={() => setSearchTerm('')}
         onResetFilters={() => setFilterOpen(false)}
-        onSearchChange={(event) => setSearchTerm(event.target.value)}
+        onSearch={setSearchTerm}
         onSortChange={noop}
         onToggleFilter={() => setFilterOpen((current) => !current)}
         searchTerm={searchTerm}

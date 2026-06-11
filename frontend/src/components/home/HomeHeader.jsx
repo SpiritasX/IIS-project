@@ -12,7 +12,7 @@ function HomeHeader({
   onCategoryChange,
   onClearSearch,
   onResetFilters,
-  onSearchChange,
+  onSearch,
   onSortChange,
   onOrderChange,
   onSpeciesChange,
@@ -44,7 +44,7 @@ function HomeHeader({
       </button>
 
       <div className="home-header-controls">
-        <SearchBar onChange={onSearchChange} onClear={onClearSearch} value={searchTerm} />
+        <SearchBar onClear={onClearSearch} onSearch={onSearch} value={searchTerm} />
 
         <div className="home-filter-wrap">
           <button

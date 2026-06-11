@@ -134,7 +134,26 @@
 .home-search-icon {
   color: #666666;
   font-size: 30px;
-  margin: 0 14px 0 10px;
+}
+
+.home-search-submit {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: #666666;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 30px;
+  height: 48px;
+  justify-content: center;
+  margin: 0 8px 0 4px;
+  padding: 0;
+  width: 42px;
+}
+
+.home-search-submit:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: -4px;
 }
 
 .home-filter-wrap {

@@ -113,7 +113,7 @@ function HomePage() {
         onCategoryChange={(event) => setCategory(event.target.value)}
         onClearSearch={() => setSearchTerm('')}
         onResetFilters={handleResetFilters}
-        onSearchChange={(event) => setSearchTerm(event.target.value)}
+        onSearch={setSearchTerm}
         onSortChange={(event) => setSort(event.target.value)}
         onOrderChange={(event) => setOrder(event.target.value)}
         onSpeciesChange={(event) => setSpecies(event.target.value)}
