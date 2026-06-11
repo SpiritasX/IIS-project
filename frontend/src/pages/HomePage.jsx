@@ -23,7 +23,7 @@ function normalizeProduct(product) {
 
 function HomePage() {
   const navigate = useNavigate()
-  const { logout } = useAuth()
+  const { logout, user } = useAuth()
   const [catalogProducts, setCatalogProducts] = useState([])
   const [loadingProducts, setLoadingProducts] = useState(true)
   const [productError, setProductError] = useState('')
@@ -103,6 +103,28 @@ function HomePage() {
     setFilterOpen(false)
   }
 
+  function handleSearch(value) {
+    setSearchTerm(value)
+
+    if (!user?.id) {
+      return
+    }
+
+    api
+      .post('/recommendations/search', {
+        customer_id: user.id,
+        query: value,
+        min_price: minPrice ? Number(minPrice) : null,
+        max_price: maxPrice ? Number(maxPrice) : null,
+        variety: variety || null,
+        species: species || null,
+        type: category !== 'All' ? category : null,
+      })
+      .catch(() => {
+        // Recommendation tracking should not block product search results.
+      })
+  }
+
   return (
     <main className="home-page">
       <HomeHeader
@@ -113,7 +135,7 @@ function HomePage() {
         onCategoryChange={(event) => setCategory(event.target.value)}
         onClearSearch={() => setSearchTerm('')}
         onResetFilters={handleResetFilters}
-        onSearch={setSearchTerm}
+        onSearch={handleSearch}
         onSortChange={(event) => setSort(event.target.value)}
         onOrderChange={(event) => setOrder(event.target.value)}
         onSpeciesChange={(event) => setSpecies(event.target.value)}

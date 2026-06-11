@@ -135,7 +135,7 @@ class RecommendationRepository:
             """
             MATCH (c:Customer {id: $customer_id})
             CREATE (s:Search {
-                query: $query,
+                query: $search_query,
                 min_price: $min_price,
                 max_price: $max_price,
                 variety: $variety,
@@ -147,7 +147,7 @@ class RecommendationRepository:
             RETURN s
             """,
             customer_id=customer_id,
-            query=query,
+            search_query=query,
             min_price=min_price,
             max_price=max_price,
             variety=variety,

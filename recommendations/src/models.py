@@ -28,6 +28,9 @@ class SearchCreate(BaseModel):
     query: str
     min_price: int | None = None
     max_price: int | None = None
+    variety: str | None = None
+    species: str | None = None
+    type: str | None = None
 
 
 class PurchaseCreate(BaseModel):
