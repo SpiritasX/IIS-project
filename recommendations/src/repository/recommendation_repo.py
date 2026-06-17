@@ -51,16 +51,17 @@ class RecommendationRepository:
         return result.consume()
 
     @staticmethod
-    def create_plant_variety(tx, id: int, name: str):
+    def create_plant_variety(tx, id: int, name: str, season: str):
         result = tx.run(
             """
             MERGE (p:PlantVariety {id: $id})
-            ON CREATE SET p.name = $name
-            ON MATCH SET p.name = $name
+            ON CREATE SET p.name = $name, p.season = $season
+            ON MATCH SET p.name = $name, p.season = $season
             RETURN p
             """,
             id=id,
             name=name,
+            season=season,
         )
         return result.data(), result.consume()
     

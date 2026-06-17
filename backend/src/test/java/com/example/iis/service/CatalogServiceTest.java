@@ -37,7 +37,7 @@ class CatalogServiceTest {
         PlantCategory category = new PlantCategory("Herbs");
         PlantType type = new PlantType("Culinary herbs", category);
         PlantSpecies species = new PlantSpecies("Basil", type);
-        PlantVariety variety = new PlantVariety("Genovese basil", 60.0, "Rich soil", "Keep warm", species);
+        PlantVariety variety = new PlantVariety("Genovese basil", 60.0, "Rich soil", "Keep warm", "SUMMER", species);
         Plant plant = new Plant("Basil seedling", "Fresh basil", "Seed", "Available", variety);
         PlantPrice price = new PlantPrice(new BigDecimal("750"), plant);
         when(plantPriceRepository.findActiveCatalogPrices()).thenReturn(List.of(price));

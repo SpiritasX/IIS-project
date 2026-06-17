@@ -34,10 +34,10 @@ public class RecommendationClient {
                 .toBodilessEntity();
     }
 
-    public void createPlantVariety(Long plantVarietyId, String name) {
+    public void createPlantVariety(Long plantVarietyId, String name, String season) {
         restClient.post()
                 .uri("/plant/variety")
-                .body(new PlantVarietyCreate(plantVarietyId, name))
+                .body(new PlantVarietyCreate(plantVarietyId, name, season))
                 .retrieve()
                 .toBodilessEntity();
     }

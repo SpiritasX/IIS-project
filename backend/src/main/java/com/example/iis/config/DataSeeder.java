@@ -55,6 +55,7 @@ public class DataSeeder {
                     45.0,
                     "Well-drained alkaline soil",
                     "Keep in full sun and water sparingly.",
+                    "SUMMER",
                     lavenderSpecies
             ));
             PlantVariety basil = plantVarietyRepository.save(new PlantVariety(
@@ -62,6 +63,7 @@ public class DataSeeder {
                     60.0,
                     "Rich, moist soil",
                     "Pinch top leaves often to encourage growth.",
+                    "WINTER",
                     basilSpecies
             ));
             PlantVariety olive = plantVarietyRepository.save(new PlantVariety(
@@ -69,6 +71,7 @@ public class DataSeeder {
                     40.0,
                     "Sandy loam",
                     "Place in a warm bright spot and avoid overwatering.",
+                    "SUMMER",
                     oliveSpecies
             ));
             PlantVariety mint = plantVarietyRepository.save(new PlantVariety(
@@ -76,6 +79,7 @@ public class DataSeeder {
                     65.0,
                     "Moist garden soil",
                     "Trim runners and keep soil evenly moist.",
+                    "WINTER",
                     mintSpecies
             ));
             PlantVariety rose = plantVarietyRepository.save(new PlantVariety(
@@ -83,14 +87,15 @@ public class DataSeeder {
                     55.0,
                     "Loamy soil",
                     "Prune spent blooms and water at the base.",
+                    "SUMMER",
                     roseSpecies
             ));
 
-            recommendationClient.createPlantVariety(lavender.getId(), lavender.getName());
-            recommendationClient.createPlantVariety(basil.getId(), basil.getName());
-            recommendationClient.createPlantVariety(olive.getId(), olive.getName());
-            recommendationClient.createPlantVariety(mint.getId(), mint.getName());
-            recommendationClient.createPlantVariety(rose.getId(), rose.getName());
+            recommendationClient.createPlantVariety(lavender.getId(), lavender.getName(), lavender.getSeason());
+            recommendationClient.createPlantVariety(basil.getId(), basil.getName(), basil.getSeason());
+            recommendationClient.createPlantVariety(olive.getId(), olive.getName(), olive.getSeason());
+            recommendationClient.createPlantVariety(mint.getId(), mint.getName(), mint.getSeason());
+            recommendationClient.createPlantVariety(rose.getId(), rose.getName(), rose.getSeason());
 
             savePlantWithPrice(
                     plantRepository,

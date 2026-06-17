@@ -16,6 +16,7 @@ public class PlantVariety {
     private Double humidity;
     private String soil;
     private String instructions;
+    private String season;
 
     @ManyToOne(fetch = FetchType.EAGER, optional = false)
     private PlantSpecies species;
@@ -26,11 +27,12 @@ public class PlantVariety {
     public PlantVariety() {
     }
 
-    public PlantVariety(String name, Double humidity, String soil, String instructions, PlantSpecies species) {
+    public PlantVariety(String name, Double humidity, String soil, String instructions, String season, PlantSpecies species) {
         this.name = name;
         this.humidity = humidity;
         this.soil = soil;
         this.instructions = instructions;
+        this.season = season;
         this.species = species;
     }
 
@@ -64,6 +66,14 @@ public class PlantVariety {
 
     public void setInstructions(String instructions) {
         this.instructions = instructions;
+    }
+
+    public String getSeason() {
+        return season;
+    }
+
+    public void setSeason(String season) {
+        this.season = season;
     }
 
     public PlantSpecies getSpecies() {

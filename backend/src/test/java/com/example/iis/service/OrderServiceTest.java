@@ -100,7 +100,7 @@ class OrderServiceTest {
         PlantCategory category = new PlantCategory("Flowers");
         PlantType type = new PlantType("Flowering plants", category);
         PlantSpecies species = new PlantSpecies("Lavender", type);
-        PlantVariety variety = new PlantVariety("English lavender", 45.0, "Soil", "Sun", species);
+        PlantVariety variety = new PlantVariety("English lavender", 45.0, "Soil", "Sun", "SUMMER", species);
         Plant plant = new Plant("Lavender starter", "Hardy lavender", "Cuttings", "Available", variety);
         return new PlantPrice(new BigDecimal("1000"), plant);
     }

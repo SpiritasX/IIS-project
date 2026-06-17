@@ -124,6 +124,7 @@ class RecommendationService:
                 RecommendationRepository.create_plant_variety,
                 payload.id,
                 payload.name,
+                payload.season,
             )
 
         if not records:
