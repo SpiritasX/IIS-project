@@ -1,6 +1,6 @@
 package com.example.iis.config;
 
-import com.example.iis.security.CustomerUserDetailsService;
+import com.example.iis.security.AccountUserDetailsService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -59,7 +59,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.GET, "/", "/api/plants", "/api/auth/csrf").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/signup").permitAll()
-                        .requestMatchers("/api/auth/me", "/api/auth/logout", "/api/orders/**").authenticated()
+                        .requestMatchers("/api/auth/profile/**", "/api/orders", "/api/orders/**").hasRole("CUSTOMER")
+                        .requestMatchers("/api/auth/me", "/api/auth/logout").authenticated()
                         .anyRequest().authenticated()
                 );
 
@@ -73,7 +74,7 @@ public class SecurityConfig {
 
     @Bean
     public DaoAuthenticationProvider authenticationProvider(
-            CustomerUserDetailsService userDetailsService,
+            AccountUserDetailsService userDetailsService,
             PasswordEncoder passwordEncoder
     ) {
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);

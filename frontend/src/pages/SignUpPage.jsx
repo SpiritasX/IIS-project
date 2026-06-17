@@ -4,6 +4,7 @@ import AuthButton from '../components/auth/AuthButton'
 import AuthCard from '../components/auth/AuthCard'
 import AuthInput from '../components/auth/AuthInput'
 import { useAuth } from '../hooks/useAuth'
+import { homePathForRole } from '../utils/roleRoutes'
 import '../styles/auth.css'
 
 const initialValues = {
@@ -77,7 +78,7 @@ function SignUpPage() {
       return
     }
 
-    navigate('/home')
+    navigate(homePathForRole(result.user.role))
   }
 
   return (

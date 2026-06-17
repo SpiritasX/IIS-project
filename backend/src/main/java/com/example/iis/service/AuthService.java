@@ -7,9 +7,11 @@ import com.example.iis.dto.LoginRequest;
 import com.example.iis.dto.PasswordUpdateRequest;
 import com.example.iis.dto.PersonalDataUpdateRequest;
 import com.example.iis.dto.SignupRequest;
+import com.example.iis.model.Account;
 import com.example.iis.model.Customer;
+import com.example.iis.repository.AccountRepository;
 import com.example.iis.repository.CustomerRepository;
-import com.example.iis.security.CustomerPrincipal;
+import com.example.iis.security.AccountPrincipal;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -22,10 +24,16 @@ import java.util.stream.Stream;
 @Service
 public class AuthService {
     private final CustomerRepository customerRepository;
+    private final AccountRepository accountRepository;
     private final PasswordEncoder passwordEncoder;
 
-    public AuthService(CustomerRepository customerRepository, PasswordEncoder passwordEncoder) {
+    public AuthService(
+            CustomerRepository customerRepository,
+            AccountRepository accountRepository,
+            PasswordEncoder passwordEncoder
+    ) {
         this.customerRepository = customerRepository;
+        this.accountRepository = accountRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -34,7 +42,7 @@ public class AuthService {
         String email = normalizeEmail(request == null ? null : request.email());
         String password = normalizePassword(request == null ? null : request.password());
 
-        if (customerRepository.existsByEmail(email)) {
+        if (accountRepository.existsByEmail(email)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Email is already registered");
         }
 
@@ -52,12 +60,19 @@ public class AuthService {
     }
 
     @Transactional(readOnly = true)
-    public AuthUserResponse currentUser(CustomerPrincipal principal) {
-        return toResponse(customerForPrincipal(principal));
+    public AuthUserResponse currentUser(AccountPrincipal principal) {
+        if (principal == null || principal.getAccountId() == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not authenticated");
+        }
+
+        Account account = accountRepository.findById(principal.getAccountId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not authenticated"));
+
+        return toResponse(account);
     }
 
     @Transactional
-    public AuthUserResponse updatePersonalData(CustomerPrincipal principal, PersonalDataUpdateRequest request) {
+    public AuthUserResponse updatePersonalData(AccountPrincipal principal, PersonalDataUpdateRequest request) {
         Customer customer = customerForPrincipal(principal);
         String firstName = requireText(request == null ? null : request.firstName(), "First name is required");
         String lastName = requireText(request == null ? null : request.lastName(), "Last name is required");
@@ -70,7 +85,7 @@ public class AuthService {
     }
 
     @Transactional
-    public AuthUserResponse updateEmail(CustomerPrincipal principal, EmailUpdateRequest request) {
+    public AuthUserResponse updateEmail(AccountPrincipal principal, EmailUpdateRequest request) {
         Customer customer = customerForPrincipal(principal);
         String newEmail = normalizeEmail(request == null ? null : request.newEmail());
         String repeatedNewEmail = normalizeEmail(request == null ? null : request.repeatedNewEmail());
@@ -84,9 +99,9 @@ public class AuthService {
             throw invalidCredentials();
         }
 
-        customerRepository.findByEmail(newEmail)
-                .filter(existingCustomer -> !existingCustomer.getId().equals(customer.getId()))
-                .ifPresent(existingCustomer -> {
+        accountRepository.findByEmail(newEmail)
+                .filter(existingAccount -> !existingAccount.getId().equals(customer.getId()))
+                .ifPresent(existingAccount -> {
                     throw new ResponseStatusException(HttpStatus.CONFLICT, "Email is already registered");
                 });
 
@@ -97,7 +112,7 @@ public class AuthService {
     }
 
     @Transactional
-    public AuthUserResponse updatePassword(CustomerPrincipal principal, PasswordUpdateRequest request) {
+    public AuthUserResponse updatePassword(AccountPrincipal principal, PasswordUpdateRequest request) {
         Customer customer = customerForPrincipal(principal);
         String oldPassword = normalizePassword(request == null ? null : request.oldPassword());
         String newPassword = normalizePassword(request == null ? null : request.newPassword());
@@ -117,7 +132,7 @@ public class AuthService {
     }
 
     @Transactional
-    public AuthUserResponse updateAddress(CustomerPrincipal principal, AddressUpdateRequest request) {
+    public AuthUserResponse updateAddress(AccountPrincipal principal, AddressUpdateRequest request) {
         Customer customer = customerForPrincipal(principal);
 
         customer.setCountry(requireText(request == null ? null : request.country(), "Country is required"));
@@ -128,12 +143,12 @@ public class AuthService {
         return toResponse(customerRepository.save(customer));
     }
 
-    private Customer customerForPrincipal(CustomerPrincipal principal) {
-        if (principal == null || principal.getCustomerId() == null) {
+    private Customer customerForPrincipal(AccountPrincipal principal) {
+        if (principal == null || principal.getAccountId() == null || !principal.isCustomer()) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not authenticated");
         }
 
-        return customerRepository.findById(principal.getCustomerId())
+        return customerRepository.findById(principal.getAccountId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not authenticated"));
     }
 
@@ -142,14 +157,14 @@ public class AuthService {
         String email = normalizeEmail(request == null ? null : request.email());
         String password = normalizePassword(request == null ? null : request.password());
 
-        Customer customer = customerRepository.findByEmail(email)
+        Account account = accountRepository.findByEmail(email)
                 .orElseThrow(() -> invalidCredentials());
 
-        if (!passwordEncoder.matches(password, customer.getPassword())) {
+        if (!passwordEncoder.matches(password, account.getPassword())) {
             throw invalidCredentials();
         }
 
-        return toResponse(customer);
+        return toResponse(account);
     }
 
     private String normalizeEmail(String email) {
@@ -185,7 +200,7 @@ public class AuthService {
         String candidate = base;
         int suffix = 1;
 
-        while (customerRepository.existsByUsername(candidate)) {
+        while (accountRepository.existsByUsername(candidate)) {
             candidate = base + suffix;
             suffix++;
         }
@@ -205,7 +220,7 @@ public class AuthService {
         String candidate = base;
         int suffix = 1;
 
-        while (customerRepository.existsByUsername(candidate) && !candidate.equals(customer.getUsername())) {
+        while (accountRepository.existsByUsername(candidate) && !candidate.equals(customer.getUsername())) {
             candidate = base + suffix;
             suffix++;
         }
@@ -222,23 +237,24 @@ public class AuthService {
         return new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid email or password");
     }
 
-    public AuthUserResponse toResponse(Customer customer) {
-        String name = (customer.getFirstName() + " " + customer.getLastName()).trim();
+    public AuthUserResponse toResponse(Account account) {
+        String name = (account.getFirstName() + " " + account.getLastName()).trim();
 
         return new AuthUserResponse(
-                customer.getId(),
-                customer.getEmail(),
-                customer.getUsername(),
+                account.getId(),
+                account.getEmail(),
+                account.getUsername(),
                 name,
-                formatAddress(customer),
-                customer.getFirstName(),
-                customer.getLastName(),
-                customer.getPhoneNumber(),
-                customer.getAddress(),
-                customer.getCity(),
-                customer.getCountry(),
-                customer.getZipCode(),
-                "CUSTOMER"
+                formatAddress(account),
+                account.getFirstName(),
+                account.getLastName(),
+                account.getAge(),
+                account.getPhoneNumber(),
+                account.getAddress(),
+                account.getCity(),
+                account.getCountry(),
+                account.getZipCode(),
+                roleFor(account)
         );
     }
 
@@ -260,12 +276,16 @@ public class AuthService {
         return value.trim();
     }
 
-    private String formatAddress(Customer customer) {
+    private String roleFor(Account account) {
+        return new AccountPrincipal(account).getRole();
+    }
+
+    private String formatAddress(Account account) {
         return Stream.of(
-                        customer.getAddress(),
-                        customer.getCity(),
-                        customer.getCountry(),
-                        customer.getZipCode()
+                        account.getAddress(),
+                        account.getCity(),
+                        account.getCountry(),
+                        account.getZipCode()
                 )
                 .filter(value -> value != null && !value.isBlank())
                 .reduce((first, second) -> first + ", " + second)

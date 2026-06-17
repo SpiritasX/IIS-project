@@ -10,6 +10,7 @@ public record ProductResponse(
         String category,
         BigDecimal price,
         String status,
+        Long availableQuantity,
         boolean available
 ) {
 }

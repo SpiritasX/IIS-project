@@ -13,6 +13,7 @@ function normalizeProduct(product) {
   return {
     ...product,
     available: Boolean(product.available),
+    availableQuantity: Number(product.availableQuantity || 0),
     category: product.category || 'Other',
     id: String(product.id),
     imageAlt: `${product.name} placeholder`,

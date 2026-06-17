@@ -5,6 +5,58 @@
   overflow-x: hidden;
 }
 
+.role-page {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  padding: 32px var(--layout-gutter);
+}
+
+.role-shell {
+  background: var(--color-surface);
+  border-radius: var(--radius-surface);
+  box-sizing: border-box;
+  max-width: 560px;
+  padding: 40px;
+  width: min(100%, 560px);
+}
+
+.role-eyebrow {
+  font-size: 14px;
+  font-weight: 800;
+  margin: 0 0 12px;
+  text-transform: uppercase;
+}
+
+.role-shell h1 {
+  font-size: 34px;
+  margin: 0 0 16px;
+}
+
+.role-shell p {
+  font-size: 18px;
+  line-height: 1.45;
+  margin: 0 0 28px;
+}
+
+.role-logout-button {
+  background: var(--color-primary);
+  border: 0;
+  border-radius: var(--radius-pill);
+  color: var(--color-primary-contrast);
+  cursor: pointer;
+  font: inherit;
+  font-size: 18px;
+  font-weight: 800;
+  min-height: 48px;
+  padding: 0 28px;
+}
+
+.role-logout-button:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 4px;
+}
+
 .home-header {
   align-items: center;
   background: var(--color-surface);
@@ -382,6 +434,15 @@
   display: block;
   font-size: var(--text-body-size);
   line-height: 1;
+  margin-bottom: 8px;
+}
+
+.product-stock {
+  color: var(--color-primary);
+  display: block;
+  font-size: var(--text-body-secondary-size);
+  font-weight: 800;
+  line-height: 1.1;
 }
 
 .product-add-button,

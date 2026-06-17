@@ -3,7 +3,7 @@ package com.example.iis.controller;
 import com.example.iis.dto.AuthUserResponse;
 import com.example.iis.dto.LoginRequest;
 import com.example.iis.model.Customer;
-import com.example.iis.security.CustomerPrincipal;
+import com.example.iis.security.AccountPrincipal;
 import com.example.iis.service.AuthService;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -27,7 +27,7 @@ class AuthControllerTest {
         SecurityContextRepository securityContextRepository = mock(SecurityContextRepository.class);
         AuthController controller = new AuthController(authService, authenticationManager, securityContextRepository);
         LoginRequest loginRequest = new LoginRequest("user@example.com", "secret");
-        CustomerPrincipal principal = new CustomerPrincipal(
+        AccountPrincipal principal = new AccountPrincipal(
                 new Customer("user", "secret", "User", "Customer", "user@example.com")
         );
         AuthUserResponse response = new AuthUserResponse(
@@ -38,6 +38,7 @@ class AuthControllerTest {
                 null,
                 "User",
                 "Customer",
+                null,
                 null,
                 null,
                 null,
@@ -62,7 +63,7 @@ class AuthControllerTest {
         AuthenticationManager authenticationManager = mock(AuthenticationManager.class);
         SecurityContextRepository securityContextRepository = mock(SecurityContextRepository.class);
         AuthController controller = new AuthController(authService, authenticationManager, securityContextRepository);
-        CustomerPrincipal principal = new CustomerPrincipal(
+        AccountPrincipal principal = new AccountPrincipal(
                 new Customer("user", "secret", "User", "Customer", "user@example.com")
         );
         AuthUserResponse response = new AuthUserResponse(
@@ -73,6 +74,7 @@ class AuthControllerTest {
                 null,
                 "User",
                 "Customer",
+                null,
                 null,
                 null,
                 null,

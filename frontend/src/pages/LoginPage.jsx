@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import AuthButton from '../components/auth/AuthButton'
 import AuthCard from '../components/auth/AuthCard'
 import AuthInput from '../components/auth/AuthInput'
 import { useAuth } from '../hooks/useAuth'
+import { homePathForRole } from '../utils/roleRoutes'
 import '../styles/auth.css'
 
 const initialValues = {
@@ -34,6 +35,12 @@ function LoginPage() {
   const [errors, setErrors] = useState({})
   const [formError, setFormError] = useState('')
   const [submitted, setSubmitted] = useState(false)
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate(homePathForRole(user?.role), { replace: true })
+    }
+  }, [isAuthenticated, navigate, user?.role])
 
   function handleChange(event) {
     const { name, value } = event.target
@@ -70,7 +77,7 @@ function LoginPage() {
       return
     }
 
-    navigate('/home')
+    navigate(homePathForRole(result.user.role))
   }
 
   return (

@@ -11,6 +11,7 @@ function ProductCard({ onAddToCart, onRemoveFromCart, product, quantity }) {
         <h2>{product.name}</h2>
         <p>{product.description}</p>
         <strong>Price: {product.price}</strong>
+        <span className="product-stock">In stock: {product.availableQuantity}</span>
       </div>
 
       {quantity > 0 ? (

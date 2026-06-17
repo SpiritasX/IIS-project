@@ -28,6 +28,8 @@ public class Account {
 
     private String phoneNumber;
 
+    private Integer age;
+
     private String address;
 
     private String city;
@@ -102,6 +104,14 @@ public class Account {
 
     public void setPhoneNumber(String phoneNumber) {
         this.phoneNumber = phoneNumber;
+    }
+
+    public Integer getAge() {
+        return age;
+    }
+
+    public void setAge(Integer age) {
+        this.age = age;
     }
 
     public String getAddress() {

@@ -105,7 +105,7 @@ function ProfilePage() {
             onSubmit={(event) =>
               submitProfileSection(
                 event,
-                '/api/auth/profile/personal',
+                '/auth/profile/personal',
                 personalForm,
                 setPersonalStatus,
               )
@@ -141,7 +141,7 @@ function ProfilePage() {
             onSubmit={(event) =>
               submitProfileSection(
                 event,
-                '/api/auth/profile/address',
+                '/auth/profile/address',
                 addressForm,
                 setAddressStatus,
               )

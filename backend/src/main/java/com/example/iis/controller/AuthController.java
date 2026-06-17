@@ -7,7 +7,7 @@ import com.example.iis.dto.LoginRequest;
 import com.example.iis.dto.PasswordUpdateRequest;
 import com.example.iis.dto.PersonalDataUpdateRequest;
 import com.example.iis.dto.SignupRequest;
-import com.example.iis.security.CustomerPrincipal;
+import com.example.iis.security.AccountPrincipal;
 import com.example.iis.service.AuthService;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -60,13 +60,13 @@ public class AuthController {
     }
 
     @GetMapping("/me")
-    public AuthUserResponse me(@AuthenticationPrincipal CustomerPrincipal principal) {
+    public AuthUserResponse me(@AuthenticationPrincipal AccountPrincipal principal) {
         return authService.currentUser(principal);
     }
 
     @PatchMapping("/profile/personal")
     public AuthUserResponse updatePersonalData(
-            @AuthenticationPrincipal CustomerPrincipal principal,
+            @AuthenticationPrincipal AccountPrincipal principal,
             @RequestBody PersonalDataUpdateRequest request
     ) {
         return authService.updatePersonalData(principal, request);
@@ -74,7 +74,7 @@ public class AuthController {
 
     @PatchMapping("/profile/email")
     public AuthUserResponse updateEmail(
-            @AuthenticationPrincipal CustomerPrincipal principal,
+            @AuthenticationPrincipal AccountPrincipal principal,
             @RequestBody EmailUpdateRequest request
     ) {
         return authService.updateEmail(principal, request);
@@ -82,7 +82,7 @@ public class AuthController {
 
     @PatchMapping("/profile/password")
     public AuthUserResponse updatePassword(
-            @AuthenticationPrincipal CustomerPrincipal principal,
+            @AuthenticationPrincipal AccountPrincipal principal,
             @RequestBody PasswordUpdateRequest request
     ) {
         return authService.updatePassword(principal, request);
@@ -90,7 +90,7 @@ public class AuthController {
 
     @PatchMapping("/profile/address")
     public AuthUserResponse updateAddress(
-            @AuthenticationPrincipal CustomerPrincipal principal,
+            @AuthenticationPrincipal AccountPrincipal principal,
             @RequestBody AddressUpdateRequest request
     ) {
         return authService.updateAddress(principal, request);
@@ -150,8 +150,8 @@ public class AuthController {
             securityContextRepository.saveContext(securityContext, request, response);
 
             Object principal = authentication.getPrincipal();
-            if (principal instanceof CustomerPrincipal customerPrincipal) {
-                return authService.currentUser(customerPrincipal);
+            if (principal instanceof AccountPrincipal accountPrincipal) {
+                return authService.currentUser(accountPrincipal);
             }
 
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid email or password");

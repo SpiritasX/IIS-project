@@ -8,6 +8,7 @@ public record AuthUserResponse(
         String address,
         String firstName,
         String lastName,
+        Integer age,
         String phoneNumber,
         String addressLine,
         String city,

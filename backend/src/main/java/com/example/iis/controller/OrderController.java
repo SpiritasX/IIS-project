@@ -2,7 +2,7 @@ package com.example.iis.controller;
 
 import com.example.iis.dto.CreateOrderRequest;
 import com.example.iis.dto.OrderResponse;
-import com.example.iis.security.CustomerPrincipal;
+import com.example.iis.security.AccountPrincipal;
 import com.example.iis.service.OrderService;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -25,22 +25,22 @@ public class OrderController {
 
     @PostMapping("/orders")
     public OrderResponse createOrder(
-            @AuthenticationPrincipal CustomerPrincipal principal,
+            @AuthenticationPrincipal AccountPrincipal principal,
             @RequestBody CreateOrderRequest request
     ) {
-        return orderService.createOrder(principal.getCustomerId(), request);
+        return orderService.createOrder(principal.getAccountId(), request);
     }
 
     @GetMapping("/orders")
-    public List<OrderResponse> getCustomerOrders(@AuthenticationPrincipal CustomerPrincipal principal) {
-        return orderService.getOrdersForCustomer(principal.getCustomerId());
+    public List<OrderResponse> getCustomerOrders(@AuthenticationPrincipal AccountPrincipal principal) {
+        return orderService.getOrdersForCustomer(principal.getAccountId());
     }
 
     @GetMapping("/orders/{orderId}")
     public OrderResponse getOrder(
-            @AuthenticationPrincipal CustomerPrincipal principal,
+            @AuthenticationPrincipal AccountPrincipal principal,
             @PathVariable Long orderId
     ) {
-        return orderService.getOrderForCustomer(principal.getCustomerId(), orderId);
+        return orderService.getOrderForCustomer(principal.getAccountId(), orderId);
     }
 }

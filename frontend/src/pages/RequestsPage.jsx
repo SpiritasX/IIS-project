@@ -136,7 +136,7 @@ function RequestsPage() {
 
   async function handleViewDetails(order) {
     try {
-      const response = await api.get(`/api/orders/${order.id}`)
+      const response = await api.get(`/orders/${order.id}`)
       setSelectedOrder(normalizeOrder(response.data))
     } catch {
       setSelectedOrder(order)
