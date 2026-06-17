@@ -177,40 +177,60 @@ class RecommendationRepository:
         return result.data(), result.consume()
 
     @staticmethod
-    def get_general_recommendations(tx):
+    def get_trending_seasonal_plants(tx):
         result = tx.run(
             """
-            MATCH (p:Plant)
+            MATCH (p:Plant)-[:PLANT_VARIETY]->(:PlantVariety { 
+                season: CASE
+                    WHEN datetime().month IN [4, 5, 6, 7, 8, 9] THEN 'SUMMER'
+                    ELSE 'WINTER' 
+                END
+            })
 
-            OPTIONAL MATCH ()-[v_recent:VIEWED]->(p)
-            WHERE v_recent.timestamp >= datetime() - duration('P30D')
+            CALL {
+                WITH p
+                OPTIONAL MATCH ()-[v_recent:VIEWED]->(p)
+                WHERE v_recent.timestamp >= datetime() - duration('P30D')
+                RETURN coalesce(sum(v_recent.count), 0) AS recent_views
+            }
 
-            OPTIONAL MATCH ()-[v_prev:VIEWED]->(p)
-            WHERE v_prev.timestamp >= datetime() - duration('P60D')
-            AND v_prev.timestamp < datetime() - duration('P30D')
+            CALL {
+                WITH p
+                OPTIONAL MATCH ()-[v_prev:VIEWED]->(p)
+                WHERE v_prev.timestamp >= datetime() - duration('P60D')
+                  AND v_prev.timestamp < datetime() - duration('P30D')
+                RETURN coalesce(sum(v_prev.count), 0) AS prev_views
+            }
 
-            OPTIONAL MATCH ()-[l_recent:LIKED]->(p)
-            WHERE l_recent.timestamp >= datetime() - duration('P30D')
+            CALL {
+                WITH p
+                OPTIONAL MATCH ()-[l:LIKED]->(p)
+                RETURN coalesce(count(DISTINCT l), 0) AS likes
+            }
 
-            OPTIONAL MATCH ()-[l_prev:LIKED]->(p)
-            WHERE l_prev.timestamp >= datetime() - duration('P60D')
-            AND l_prev.timestamp < datetime() - duration('P30D')
+            CALL {
+                WITH p
+                OPTIONAL MATCH ()-[p_recent:PURCHASES]->(p)
+                WHERE p_recent.timestamp >= datetime() - duration('P30D')
+                RETURN coalesce(sum(p_recent.quantity), 0) AS recent_purchases
+            }
 
-            OPTIONAL MATCH ()-[p_recent:PURCHASES]->(p)
-            WHERE p_recent.timestamp >= datetime() - duration('P30D')
-
-            OPTIONAL MATCH ()-[p_prev:PURCHASES]->(p)
-            WHERE p_prev.timestamp >= datetime() - duration('P60D')
-            AND p_prev.timestamp < datetime() - duration('P30D')
+            CALL {
+                WITH p
+                OPTIONAL MATCH ()-[p_prev:PURCHASES]->(p)
+                WHERE p_prev.timestamp >= datetime() - duration('P60D')
+                  AND p_prev.timestamp < datetime() - duration('P30D')
+                RETURN coalesce(sum(p_prev.quantity), 0) AS prev_purchases
+            }
 
             WITH p,
-                count(DISTINCT v_recent) - count(DISTINCT v_prev) AS views_growth,
-                count(DISTINCT l_recent) - count(DISTINCT l_prev) AS likes_growth,
-                count(DISTINCT p_recent) - count(DISTINCT p_prev) AS purchases_growth
+                recent_views - prev_views AS views_growth,
+                likes AS likes,
+                recent_purchases - prev_purchases AS purchases_growth
 
             WITH p,
                 (2 * views_growth) +
-                (3 * likes_growth) +
+                (3 * likes) +
                 (5 * purchases_growth) AS score
 
             RETURN

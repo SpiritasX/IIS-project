@@ -171,7 +171,7 @@ class RecommendationService:
     @staticmethod
     def get_general_recommendations():
         with Neo4jDB.driver.session() as session:
-            return session.execute_read(RecommendationRepository.get_general_recommendations)
+            return session.execute_read(RecommendationRepository.get_trending_seasonal_plants)
 
     @staticmethod
     def update_recommendation(recommendation_id: int, payload):
