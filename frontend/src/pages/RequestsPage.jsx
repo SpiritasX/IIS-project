@@ -9,7 +9,17 @@ import { useCart } from '../hooks/useCart'
 import '../styles/home.css'
 import '../styles/requests.css'
 
-const statusOptions = ['All', 'Pending', 'Delivered', 'Cancelled']
+const statusOptions = [
+  'All',
+  'Ponuda',
+  'Rezervacija',
+  'Spremno',
+  'Isporuka',
+  'Isporuceno',
+  'Odbijeno',
+  'Isteklo',
+  'Otkazano',
+]
 const sortOptions = [
   { label: 'Newest', value: 'newest' },
   { label: 'Oldest', value: 'oldest' },

@@ -22,12 +22,25 @@ public class OrderItem {
     @Column(nullable = false)
     private Integer quantity;
 
+    private Integer requestedQuantity;
+
+    private Integer offeredQuantity;
+
     public OrderItem() {
     }
 
     public OrderItem(PlantPrice plantPrice, Integer quantity) {
         this.plantPrice = plantPrice;
         this.quantity = quantity;
+        this.requestedQuantity = quantity;
+        this.offeredQuantity = quantity;
+    }
+
+    public OrderItem(PlantPrice plantPrice, Integer requestedQuantity, Integer offeredQuantity, Integer reservedQuantity) {
+        this.plantPrice = plantPrice;
+        this.requestedQuantity = requestedQuantity;
+        this.offeredQuantity = offeredQuantity;
+        this.quantity = reservedQuantity;
     }
 
     public Long getId() {
@@ -56,6 +69,38 @@ public class OrderItem {
 
     public void setQuantity(Integer quantity) {
         this.quantity = quantity;
+    }
+
+    public Integer getRequestedQuantity() {
+        return requestedQuantity;
+    }
+
+    public void setRequestedQuantity(Integer requestedQuantity) {
+        this.requestedQuantity = requestedQuantity;
+    }
+
+    public Integer getOfferedQuantity() {
+        return offeredQuantity;
+    }
+
+    public void setOfferedQuantity(Integer offeredQuantity) {
+        this.offeredQuantity = offeredQuantity;
+    }
+
+    @PrePersist
+    @PreUpdate
+    void normalizeQuantities() {
+        if (requestedQuantity == null) {
+            requestedQuantity = quantity;
+        }
+
+        if (offeredQuantity == null) {
+            offeredQuantity = quantity;
+        }
+
+        if (quantity == null) {
+            quantity = 0;
+        }
     }
 
     @Override

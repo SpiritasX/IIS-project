@@ -1,7 +1,9 @@
 package com.example.iis.repository;
 
 import com.example.iis.model.RelocationHistory;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -24,4 +26,7 @@ public interface RelocationHistoryRepository extends JpaRepository<RelocationHis
             group by history.plant.id
             """)
     List<PlantStockView> findActiveStockByPlantIds(@Param("plantIds") Collection<Long> plantIds);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    List<RelocationHistory> findByPlant_IdAndEndTimeIsNullOrderByStartTimeAsc(Long plantId);
 }

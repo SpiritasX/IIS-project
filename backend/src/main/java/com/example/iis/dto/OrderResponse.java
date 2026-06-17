@@ -8,6 +8,13 @@ public record OrderResponse(
         String date,
         String status,
         BigDecimal total,
-        List<OrderItemResponse> items
+        List<OrderItemResponse> items,
+        Long processId,
+        String currentPhase,
+        String expiresAt,
+        List<PhaseHistoryResponse> phaseHistory,
+        boolean canAccept,
+        boolean canReject,
+        boolean canCancel
 ) {
 }

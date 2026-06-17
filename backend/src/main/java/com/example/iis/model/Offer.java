@@ -17,6 +17,8 @@ public class Offer {
     @Column(nullable = false)
     private Date createdAt;
 
+    private Date expiresAt;
+
     @ManyToOne(fetch = FetchType.EAGER, optional = false)
     private OfferStatus status;
 
@@ -52,6 +54,14 @@ public class Offer {
 
     public Date getCreatedAt() {
         return createdAt;
+    }
+
+    public Date getExpiresAt() {
+        return expiresAt;
+    }
+
+    public void setExpiresAt(Date expiresAt) {
+        this.expiresAt = expiresAt;
     }
 
     public OfferStatus getStatus() {

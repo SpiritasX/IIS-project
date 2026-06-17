@@ -7,6 +7,10 @@ public record OrderItemResponse(
         Long priceId,
         String name,
         Integer quantity,
+        Integer requestedQuantity,
+        Integer offeredQuantity,
+        Integer reservedQuantity,
+        boolean adjusted,
         BigDecimal price
 ) {
 }

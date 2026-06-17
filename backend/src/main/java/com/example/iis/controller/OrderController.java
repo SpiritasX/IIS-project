@@ -1,5 +1,6 @@
 package com.example.iis.controller;
 
+import com.example.iis.dto.CancelRequest;
 import com.example.iis.dto.CreateOrderRequest;
 import com.example.iis.dto.OrderResponse;
 import com.example.iis.security.AccountPrincipal;
@@ -42,5 +43,30 @@ public class OrderController {
             @PathVariable Long orderId
     ) {
         return orderService.getOrderForCustomer(principal.getAccountId(), orderId);
+    }
+
+    @PostMapping("/orders/{orderId}/accept")
+    public OrderResponse acceptOffer(
+            @AuthenticationPrincipal AccountPrincipal principal,
+            @PathVariable Long orderId
+    ) {
+        return orderService.acceptOffer(principal.getAccountId(), orderId);
+    }
+
+    @PostMapping("/orders/{orderId}/reject")
+    public OrderResponse rejectOffer(
+            @AuthenticationPrincipal AccountPrincipal principal,
+            @PathVariable Long orderId
+    ) {
+        return orderService.rejectOffer(principal.getAccountId(), orderId);
+    }
+
+    @PostMapping("/orders/{orderId}/cancel")
+    public OrderResponse cancelOrder(
+            @AuthenticationPrincipal AccountPrincipal principal,
+            @PathVariable Long orderId,
+            @RequestBody CancelRequest request
+    ) {
+        return orderService.cancelOrder(principal.getAccountId(), orderId, request);
     }
 }

@@ -2,6 +2,7 @@ package com.example.iis.config;
 
 import com.example.iis.model.Admin;
 import com.example.iis.model.Botanist;
+import com.example.iis.model.CancellationReason;
 import com.example.iis.model.LocationParcel;
 import com.example.iis.model.OfferStatus;
 import com.example.iis.model.PhaseType;
@@ -14,6 +15,7 @@ import com.example.iis.model.PlantVariety;
 import com.example.iis.model.RelocationHistory;
 import com.example.iis.model.Worker;
 import com.example.iis.repository.AccountRepository;
+import com.example.iis.repository.CancellationReasonRepository;
 import com.example.iis.repository.LocationParcelRepository;
 import com.example.iis.repository.OfferStatusRepository;
 import com.example.iis.repository.PhaseTypeRepository;
@@ -37,6 +39,7 @@ public class DataSeeder {
     @Bean
     CommandLineRunner seedData(
             AccountRepository accountRepository,
+            CancellationReasonRepository cancellationReasonRepository,
             OfferStatusRepository offerStatusRepository,
             PhaseTypeRepository phaseTypeRepository,
             PlantCategoryRepository plantCategoryRepository,
@@ -53,6 +56,7 @@ public class DataSeeder {
             seedStaffAccounts(accountRepository, passwordEncoder);
             seedOrderStatuses(offerStatusRepository);
             seedPhaseTypes(phaseTypeRepository);
+            seedCancellationReasons(cancellationReasonRepository);
 
             if (plantPriceRepository.count() == 0) {
                 seedCatalog(
@@ -224,6 +228,22 @@ public class DataSeeder {
     private void savePhaseTypeIfMissing(PhaseTypeRepository phaseTypeRepository, String name) {
         if (phaseTypeRepository.findByName(name).isEmpty()) {
             phaseTypeRepository.save(new PhaseType(name));
+        }
+    }
+
+    private void seedCancellationReasons(CancellationReasonRepository cancellationReasonRepository) {
+        List.of(
+                "Customer cancellation",
+                "Staff cancellation"
+        ).forEach(name -> saveCancellationReasonIfMissing(cancellationReasonRepository, name));
+    }
+
+    private void saveCancellationReasonIfMissing(
+            CancellationReasonRepository cancellationReasonRepository,
+            String name
+    ) {
+        if (cancellationReasonRepository.findByName(name).isEmpty()) {
+            cancellationReasonRepository.save(new CancellationReason(name));
         }
     }
 
