@@ -75,6 +75,7 @@ class RecommendationRepository:
             """
             MATCH (c:Customer {id: $customer_id})
             MATCH (p:Plant {id: $plant_id})
+            OPTIONAL MATCH (c)-[recommendation:RECOMMENDED]->(p)
             MERGE (c)-[rel:VIEWED]->(p)
             ON CREATE SET
                 rel.created_at = datetime($timestamp),
@@ -83,6 +84,11 @@ class RecommendationRepository:
             ON MATCH SET
                 rel.updated_at = datetime($timestamp),
                 rel.count = rel.count + 1
+            FOREACH (_ IN CASE WHEN recommendation IS NULL THEN [] ELSE [1] END |
+                SET recommendation.viewed = true,
+                    recommendation.successful = true,
+                    recommendation.viewed_at = datetime($timestamp)
+            )
             RETURN rel
             """,
             customer_id=customer_id,
@@ -168,9 +174,15 @@ class RecommendationRepository:
             """
             MATCH (c:Customer {id: $customer_id})
             MATCH (p:Plant {id: $plant_id})
+            OPTIONAL MATCH (c)-[recommendation:RECOMMENDED]->(p)
             MERGE (c)-[rel:PURCHASES]->(p)
             SET rel.timestamp = datetime($timestamp),
                 rel.quantity = $quantity
+            FOREACH (_ IN CASE WHEN recommendation IS NULL THEN [] ELSE [1] END |
+                SET recommendation.purchased = true,
+                    recommendation.successful = true,
+                    recommendation.purchased_at = datetime($timestamp)
+            )
             RETURN rel
             """,
             customer_id=customer_id,
@@ -265,13 +277,21 @@ class RecommendationRepository:
                 r.id = randomUUID(),
                 r.created_at = datetime(),
                 r.viewed = false,
-                r.purchased = false
+                r.purchased = false,
+                r.successful = false
+            ON MATCH SET
+                r.viewed = coalesce(r.viewed, false),
+                r.purchased = coalesce(r.purchased, false),
+                r.successful = coalesce(r.successful, false)
 
             RETURN
                 r.id AS recommendation_id,
                 popular.id AS id,
                 popular.name AS name,
                 popular.seasonality AS seasonality,
+                r.viewed AS viewed,
+                r.purchased AS purchased,
+                r.successful AS successful,
                 purchase_count AS score
             """,
             customer_id=customer_id,

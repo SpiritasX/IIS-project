@@ -175,7 +175,7 @@ class RecommendationService:
             return session.execute_read(RecommendationRepository.get_trending_seasonal_plants)
 
     @staticmethod
-    def update_recommendation(recommendation_id: int, payload):
+    def update_recommendation(recommendation_id: str, payload):
         with Neo4jDB.driver.session() as session:
             records, summary = session.execute_write(
                 RecommendationRepository.update_recommendation,
@@ -192,4 +192,4 @@ class RecommendationService:
     @staticmethod
     def get_customer_recommendations(customer_id: int):
         with Neo4jDB.driver.session() as session:
-            return session.execute_read(RecommendationRepository.get_customer_recommendations, customer_id)
+            return session.execute_write(RecommendationRepository.get_customer_recommendations, customer_id)

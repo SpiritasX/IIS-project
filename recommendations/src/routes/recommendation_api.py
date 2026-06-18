@@ -66,7 +66,7 @@ def get_general_recommendations():
 
 
 @router.patch("/{recommendation_id}")
-def update_recommendation(recommendation_id: int, payload: RecommendationUpdate):
+def update_recommendation(recommendation_id: str, payload: RecommendationUpdate):
     return RecommendationService.update_recommendation(recommendation_id, payload)
 
 

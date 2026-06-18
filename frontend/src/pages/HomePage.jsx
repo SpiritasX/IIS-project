@@ -9,28 +9,114 @@ import { useAuth } from '../hooks/useAuth'
 import { useCart } from '../hooks/useCart'
 import '../styles/home.css'
 
+const homeSortOptions = [
+  { label: 'Recommended', value: 'recommended' },
+  { label: 'Price', value: 'price' },
+  { label: 'Name', value: 'name' },
+]
+
 function normalizeProduct(product) {
+  const available =
+    typeof product.available === 'boolean'
+      ? product.available
+      : product.availability === undefined
+        ? true
+        : Number(product.availability) > 0
+  const id = String(product.id)
+
   return {
     ...product,
-    available: Boolean(product.available),
-    category: product.category || 'Other',
-    id: String(product.id),
+    available,
+    category: product.category || product.plantTypeName || 'Other',
+    description: product.description || '',
+    id,
     imageAlt: `${product.name} placeholder`,
-    price: Number(product.price),
-    priceId: String(product.priceId),
+    price: Number(product.price || 0),
+    priceId: String(product.priceId || product.id),
+    species: product.species || product.speciesName || '',
+    variety: product.variety || product.varietyName || '',
   }
+}
+
+function includesText(value, searchValue) {
+  return !searchValue || String(value || '').toLowerCase().includes(searchValue)
+}
+
+function optionalIncludesText(value, searchValue) {
+  return !searchValue || !value || String(value).toLowerCase().includes(searchValue)
+}
+
+function sortProducts(products, sort, order) {
+  if (sort === 'recommended') {
+    return products
+  }
+
+  const sortedProducts = [...products].sort((first, second) => {
+    if (sort === 'name') {
+      return first.name.localeCompare(second.name)
+    }
+
+    return first.price - second.price
+  })
+
+  return order === 'desc' ? sortedProducts.reverse() : sortedProducts
+}
+
+function productsForRecommendations(recommendations, productsById, sort, order) {
+  const products = recommendations
+    .map((recommendation) => productsById.get(String(recommendation.id)))
+    .filter(Boolean)
+
+  return sortProducts(products, sort, order)
+}
+
+function RecommendationList({
+  emptyText,
+  loading,
+  onAddToCart,
+  onRemoveFromCart,
+  products,
+  quantities,
+  title,
+  titleId,
+}) {
+  return (
+    <section className="recommendation-section" aria-labelledby={titleId}>
+      <h2 id={titleId}>{title}</h2>
+
+      <div className="recommendation-list">
+        {loading ? (
+          <div className="product-empty">Loading products...</div>
+        ) : products.length > 0 ? (
+          products.map((product) => (
+            <ProductCard
+              key={product.priceId}
+              onAddToCart={onAddToCart}
+              onRemoveFromCart={onRemoveFromCart}
+              product={product}
+              quantity={quantities[product.priceId] || 0}
+            />
+          ))
+        ) : (
+          <div className="product-empty">{emptyText}</div>
+        )}
+      </div>
+    </section>
+  )
 }
 
 function HomePage() {
   const navigate = useNavigate()
   const { logout, user } = useAuth()
   const [catalogProducts, setCatalogProducts] = useState([])
+  const [trendingRecommendations, setTrendingRecommendations] = useState([])
+  const [personalRecommendations, setPersonalRecommendations] = useState([])
   const [loadingProducts, setLoadingProducts] = useState(true)
   const [productError, setProductError] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
   const [filterOpen, setFilterOpen] = useState(false)
   const [category, setCategory] = useState('All')
-  const [sort, setSort] = useState('price')
+  const [sort, setSort] = useState('recommended')
   const [order, setOrder] = useState('asc')
   const [species, setSpecies] = useState('')
   const [variety, setVariety] = useState('')
@@ -46,25 +132,23 @@ function HomePage() {
       setProductError('')
 
       try {
-        const response = await api.get('/search/search/plants', {
-          params: {
-            query: searchTerm || undefined,
-            plant_type: category !== 'All' ? category : undefined,
-            species: species || undefined,
-            variety: variety || undefined,
-            min_price: minPrice || undefined,
-            max_price: maxPrice || undefined,
-            sort_by: sort,
-            order,
-          },
-        })
+        const personalRequest = user?.id
+          ? api.get(`/recommendations/customer/${user.id}`)
+          : Promise.resolve({ data: [] })
+        const [catalogResponse, trendingResponse, personalResponse] = await Promise.all([
+          api.get('/plants'),
+          api.get('/recommendations/'),
+          personalRequest,
+        ])
 
         if (!ignore) {
-          setCatalogProducts(response.data['hits'].map(normalizeProduct))
+          setCatalogProducts(catalogResponse.data.map(normalizeProduct))
+          setTrendingRecommendations(trendingResponse.data)
+          setPersonalRecommendations(personalResponse.data)
         }
       } catch {
         if (!ignore) {
-          setProductError('Unable to load products from the backend.')
+          setProductError('Unable to load recommendations from the backend.')
         }
       } finally {
         if (!ignore) {
@@ -78,14 +162,50 @@ function HomePage() {
     return () => {
       ignore = true
     }
-  }, [searchTerm, category, species, variety, minPrice, maxPrice, sort, order])
+  }, [user?.id])
 
   const categoryOptions = useMemo(() => {
     const categories = catalogProducts.map((product) => product.category).filter(Boolean)
     return ['All', ...new Set(categories)]
   }, [catalogProducts])
 
-  const products = catalogProducts
+  const filteredProductsById = useMemo(() => {
+    const normalizedSearch = searchTerm.trim().toLowerCase()
+    const normalizedSpecies = species.trim().toLowerCase()
+    const normalizedVariety = variety.trim().toLowerCase()
+    const minimumPrice = minPrice === '' ? null : Number(minPrice)
+    const maximumPrice = maxPrice === '' ? null : Number(maxPrice)
+    const filteredProducts = catalogProducts.filter((product) => {
+      const matchesSearch =
+        includesText(product.name, normalizedSearch) ||
+        includesText(product.description, normalizedSearch)
+      const matchesCategory = category === 'All' || product.category === category
+      const matchesSpecies = optionalIncludesText(product.species, normalizedSpecies)
+      const matchesVariety = optionalIncludesText(product.variety, normalizedVariety)
+      const matchesMinimumPrice = minimumPrice === null || product.price >= minimumPrice
+      const matchesMaximumPrice = maximumPrice === null || product.price <= maximumPrice
+
+      return (
+        matchesSearch &&
+        matchesCategory &&
+        matchesSpecies &&
+        matchesVariety &&
+        matchesMinimumPrice &&
+        matchesMaximumPrice
+      )
+    })
+
+    return new Map(filteredProducts.map((product) => [product.id, product]))
+  }, [catalogProducts, category, maxPrice, minPrice, searchTerm, species, variety])
+
+  const trendingProducts = useMemo(
+    () => productsForRecommendations(trendingRecommendations, filteredProductsById, sort, order),
+    [filteredProductsById, order, sort, trendingRecommendations],
+  )
+  const personalProducts = useMemo(
+    () => productsForRecommendations(personalRecommendations, filteredProductsById, sort, order),
+    [filteredProductsById, order, personalRecommendations, sort],
+  )
 
   async function handleBack() {
     await logout()
@@ -94,7 +214,7 @@ function HomePage() {
 
   function handleResetFilters() {
     setCategory('All')
-    setSort('price')
+    setSort('recommended')
     setOrder('asc')
     setSpecies('')
     setVariety('')
@@ -145,6 +265,7 @@ function HomePage() {
         onToggleFilter={() => setFilterOpen((current) => !current)}
         searchTerm={searchTerm}
         sort={sort}
+        sortOptions={homeSortOptions}
         order={order}
         species={species}
         variety={variety}
@@ -157,23 +278,32 @@ function HomePage() {
       <section className="home-body">
         <UserSidebar />
 
-        <div className="product-list" aria-live="polite">
-          {loadingProducts ? (
-            <div className="product-empty">Loading products...</div>
-          ) : productError ? (
-            <div className="product-empty">{productError}</div>
-          ) : products.length > 0 ? (
-            products.map((product) => (
-              <ProductCard
-                key={product.priceId}
+        <div className="recommendation-columns" aria-live="polite">
+          {productError ? (
+            <div className="product-empty recommendation-grid-message">{productError}</div>
+          ) : (
+            <>
+              <RecommendationList
+                emptyText="No trending plants match your filters."
+                loading={loadingProducts}
                 onAddToCart={addToCart}
                 onRemoveFromCart={removeFromCart}
-                product={product}
-                quantity={cartItems[product.priceId] || 0}
+                products={trendingProducts}
+                quantities={cartItems}
+                title="Trending and seasonal plants"
+                titleId="trending-plants-title"
               />
-            ))
-          ) : (
-            <div className="product-empty">No products match your filters.</div>
+              <RecommendationList
+                emptyText="No personal recommendations match your filters."
+                loading={loadingProducts}
+                onAddToCart={addToCart}
+                onRemoveFromCart={removeFromCart}
+                products={personalProducts}
+                quantities={cartItems}
+                title="Personal recommendations"
+                titleId="personal-recommendations-title"
+              />
+            </>
           )}
         </div>
       </section>
