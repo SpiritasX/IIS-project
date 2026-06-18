@@ -26,16 +26,20 @@ class RecommendationRepository:
         return result.consume()
 
     @staticmethod
-    def create_plant(tx, plant_id: int, name: str):
+    def create_plant(tx, plant_id: int, name: str, plant_variety_id: int):
         result = tx.run(
             """
             MERGE (p:Plant {id: $plant_id})
             ON CREATE SET p.name = $name
             ON MATCH SET p.name = $name
+            WITH p
+            MATCH (pv:PlantVariety {id: $plant_variety_id})
+            MERGE (p)-[:PLANT_VARIETY]->(pv)
             RETURN p
             """,
             plant_id=plant_id,
             name=name,
+            plant_variety_id=plant_variety_id,
         )
         return result.data(), result.consume()
 
@@ -187,36 +191,31 @@ class RecommendationRepository:
                 END
             })
 
-            CALL {
-                WITH p
+            CALL (p) {
                 OPTIONAL MATCH ()-[v_recent:VIEWED]->(p)
-                WHERE v_recent.timestamp >= datetime() - duration('P30D')
+                WHERE v_recent.updated_at >= datetime() - duration('P30D')
                 RETURN coalesce(sum(v_recent.count), 0) AS recent_views
             }
 
-            CALL {
-                WITH p
+            CALL (p) {
                 OPTIONAL MATCH ()-[v_prev:VIEWED]->(p)
-                WHERE v_prev.timestamp >= datetime() - duration('P60D')
-                  AND v_prev.timestamp < datetime() - duration('P30D')
+                WHERE v_prev.updated_at >= datetime() - duration('P60D')
+                  AND v_prev.updated_at < datetime() - duration('P30D')
                 RETURN coalesce(sum(v_prev.count), 0) AS prev_views
             }
 
-            CALL {
-                WITH p
+            CALL (p) {
                 OPTIONAL MATCH ()-[l:LIKED]->(p)
                 RETURN coalesce(count(DISTINCT l), 0) AS likes
             }
 
-            CALL {
-                WITH p
+            CALL (p) {
                 OPTIONAL MATCH ()-[p_recent:PURCHASES]->(p)
                 WHERE p_recent.timestamp >= datetime() - duration('P30D')
                 RETURN coalesce(sum(p_recent.quantity), 0) AS recent_purchases
             }
 
-            CALL {
-                WITH p
+            CALL (p) {
                 OPTIONAL MATCH ()-[p_prev:PURCHASES]->(p)
                 WHERE p_prev.timestamp >= datetime() - duration('P60D')
                   AND p_prev.timestamp < datetime() - duration('P30D')

@@ -18,6 +18,7 @@ class CustomerCreate(BaseModel):
 class PlantCreate(BaseModel):
     id: int
     name: str
+    plant_variety_id: int
 
 class PlantVarietyCreate(BaseModel):
     id: int

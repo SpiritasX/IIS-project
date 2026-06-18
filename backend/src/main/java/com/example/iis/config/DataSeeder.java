@@ -197,7 +197,7 @@ public class DataSeeder {
             BigDecimal price
     ) {
         Plant savedPlant = plantRepository.save(plant);
-        recommendationClient.createPlant(savedPlant.getId(), savedPlant.getName());
+        recommendationClient.createPlant(savedPlant.getId(), savedPlant.getName(), savedPlant.getVariety().getId());
         plantPriceRepository.save(new PlantPrice(price, savedPlant));
         searchClient.createPlant(
                 savedPlant.getId(),

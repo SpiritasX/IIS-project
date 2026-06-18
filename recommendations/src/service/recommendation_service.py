@@ -100,6 +100,7 @@ class RecommendationService:
                 RecommendationRepository.create_plant,
                 payload.id,
                 payload.name,
+                payload.plant_variety_id,
             )
 
         if not records:
