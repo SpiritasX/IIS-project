@@ -1,6 +1,7 @@
 import ImageOutlinedIcon from '@mui/icons-material/ImageOutlined'
 
-function CheckoutProductCard({ product, quantity }) {
+function CheckoutProductCard({ disabled, onAdd, onRemove, product, quantity }) {
+  const canAdd = product.available && quantity < product.availableQuantity && !disabled
   const displayPrice = Math.round(product.price / 100)
 
   return (
@@ -14,6 +15,29 @@ function CheckoutProductCard({ product, quantity }) {
         <strong>${displayPrice}</strong>
         {quantity > 1 ? <em>x{quantity}</em> : null}
       </p>
+      <div className="checkout-quantity-control" aria-label={`${product.name} quantity`}>
+        <button
+          aria-label={`Remove one ${product.name}`}
+          className="checkout-quantity-button"
+          disabled={disabled}
+          onClick={() => onRemove(product.priceId)}
+          type="button"
+        >
+          -
+        </button>
+        <span className="checkout-quantity-value" aria-live="polite">
+          {quantity}
+        </span>
+        <button
+          aria-label={`Add one more ${product.name}`}
+          className="checkout-quantity-button"
+          disabled={!canAdd}
+          onClick={() => onAdd(product.priceId)}
+          type="button"
+        >
+          +
+        </button>
+      </div>
     </article>
   )
 }

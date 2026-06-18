@@ -9,6 +9,7 @@ import ProfilePage from './pages/ProfilePage'
 import RequestsPage from './pages/RequestsPage'
 import RoleDashboardPage from './pages/RoleDashboardPage'
 import SignUpPage from './pages/SignUpPage'
+import StaffRequestsPage from './pages/StaffRequestsPage'
 
 function App() {
   return (
@@ -55,6 +56,7 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['ADMIN']}>
                 <RoleDashboardPage
+                  actions={[{ label: 'Requests', path: '/admin/requests' }]}
                   subtitle="Customer management and process dashboards will be added in the next parts."
                   title="Admin dashboard"
                 />
@@ -77,8 +79,35 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['WORKER']}>
                 <RoleDashboardPage
+                  actions={[{ label: 'Requests', path: '/worker/requests' }]}
                   subtitle="Sales process operations will be connected here in the workflow part."
                   title="Worker dashboard"
+                />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/requests"
+            element={
+              <ProtectedRoute allowedRoles={['ADMIN']}>
+                <StaffRequestsPage
+                  backPath="/admin"
+                  emptyMessage="No requests found."
+                  title="Admin Requests"
+                  variant="admin"
+                />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/worker/requests"
+            element={
+              <ProtectedRoute allowedRoles={['WORKER']}>
+                <StaffRequestsPage
+                  backPath="/worker"
+                  emptyMessage="No reservations are ready for worker action."
+                  title="Worker Requests"
+                  variant="worker"
                 />
               </ProtectedRoute>
             }

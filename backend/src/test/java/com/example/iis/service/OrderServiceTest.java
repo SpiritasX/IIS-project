@@ -118,7 +118,8 @@ class OrderServiceTest {
 
         var response = orderService.createOrder(7L, new CreateOrderRequest(
                 "Main Street 1",
-                List.of(new OrderItemRequest(10L, 3))
+                List.of(new OrderItemRequest(10L, 3)),
+                false
         ));
 
         assertEquals("Main Street 1", customer.getAddress());
@@ -153,9 +154,105 @@ class OrderServiceTest {
                 ResponseStatusException.class,
                 () -> orderService.createOrder(7L, new CreateOrderRequest(
                         "Main Street 1",
-                        List.of(new OrderItemRequest(10L, 3))
+                        List.of(new OrderItemRequest(10L, 3)),
+                        false
                 ))
         );
+    }
+
+    @Test
+    void createOrderAutoAcceptsUnchangedOfferAndReservesStock() {
+        Customer customer = new Customer("user", "password", "User", "Customer", "user@example.com");
+        PlantPrice plantPrice = plantPrice();
+        RelocationHistory history = new RelocationHistory("Initial stock", plantPrice.getPlant(), null, 3L);
+        RelocationHistoryRepository.PlantStockView stock = mock(RelocationHistoryRepository.PlantStockView.class);
+
+        when(customerRepository.findById(7L)).thenReturn(Optional.of(customer));
+        when(plantPriceRepository.findById(10L)).thenReturn(Optional.of(plantPrice));
+        when(relocationHistoryRepository.findActiveStockByPlantIds(List.of(5L))).thenReturn(List.of(stock));
+        when(stock.getPlantId()).thenReturn(5L);
+        when(stock.getAvailableQuantity()).thenReturn(3L);
+        when(offerStatusRepository.findByName("Ponuda")).thenReturn(Optional.of(new OfferStatus("Ponuda")));
+        when(offerStatusRepository.findByName("Rezervacija")).thenReturn(Optional.of(new OfferStatus("Rezervacija")));
+        when(phaseTypeRepository.findByName("Ponuda")).thenReturn(Optional.of(new PhaseType("Ponuda")));
+        when(phaseTypeRepository.findByName("Rezervacija")).thenReturn(Optional.of(new PhaseType("Rezervacija")));
+        when(relocationHistoryRepository.findByPlant_IdAndEndTimeIsNullOrderByStartTimeAsc(5L))
+                .thenReturn(List.of(history));
+        when(offerRepository.save(any(Offer.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(processRepository.save(any(Process.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        var response = orderService.createOrder(7L, new CreateOrderRequest(
+                "Main Street 1",
+                List.of(new OrderItemRequest(10L, 3)),
+                true
+        ));
+
+        assertEquals("Rezervacija", response.status());
+        assertEquals("Rezervacija", response.currentPhase());
+        assertEquals(3, response.items().get(0).reservedQuantity());
+        assertEquals(0L, history.getInStock());
+        verify(stockReservationRepository).save(any());
+    }
+
+    @Test
+    void createOrderDoesNotAutoAcceptAdjustedOffer() {
+        Customer customer = new Customer("user", "password", "User", "Customer", "user@example.com");
+        PlantPrice plantPrice = plantPrice();
+        RelocationHistoryRepository.PlantStockView stock = mock(RelocationHistoryRepository.PlantStockView.class);
+
+        when(customerRepository.findById(7L)).thenReturn(Optional.of(customer));
+        when(plantPriceRepository.findById(10L)).thenReturn(Optional.of(plantPrice));
+        when(relocationHistoryRepository.findActiveStockByPlantIds(List.of(5L))).thenReturn(List.of(stock));
+        when(stock.getPlantId()).thenReturn(5L);
+        when(stock.getAvailableQuantity()).thenReturn(2L);
+        when(offerStatusRepository.findByName("Ponuda")).thenReturn(Optional.of(new OfferStatus("Ponuda")));
+        when(phaseTypeRepository.findByName("Ponuda")).thenReturn(Optional.of(new PhaseType("Ponuda")));
+        when(offerRepository.save(any(Offer.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(processRepository.save(any(Process.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        var response = orderService.createOrder(7L, new CreateOrderRequest(
+                "Main Street 1",
+                List.of(new OrderItemRequest(10L, 3)),
+                true
+        ));
+
+        assertEquals("Ponuda", response.status());
+        assertEquals("Ponuda", response.currentPhase());
+        assertEquals(3, response.items().get(0).requestedQuantity());
+        assertEquals(2, response.items().get(0).offeredQuantity());
+        assertEquals(0, response.items().get(0).reservedQuantity());
+        verify(stockReservationRepository, never()).save(any());
+    }
+
+    @Test
+    void createOrderAutoAcceptReturnsConflictWhenReservationStockDisappears() {
+        Customer customer = new Customer("user", "password", "User", "Customer", "user@example.com");
+        PlantPrice plantPrice = plantPrice();
+        RelocationHistoryRepository.PlantStockView stock = mock(RelocationHistoryRepository.PlantStockView.class);
+
+        when(customerRepository.findById(7L)).thenReturn(Optional.of(customer));
+        when(plantPriceRepository.findById(10L)).thenReturn(Optional.of(plantPrice));
+        when(relocationHistoryRepository.findActiveStockByPlantIds(List.of(5L))).thenReturn(List.of(stock));
+        when(stock.getPlantId()).thenReturn(5L);
+        when(stock.getAvailableQuantity()).thenReturn(3L);
+        when(offerStatusRepository.findByName("Ponuda")).thenReturn(Optional.of(new OfferStatus("Ponuda")));
+        when(phaseTypeRepository.findByName("Ponuda")).thenReturn(Optional.of(new PhaseType("Ponuda")));
+        when(relocationHistoryRepository.findByPlant_IdAndEndTimeIsNullOrderByStartTimeAsc(5L))
+                .thenReturn(List.of());
+        when(offerRepository.save(any(Offer.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(processRepository.save(any(Process.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> orderService.createOrder(7L, new CreateOrderRequest(
+                        "Main Street 1",
+                        List.of(new OrderItemRequest(10L, 3)),
+                        true
+                ))
+        );
+
+        assertEquals(HttpStatus.CONFLICT, exception.getStatusCode());
+        verify(stockReservationRepository, never()).save(any());
     }
 
     @Test
@@ -268,7 +365,49 @@ class OrderServiceTest {
     }
 
     @Test
-    void staffTransitionsReservationThroughDeliveryCompletion() {
+    void workerListOnlyReturnsReservationAndReadyProcesses() {
+        Customer customer = customer();
+        PlantPrice plantPrice = plantPrice();
+        Process offerProcess = process(customer, offer("Ponuda", plantPrice, 1, 1, 0), "Ponuda");
+        Process reservationProcess = process(customer, offer("Rezervacija", plantPrice, 1, 1, 1), "Rezervacija");
+        Process readyProcess = process(customer, offer("Spremno", plantPrice, 1, 1, 1), "Spremno");
+        Process deliveryProcess = process(customer, offer("Isporuka", plantPrice, 1, 1, 1), "Isporuka");
+
+        when(processRepository.findAllByOrderByStartTimeDesc()).thenReturn(List.of(
+                offerProcess,
+                reservationProcess,
+                readyProcess,
+                deliveryProcess
+        ));
+
+        var response = orderService.getStaffProcesses("WORKER");
+
+        assertEquals(2, response.size());
+        assertEquals(List.of("Rezervacija", "Spremno"), response.stream().map(item -> item.currentPhase()).toList());
+    }
+
+    @Test
+    void adminListReturnsAllProcesses() {
+        Customer customer = customer();
+        PlantPrice plantPrice = plantPrice();
+        Process offerProcess = process(customer, offer("Ponuda", plantPrice, 1, 1, 0), "Ponuda");
+        Process reservationProcess = process(customer, offer("Rezervacija", plantPrice, 1, 1, 1), "Rezervacija");
+        Process deliveryProcess = process(customer, offer("Isporuka", plantPrice, 1, 1, 1), "Isporuka");
+
+        when(processRepository.findAllByOrderByStartTimeDesc()).thenReturn(List.of(
+                offerProcess,
+                reservationProcess,
+                deliveryProcess
+        ));
+
+        var response = orderService.getStaffProcesses("ADMIN");
+
+        assertEquals(3, response.size());
+        assertEquals(List.of("Ponuda", "Rezervacija", "Isporuka"), response.stream().map(item -> item.currentPhase()).toList());
+    }
+
+    @Test
+    void workerTransitionsReservationToReadyThenDelivery() {
         Customer customer = customer();
         PlantPrice plantPrice = plantPrice();
         Offer offer = offer("Rezervacija", plantPrice, 3, 3, 3);
@@ -277,24 +416,63 @@ class OrderServiceTest {
 
         when(processRepository.findById(30L)).thenReturn(Optional.of(process));
 
-        var ready = orderService.transitionStaffProcess(30L, new StaffTransitionRequest("MARK_READY"));
+        var ready = orderService.transitionStaffProcess(30L, new StaffTransitionRequest("MARK_READY"), "WORKER");
         assertEquals("Spremno", ready.status());
         assertEquals("Spremno", ready.currentPhase());
         assertEquals(List.of("START_DELIVERY", "CANCEL"), ready.allowedActions());
 
-        var delivery = orderService.transitionStaffProcess(30L, new StaffTransitionRequest("START_DELIVERY"));
+        var delivery = orderService.transitionStaffProcess(30L, new StaffTransitionRequest("START_DELIVERY"), "WORKER");
         assertEquals("Isporuka", delivery.status());
         assertEquals("Isporuka", delivery.currentPhase());
-        assertEquals(List.of("COMPLETE_DELIVERY"), delivery.allowedActions());
-
-        var delivered = orderService.transitionStaffProcess(30L, new StaffTransitionRequest("COMPLETE_DELIVERY"));
-        assertEquals("Isporuceno", delivered.status());
-        assertEquals(null, delivered.currentPhase());
-        assertNotNull(process.getEndTime());
+        assertEquals(List.of(), delivery.allowedActions());
     }
 
     @Test
-    void staffCancelReadyProcessRestoresReservedStock() {
+    void adminCannotPerformWorkerTransitions() {
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> orderService.transitionStaffProcess(30L, new StaffTransitionRequest("MARK_READY"), "ADMIN")
+        );
+
+        assertEquals(HttpStatus.FORBIDDEN, exception.getStatusCode());
+    }
+
+    @Test
+    void adminCanCancelOfferReservationAndReadyProcesses() {
+        Customer customer = customer();
+        PlantPrice plantPrice = plantPrice();
+        Process offerProcess = process(customer, offer("Ponuda", plantPrice, 3, 3, 0), "Ponuda");
+        Process reservationProcess = process(customer, offer("Rezervacija", plantPrice, 3, 3, 3), "Rezervacija");
+        Process readyProcess = process(customer, offer("Spremno", plantPrice, 3, 3, 3), "Spremno");
+
+        when(processRepository.findById(30L))
+                .thenReturn(Optional.of(offerProcess))
+                .thenReturn(Optional.of(reservationProcess))
+                .thenReturn(Optional.of(readyProcess));
+        when(stockReservationRepository.findByOrderItem_Offer_Id(20L)).thenReturn(List.of());
+        when(cancellationReasonRepository.findByName("Staff cancellation"))
+                .thenReturn(Optional.of(new CancellationReason("Staff cancellation")));
+        when(offerStatusRepository.findByName("Otkazano")).thenReturn(Optional.of(new OfferStatus("Otkazano")));
+
+        assertEquals("Otkazano", orderService.cancelStaffProcess(
+                30L,
+                new CancelRequest("Offer cancelled"),
+                "ADMIN"
+        ).status());
+        assertEquals("Otkazano", orderService.cancelStaffProcess(
+                30L,
+                new CancelRequest("Reservation cancelled"),
+                "ADMIN"
+        ).status());
+        assertEquals("Otkazano", orderService.cancelStaffProcess(
+                30L,
+                new CancelRequest("Ready cancelled"),
+                "ADMIN"
+        ).status());
+    }
+
+    @Test
+    void workerCancelReadyProcessRestoresReservedStock() {
         Customer customer = customer();
         PlantPrice plantPrice = plantPrice();
         Offer offer = offer("Spremno", plantPrice, 3, 3, 3);
@@ -309,13 +487,29 @@ class OrderServiceTest {
                 .thenReturn(Optional.of(new CancellationReason("Staff cancellation")));
         when(offerStatusRepository.findByName("Otkazano")).thenReturn(Optional.of(new OfferStatus("Otkazano")));
 
-        var response = orderService.cancelStaffProcess(30L, new CancelRequest("Damaged plants"));
+        var response = orderService.cancelStaffProcess(30L, new CancelRequest("Damaged plants"), "WORKER");
 
         assertEquals("Otkazano", response.status());
         assertEquals(null, response.currentPhase());
         assertEquals(4L, history.getInStock());
         assertEquals(0, item.getQuantity());
         assertEquals("Damaged plants", process.getPhases().get(0).getCancellation().getReason());
+    }
+
+    @Test
+    void workerCannotCancelOfferPhaseProcess() {
+        Customer customer = customer();
+        PlantPrice plantPrice = plantPrice();
+        Process process = process(customer, offer("Ponuda", plantPrice, 3, 3, 0), "Ponuda");
+
+        when(processRepository.findById(30L)).thenReturn(Optional.of(process));
+
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> orderService.cancelStaffProcess(30L, new CancelRequest("Cannot prepare"), "WORKER")
+        );
+
+        assertEquals(HttpStatus.FORBIDDEN, exception.getStatusCode());
     }
 
     @Test
@@ -345,7 +539,9 @@ class OrderServiceTest {
         PlantVariety variety = new PlantVariety("English lavender", 45.0, "Soil", "Sun", species);
         Plant plant = new Plant("Lavender starter", "Hardy lavender", "Cuttings", "Available", variety);
         ReflectionTestUtils.setField(plant, "id", 5L);
-        return new PlantPrice(new BigDecimal("1000"), plant);
+        PlantPrice plantPrice = new PlantPrice(new BigDecimal("1000"), plant);
+        ReflectionTestUtils.setField(plantPrice, "id", 10L);
+        return plantPrice;
     }
 
     private Customer customer() {

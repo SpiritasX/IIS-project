@@ -67,6 +67,8 @@ public class OrderService {
 
     private static final String CUSTOMER_CANCELLATION_REASON = "Customer cancellation";
     private static final String STAFF_CANCELLATION_REASON = "Staff cancellation";
+    private static final String ROLE_ADMIN = "ADMIN";
+    private static final String ROLE_WORKER = "WORKER";
 
     private final CancellationReasonRepository cancellationReasonRepository;
     private final CustomerRepository customerRepository;
@@ -144,6 +146,13 @@ public class OrderService {
         Process process = new Process(customer);
         process.addPhase(new Phase(process, offerPhaseType, savedOffer));
         processRepository.save(process);
+
+        if (Boolean.TRUE.equals(request.autoAcceptIfUnchanged()) && offerMatchesRequest(savedOffer, requestedQuantities)) {
+            reserveStock(savedOffer);
+            finishCurrentPhase(process);
+            savedOffer.setStatus(status(STATUS_RESERVATION));
+            process.addPhase(new Phase(process, phaseType(PHASE_RESERVATION), savedOffer));
+        }
 
         return toResponse(savedOffer, process);
     }
@@ -223,7 +232,7 @@ public class OrderService {
         expireIfNeeded(offer, process);
 
         String currentPhase = currentPhaseName(process);
-        if (!Set.of(PHASE_OFFER, PHASE_RESERVATION).contains(currentPhase)) {
+        if (currentPhase == null || !Set.of(PHASE_OFFER, PHASE_RESERVATION).contains(currentPhase)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Process cannot be cancelled in this phase");
         }
 
@@ -232,31 +241,51 @@ public class OrderService {
     }
 
     @Transactional
-    public List<StaffProcessResponse> getStaffProcesses() {
+    public List<StaffProcessResponse> getStaffProcesses(String role) {
+        String staffRole = staffRole(role);
+
         return processRepository.findAllByOrderByStartTimeDesc()
                 .stream()
                 .map(process -> {
                     Offer offer = offerForProcess(process);
                     expireIfNeeded(offer, process);
-                    return toStaffResponse(process);
+                    return process;
                 })
+                .filter(process -> canViewStaffProcess(process, staffRole))
+                .map(process -> toStaffResponse(process, staffRole))
                 .toList();
     }
 
     @Transactional
-    public StaffProcessResponse getStaffProcess(Long processId) {
+    public StaffProcessResponse getStaffProcess(Long processId, String role) {
+        String staffRole = staffRole(role);
         Process process = processRepository.findById(processId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Process not found"));
         expireIfNeeded(offerForProcess(process), process);
-        return toStaffResponse(process);
+
+        if (!canViewStaffProcess(process, staffRole)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Process is not available for this role");
+        }
+
+        return toStaffResponse(process, staffRole);
     }
 
     @Transactional
-    public StaffProcessResponse transitionStaffProcess(Long processId, StaffTransitionRequest request) {
+    public StaffProcessResponse transitionStaffProcess(Long processId, StaffTransitionRequest request, String role) {
+        String staffRole = staffRole(role);
+
+        if (!ROLE_WORKER.equals(staffRole)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only workers can transition processes");
+        }
+
         Process process = processRepository.findById(processId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Process not found"));
         Offer offer = offerForProcess(process);
         expireIfNeeded(offer, process);
+
+        if (!canViewStaffProcess(process, staffRole)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Process is not available for this role");
+        }
 
         String action = requireText(request == null ? null : request.action(), "Action is required");
         String currentPhase = currentPhaseName(process);
@@ -265,31 +294,32 @@ public class OrderService {
             transition(process, offer, STATUS_READY, PHASE_READY);
         } else if ("START_DELIVERY".equals(action) && PHASE_READY.equals(currentPhase)) {
             transition(process, offer, STATUS_DELIVERY, PHASE_DELIVERY);
-        } else if ("COMPLETE_DELIVERY".equals(action) && PHASE_DELIVERY.equals(currentPhase)) {
-            offer.setStatus(status(STATUS_DELIVERED));
-            finishCurrentPhase(process);
-            process.finish();
         } else {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid process transition");
         }
 
-        return toStaffResponse(process);
+        return toStaffResponse(process, staffRole);
     }
 
     @Transactional
-    public StaffProcessResponse cancelStaffProcess(Long processId, CancelRequest request) {
+    public StaffProcessResponse cancelStaffProcess(Long processId, CancelRequest request, String role) {
+        String staffRole = staffRole(role);
         Process process = processRepository.findById(processId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Process not found"));
         Offer offer = offerForProcess(process);
         expireIfNeeded(offer, process);
 
+        if (!canViewStaffProcess(process, staffRole)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Process is not available for this role");
+        }
+
         String currentPhase = currentPhaseName(process);
-        if (!Set.of(PHASE_OFFER, PHASE_RESERVATION, PHASE_READY).contains(currentPhase)) {
+        if (!canCancelStaffProcess(staffRole, currentPhase)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Process cannot be cancelled in this phase");
         }
 
         cancelProcess(offer, process, request == null ? null : request.reason(), STAFF_CANCELLATION_REASON);
-        return toStaffResponse(process);
+        return toStaffResponse(process, staffRole);
     }
 
     private void transition(Process process, Offer offer, String nextStatus, String nextPhase) {
@@ -375,6 +405,23 @@ public class OrderService {
 
             item.setQuantity(offeredQuantity(item));
         }
+    }
+
+    private boolean offerMatchesRequest(Offer offer, Map<Long, Integer> requestedQuantities) {
+        if (offer.getItems().size() != requestedQuantities.size()) {
+            return false;
+        }
+
+        for (OrderItem item : offer.getItems()) {
+            Long priceId = item.getPlantPrice().getId();
+            Integer requestedQuantity = requestedQuantities.get(priceId);
+
+            if (requestedQuantity == null || !requestedQuantity.equals(offeredQuantity(item))) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private void restoreReservedStock(Offer offer) {
@@ -542,7 +589,7 @@ public class OrderService {
         );
     }
 
-    private StaffProcessResponse toStaffResponse(Process process) {
+    private StaffProcessResponse toStaffResponse(Process process, String role) {
         Offer offer = offerForProcess(process);
         List<OrderItemResponse> items = itemResponsesFor(offer);
         Customer customer = process.getCustomer();
@@ -561,7 +608,7 @@ public class OrderService {
                 totalFor(items),
                 items,
                 phaseHistoryFor(process),
-                staffAllowedActions(process)
+                staffAllowedActions(process, role)
         );
     }
 
@@ -645,10 +692,18 @@ public class OrderService {
         );
     }
 
-    private List<String> staffAllowedActions(Process process) {
+    private List<String> staffAllowedActions(Process process, String role) {
         String currentPhase = currentPhaseName(process);
 
         if (currentPhase == null) {
+            return List.of();
+        }
+
+        if (ROLE_ADMIN.equals(role)) {
+            return canCancelStaffProcess(role, currentPhase) ? List.of("CANCEL") : List.of();
+        }
+
+        if (!ROLE_WORKER.equals(role)) {
             return List.of();
         }
 
@@ -658,15 +713,50 @@ public class OrderService {
             actions.add("MARK_READY");
         } else if (PHASE_READY.equals(currentPhase)) {
             actions.add("START_DELIVERY");
-        } else if (PHASE_DELIVERY.equals(currentPhase)) {
-            actions.add("COMPLETE_DELIVERY");
         }
 
-        if (Set.of(PHASE_OFFER, PHASE_RESERVATION, PHASE_READY).contains(currentPhase)) {
+        if (canCancelStaffProcess(role, currentPhase)) {
             actions.add("CANCEL");
         }
 
         return actions;
+    }
+
+    private boolean canViewStaffProcess(Process process, String role) {
+        if (ROLE_ADMIN.equals(role)) {
+            return true;
+        }
+
+        if (!ROLE_WORKER.equals(role)) {
+            return false;
+        }
+
+        String currentPhase = currentPhaseName(process);
+        return Set.of(PHASE_RESERVATION, PHASE_READY).contains(currentPhase);
+    }
+
+    private boolean canCancelStaffProcess(String role, String currentPhase) {
+        if (currentPhase == null) {
+            return false;
+        }
+
+        if (ROLE_ADMIN.equals(role)) {
+            return Set.of(PHASE_OFFER, PHASE_RESERVATION, PHASE_READY).contains(currentPhase);
+        }
+
+        if (ROLE_WORKER.equals(role)) {
+            return Set.of(PHASE_RESERVATION, PHASE_READY).contains(currentPhase);
+        }
+
+        return false;
+    }
+
+    private String staffRole(String role) {
+        if (ROLE_ADMIN.equals(role) || ROLE_WORKER.equals(role)) {
+            return role;
+        }
+
+        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Staff process access is not available for this role");
     }
 
     private boolean canCustomerAccept(Offer offer, Process process) {

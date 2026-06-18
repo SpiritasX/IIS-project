@@ -26,7 +26,7 @@
 }
 
 .checkout-product-grid {
-  --checkout-card-row-height: 336px;
+  --checkout-card-row-height: 374px;
 
   display: grid;
   gap: 38px;
@@ -114,6 +114,49 @@
   font-style: normal;
   font-weight: 700;
   margin-left: auto;
+}
+
+.checkout-quantity-control {
+  align-items: center;
+  background: var(--color-primary);
+  border-radius: var(--radius-pill);
+  color: var(--color-secondary);
+  display: grid;
+  grid-template-columns: 36px minmax(36px, 1fr) 36px;
+  height: 42px;
+  margin-top: 14px;
+  padding: 0 10px;
+}
+
+.checkout-quantity-button {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: var(--color-secondary);
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-size: 24px;
+  font-weight: 700;
+  height: 34px;
+  justify-content: center;
+  padding: 0;
+}
+
+.checkout-quantity-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.checkout-quantity-button:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 3px;
+}
+
+.checkout-quantity-value {
+  font-size: 19px;
+  font-weight: 700;
+  text-align: center;
 }
 
 .checkout-down-cue {
@@ -361,6 +404,118 @@
   text-align: center;
 }
 
+.offer-review {
+  background: var(--color-surface);
+  border-radius: var(--radius-surface);
+  box-shadow: var(--shadow-surface);
+  padding: 38px 46px;
+}
+
+.offer-review-eyebrow {
+  color: var(--color-primary);
+  font-size: 18px;
+  font-weight: 800;
+  margin: 0 0 8px;
+  text-transform: uppercase;
+}
+
+.offer-review h2 {
+  font-size: clamp(34px, 5vw, 54px);
+  margin-bottom: 12px;
+}
+
+.offer-review p {
+  color: var(--color-text-secondary);
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0 0 22px;
+}
+
+.offer-review-items {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 24px 0;
+}
+
+.offer-review-item {
+  background: var(--color-page);
+  border: 1px solid rgba(34, 82, 58, 0.24);
+  border-radius: 16px;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 16px 18px;
+}
+
+.offer-review-item strong,
+.offer-review-item span,
+.offer-review-item em {
+  color: var(--color-text);
+  font-size: 19px;
+}
+
+.offer-review-item em {
+  color: var(--color-danger);
+  font-style: normal;
+  font-weight: 800;
+}
+
+.offer-review-total {
+  color: var(--color-text);
+  display: block;
+  font-size: 24px;
+  margin-top: 18px;
+}
+
+.offer-review-actions,
+.offer-cancel-form {
+  margin-top: 26px;
+}
+
+.offer-cancel-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.offer-cancel-form label {
+  color: var(--color-text);
+  display: flex;
+  flex-direction: column;
+  font-size: 20px;
+  font-weight: 700;
+  gap: 8px;
+}
+
+.offer-cancel-form textarea {
+  background: var(--color-page);
+  border: 1px solid var(--color-primary);
+  border-radius: 16px;
+  color: var(--color-text);
+  font-size: 18px;
+  min-height: 92px;
+  padding: 12px;
+  resize: vertical;
+}
+
+.offer-cancel-button {
+  align-self: flex-start;
+  background: transparent;
+  border: 0;
+  color: var(--color-danger);
+  cursor: pointer;
+  font: inherit;
+  font-size: 19px;
+  font-weight: 800;
+  padding: 0;
+}
+
+.offer-cancel-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 @media (max-width: 1280px) {
   .checkout-product-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -427,6 +582,25 @@
   padding: 0 34px;
 }
 
+.adjusted-offer-modal {
+  max-width: 640px;
+  width: min(100%, 640px);
+}
+
+.adjusted-offer-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 4px 0 24px;
+  width: 100%;
+}
+
+.adjusted-offer-list span {
+  color: var(--color-text);
+  font-size: 19px;
+  font-weight: 700;
+}
+
 .order-modal-button:focus-visible {
   outline: var(--focus-ring);
   outline-offset: 3px;
@@ -474,6 +648,15 @@
 
   .checkout-order-button {
     width: min(280px, 100%);
+  }
+
+  .offer-review {
+    border-radius: 34px;
+    padding: 28px 22px;
+  }
+
+  .offer-review-item {
+    grid-template-columns: 1fr;
   }
 
   .address-modal {
