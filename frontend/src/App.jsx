@@ -5,6 +5,7 @@ import CartProvider from './contexts/CartProvider'
 import CartPage from './pages/CartPage'
 import HomePage from './pages/HomePage'
 import LoginPage from './pages/LoginPage'
+import OrderPlannerPage from './pages/OrderPlannerPage'
 import PlantViewPage from './pages/PlantViewPage'
 import ProfilePage from './pages/ProfilePage'
 import RequestsPage from './pages/RequestsPage'
@@ -24,6 +25,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <HomePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/planner"
+            element={
+              <ProtectedRoute>
+                <OrderPlannerPage />
               </ProtectedRoute>
             }
           />
