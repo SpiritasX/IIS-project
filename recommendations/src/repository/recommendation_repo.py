@@ -117,8 +117,17 @@ class RecommendationRepository:
             """
             MATCH (c:Customer {id: $customer_id})
             MATCH (p:Plant {id: $plant_id})
+            OPTIONAL MATCH (c)-[recommendation:RECOMMENDED]->(p)
+    
             MERGE (c)-[rel:LIKED]->(p)
             ON CREATE SET rel.timestamp = datetime($timestamp)
+    
+            FOREACH (_ IN CASE WHEN recommendation IS NULL THEN [] ELSE [1] END |
+                SET recommendation.liked = true,
+                    recommendation.successful = true,
+                    recommendation.liked_at = datetime($timestamp)
+            )
+    
             RETURN rel
             """,
             customer_id=customer_id,
@@ -260,39 +269,225 @@ class RecommendationRepository:
         result = tx.run(
             """
             MATCH (c:Customer {id: $customer_id})
-
-            OPTIONAL MATCH (c)-[:PURCHASES]->(bought:Plant)
-            WITH c, collect(DISTINCT bought) AS bought_plants
-
-            MATCH (popular:Plant)
-            WHERE NOT popular IN bought_plants
-
-            OPTIONAL MATCH (:Customer)-[pur:PURCHASES]->(popular)
-            WITH c, popular, count(pur) AS purchase_count
-            ORDER BY purchase_count DESC, popular.id ASC
+    
+            CALL (c) {
+                OPTIONAL MATCH (c)-[v:VIEWED]->(viewed:Plant)
+                RETURN
+                    collect(
+                        CASE
+                            WHEN v IS NULL THEN NULL
+                            ELSE {
+                                plant: viewed,
+                                weight: toFloat(coalesce(v.count, 1)) * 1.0
+                            }
+                        END
+                    ) AS viewed_interactions,
+                    count(v) AS view_count
+            }
+    
+            CALL (c) {
+                OPTIONAL MATCH (c)-[l:LIKED]->(liked:Plant)
+                RETURN
+                    collect(
+                        CASE
+                            WHEN l IS NULL THEN NULL
+                            ELSE {
+                                plant: liked,
+                                weight: 4.0
+                            }
+                        END
+                    ) AS liked_interactions,
+                    count(l) AS like_count
+            }
+    
+            CALL (c) {
+                OPTIONAL MATCH (c)-[p:PURCHASES]->(purchased:Plant)
+                RETURN
+                    collect(
+                        CASE
+                            WHEN p IS NULL THEN NULL
+                            ELSE {
+                                plant: purchased,
+                                weight: toFloat(coalesce(p.quantity, 1)) * 8.0
+                            }
+                        END
+                    ) AS purchased_interactions,
+                    collect(DISTINCT purchased) AS purchased_plants,
+                    count(p) AS purchase_count
+            }
+    
+            CALL (c) {
+                OPTIONAL MATCH (c)-[:SEARCHES]->(s:Search)
+                RETURN
+                    collect(s) AS searches,
+                    count(s) AS search_count
+            }
+    
+            WITH
+                c,
+                viewed_interactions + liked_interactions + purchased_interactions AS interactions,
+                purchased_plants,
+                searches,
+                view_count + like_count + purchase_count + search_count AS data_count
+    
+            // New users / users with no collected data get no personalized recommendations.
+            WHERE data_count > 0
+    
+            MATCH (candidate:Plant)-[:PLANT_VARIETY]->(candidate_variety:PlantVariety)
+            WHERE NOT candidate IN purchased_plants
+    
+            CALL (interactions, candidate, candidate_variety) {
+                UNWIND interactions AS interaction
+                WITH
+                    interaction.plant AS interacted_plant,
+                    interaction.weight AS interaction_weight,
+                    candidate,
+                    candidate_variety
+                WHERE interacted_plant IS NOT NULL
+    
+                OPTIONAL MATCH (interacted_plant)-[:PLANT_VARIETY]->(interaction_variety:PlantVariety)
+    
+                RETURN coalesce(sum(
+                    interaction_weight *
+                    CASE
+                        WHEN interaction_variety = candidate_variety THEN 1.0
+                        WHEN interaction_variety.season = candidate_variety.season THEN 0.25
+                        ELSE 0.0
+                    END
+                ), 0.0) AS interaction_score
+            }
+    
+            CALL {
+                WITH searches, candidate, candidate_variety
+                UNWIND searches AS s
+                WITH s, candidate, candidate_variety
+    
+                RETURN coalesce(sum(
+                    CASE
+                        WHEN s.query IS NOT NULL
+                         AND trim(s.query) <> ''
+                         AND (
+                            toLower(candidate.name) CONTAINS toLower(s.query)
+                            OR toLower(candidate_variety.name) CONTAINS toLower(s.query)
+                            OR toLower(s.query) CONTAINS toLower(candidate.name)
+                            OR toLower(s.query) CONTAINS toLower(candidate_variety.name)
+                         )
+                        THEN 2.0
+                        ELSE 0.0
+                    END
+                    +
+                    CASE
+                        WHEN s.variety IS NOT NULL
+                         AND toLower(candidate_variety.name) = toLower(s.variety)
+                        THEN 4.0
+                        ELSE 0.0
+                    END
+                    +
+                    CASE
+                        WHEN s.species IS NOT NULL
+                         AND toLower(coalesce(candidate.species, '')) = toLower(s.species)
+                        THEN 3.0
+                        ELSE 0.0
+                    END
+                    +
+                    CASE
+                        WHEN s.type IS NOT NULL
+                         AND toLower(coalesce(candidate.type, '')) = toLower(s.type)
+                        THEN 3.0
+                        ELSE 0.0
+                    END
+                    +
+                    CASE
+                        WHEN (s.min_price IS NOT NULL OR s.max_price IS NOT NULL)
+                         AND candidate.price IS NOT NULL
+                         AND (s.min_price IS NULL OR candidate.price >= s.min_price)
+                         AND (s.max_price IS NULL OR candidate.price <= s.max_price)
+                        THEN 1.5
+                        ELSE 0.0
+                    END
+                ), 0.0) AS search_score
+            }
+    
+            CALL {
+                WITH candidate
+                OPTIONAL MATCH (:Customer)-[v:VIEWED]->(candidate)
+                RETURN coalesce(sum(
+                    CASE
+                        WHEN v IS NULL THEN 0
+                        ELSE coalesce(v.count, 1)
+                    END
+                ), 0) AS global_views
+            }
+    
+            CALL {
+                WITH candidate
+                OPTIONAL MATCH (:Customer)-[l:LIKED]->(candidate)
+                RETURN count(l) AS global_likes
+            }
+    
+            CALL {
+                WITH candidate
+                OPTIONAL MATCH (:Customer)-[p:PURCHASES]->(candidate)
+                RETURN coalesce(sum(
+                    CASE
+                        WHEN p IS NULL THEN 0
+                        ELSE coalesce(p.quantity, 1)
+                    END
+                ), 0) AS global_purchases
+            }
+    
+            WITH
+                c,
+                candidate,
+                candidate_variety,
+                interaction_score,
+                search_score,
+                (
+                    interaction_score +
+                    search_score
+                ) AS personal_score,
+                (
+                    global_views * 0.05 +
+                    global_likes * 0.25 +
+                    global_purchases * 0.5
+                ) AS popularity_tie_breaker
+    
+            // Prevent returning generic popular products as "personalized".
+            WHERE personal_score > 0
+    
+            WITH
+                c,
+                candidate,
+                candidate_variety,
+                personal_score + popularity_tie_breaker AS score
+    
+            ORDER BY score DESC, candidate.id ASC
             LIMIT 20
-
-            MERGE (c)-[r:RECOMMENDED]->(popular)
+    
+            MERGE (c)-[r:RECOMMENDED]->(candidate)
             ON CREATE SET
                 r.id = randomUUID(),
                 r.created_at = datetime(),
                 r.viewed = false,
+                r.liked = false,
                 r.purchased = false,
                 r.successful = false
             ON MATCH SET
                 r.viewed = coalesce(r.viewed, false),
+                r.liked = coalesce(r.liked, false),
                 r.purchased = coalesce(r.purchased, false),
                 r.successful = coalesce(r.successful, false)
-
+    
             RETURN
                 r.id AS recommendation_id,
-                popular.id AS id,
-                popular.name AS name,
-                popular.seasonality AS seasonality,
+                candidate.id AS id,
+                candidate.name AS name,
+                candidate_variety.season AS seasonality,
                 r.viewed AS viewed,
+                r.liked AS liked,
                 r.purchased AS purchased,
                 r.successful AS successful,
-                purchase_count AS score
+                score
             """,
             customer_id=customer_id,
         )
