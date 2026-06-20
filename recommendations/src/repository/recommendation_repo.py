@@ -68,6 +68,17 @@ class RecommendationRepository:
             season=season,
         )
         return result.data(), result.consume()
+
+    @staticmethod
+    def delete_plant_variety(tx, plant_variety_id: int):
+        result = tx.run(
+            """
+            MATCH (pv:PlantVariety {id: $plant_variety_id})
+            DETACH DELETE pv
+            """,
+            plant_variety_id=plant_variety_id,
+        )
+        return result.consume()
     
     @staticmethod
     def create_view(tx, customer_id: int, plant_id: int, timestamp: str):

@@ -30,16 +30,13 @@ class AuthServiceTest {
     private PasswordEncoder passwordEncoder;
 
     @Mock
-    private RecommendationClient recommendationClient;
-
-    @Mock
-    private SearchClient searchClient;
+    private NoSqlSyncSagaService noSqlSyncSagaService;
 
     private AuthService authService;
 
     @BeforeEach
     void setUp() {
-        authService = new AuthService(customerRepository, passwordEncoder, recommendationClient, searchClient);
+        authService = new AuthService(customerRepository, passwordEncoder, noSqlSyncSagaService);
     }
 
     @Test
@@ -57,6 +54,7 @@ class AuthServiceTest {
         ArgumentCaptor<Customer> customerCaptor = ArgumentCaptor.forClass(Customer.class);
         verify(customerRepository).save(customerCaptor.capture());
         assertEquals("hashed-secret", customerCaptor.getValue().getPassword());
+        verify(noSqlSyncSagaService).syncCustomerCreated(customerCaptor.getValue());
     }
 
     @Test

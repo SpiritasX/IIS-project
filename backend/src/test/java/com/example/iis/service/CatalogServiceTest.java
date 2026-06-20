@@ -1,22 +1,32 @@
 package com.example.iis.service;
 
+import com.example.iis.dto.CreateCatalogItemRequest;
 import com.example.iis.model.Plant;
 import com.example.iis.model.PlantCategory;
 import com.example.iis.model.PlantPrice;
 import com.example.iis.model.PlantSpecies;
 import com.example.iis.model.PlantType;
 import com.example.iis.model.PlantVariety;
+import com.example.iis.repository.PlantCategoryRepository;
 import com.example.iis.repository.PlantPriceRepository;
+import com.example.iis.repository.PlantRepository;
+import com.example.iis.repository.PlantSpeciesRepository;
+import com.example.iis.repository.PlantTypeRepository;
+import com.example.iis.repository.PlantVarietyRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.math.BigDecimal;
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -24,11 +34,37 @@ class CatalogServiceTest {
     @Mock
     private PlantPriceRepository plantPriceRepository;
 
+    @Mock
+    private PlantRepository plantRepository;
+
+    @Mock
+    private PlantCategoryRepository plantCategoryRepository;
+
+    @Mock
+    private PlantTypeRepository plantTypeRepository;
+
+    @Mock
+    private PlantSpeciesRepository plantSpeciesRepository;
+
+    @Mock
+    private PlantVarietyRepository plantVarietyRepository;
+
+    @Mock
+    private NoSqlSyncSagaService noSqlSyncSagaService;
+
     private CatalogService catalogService;
 
     @BeforeEach
     void setUp() {
-        catalogService = new CatalogService(plantPriceRepository);
+        catalogService = new CatalogService(
+                plantPriceRepository,
+                plantRepository,
+                plantCategoryRepository,
+                plantTypeRepository,
+                plantSpeciesRepository,
+                plantVarietyRepository,
+                noSqlSyncSagaService
+        );
     }
 
     @Test

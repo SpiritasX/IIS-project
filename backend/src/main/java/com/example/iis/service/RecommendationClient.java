@@ -18,26 +18,47 @@ public class RecommendationClient {
                 .build();
     }
 
-    public void createCustomer(Long customerId, String firstName, String lastName) {
-        restClient.post()
+    public NoSqlWriteResult createCustomer(Long customerId, String firstName, String lastName) {
+        return restClient.post()
                 .uri("/customer")
                 .body(new CustomerCreate(customerId, firstName, lastName))
                 .retrieve()
-                .toBodilessEntity();
+                .body(NoSqlWriteResult.class);
     }
 
-    public void createPlant(Long plantId, String name, Long plantVarietyId) {
-        restClient.post()
-                .uri("/plant")
-                .body(new PlantCreate(plantId, name, plantVarietyId))
+    public void deleteCustomer(Long customerId) {
+        restClient.delete()
+                .uri("/customer/{customerId}", customerId)
                 .retrieve()
                 .toBodilessEntity();
     }
 
-    public void createPlantVariety(Long plantVarietyId, String name, String season) {
-        restClient.post()
+    public NoSqlWriteResult createPlant(Long plantId, String name, Long plantVarietyId) {
+        return restClient.post()
+                .uri("/plant")
+                .body(new PlantCreate(plantId, name, plantVarietyId))
+                .retrieve()
+                .body(NoSqlWriteResult.class);
+    }
+
+    public void deletePlant(Long plantId) {
+        restClient.delete()
+                .uri("/plant/{plantId}", plantId)
+                .retrieve()
+                .toBodilessEntity();
+    }
+
+    public NoSqlWriteResult createPlantVariety(Long plantVarietyId, String name, String season) {
+        return restClient.post()
                 .uri("/plant/variety")
                 .body(new PlantVarietyCreate(plantVarietyId, name, season))
+                .retrieve()
+                .body(NoSqlWriteResult.class);
+    }
+
+    public void deletePlantVariety(Long plantVarietyId) {
+        restClient.delete()
+                .uri("/plant/variety/{plantVarietyId}", plantVarietyId)
                 .retrieve()
                 .toBodilessEntity();
     }

@@ -1,21 +1,29 @@
 package com.example.iis.service;
 
 import com.example.iis.dto.CatalogOptionsResponse;
+import com.example.iis.dto.CreateCatalogItemRequest;
 import com.example.iis.dto.PlantOrderRecommendationItemResponse;
 import com.example.iis.dto.PlantOrderRecommendationRequest;
 import com.example.iis.dto.PlantOrderRecommendationResponse;
 import com.example.iis.dto.ProductResponse;
 import com.example.iis.model.Plant;
+import com.example.iis.model.PlantCategory;
 import com.example.iis.model.PlantPrice;
 import com.example.iis.model.PlantSpecies;
 import com.example.iis.model.PlantType;
 import com.example.iis.model.PlantVariety;
+import com.example.iis.repository.PlantCategoryRepository;
 import com.example.iis.repository.PlantPriceRepository;
+import com.example.iis.repository.PlantRepository;
+import com.example.iis.repository.PlantSpeciesRepository;
+import com.example.iis.repository.PlantTypeRepository;
+import com.example.iis.repository.PlantVarietyRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -31,9 +39,29 @@ public class CatalogService {
     private static final int MAX_BUDGET_RSD = 1_000_000;
 
     private final PlantPriceRepository plantPriceRepository;
+    private final PlantRepository plantRepository;
+    private final PlantCategoryRepository plantCategoryRepository;
+    private final PlantTypeRepository plantTypeRepository;
+    private final PlantSpeciesRepository plantSpeciesRepository;
+    private final PlantVarietyRepository plantVarietyRepository;
+    private final NoSqlSyncSagaService noSqlSyncSagaService;
 
-    public CatalogService(PlantPriceRepository plantPriceRepository) {
+    public CatalogService(
+            PlantPriceRepository plantPriceRepository,
+            PlantRepository plantRepository,
+            PlantCategoryRepository plantCategoryRepository,
+            PlantTypeRepository plantTypeRepository,
+            PlantSpeciesRepository plantSpeciesRepository,
+            PlantVarietyRepository plantVarietyRepository,
+            NoSqlSyncSagaService noSqlSyncSagaService
+    ) {
         this.plantPriceRepository = plantPriceRepository;
+        this.plantRepository = plantRepository;
+        this.plantCategoryRepository = plantCategoryRepository;
+        this.plantTypeRepository = plantTypeRepository;
+        this.plantSpeciesRepository = plantSpeciesRepository;
+        this.plantVarietyRepository = plantVarietyRepository;
+        this.noSqlSyncSagaService = noSqlSyncSagaService;
     }
 
     @Transactional(readOnly = true)
@@ -140,6 +168,26 @@ public class CatalogService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found")));
     }
 
+    @Transactional
+    public ProductResponse createCatalogItem(CreateCatalogItemRequest request) {
+        PlantCategory category = plantCategoryRepository.save(findOrCreateCategory(request));
+        PlantType type = plantTypeRepository.save(findOrCreateType(request, category));
+        PlantSpecies species = plantSpeciesRepository.save(findOrCreateSpecies(request, type));
+        PlantVariety variety = plantVarietyRepository.save(findOrCreateVariety(request, species));
+        Plant plant = plantRepository.save(new Plant(
+                request.plantName(),
+                request.description(),
+                request.propagationMethod(),
+                request.status(),
+                variety
+        ));
+        PlantPrice price = plantPriceRepository.save(new PlantPrice(request.price(), plant));
+
+        noSqlSyncSagaService.syncCatalogItemCreated(plant, price.getPrice());
+
+        return toResponse(price);
+    }
+
     private ProductResponse toResponse(PlantPrice price) {
         CatalogItem item = toCatalogItem(price);
 
@@ -234,6 +282,55 @@ public class CatalogService {
 
     private boolean hasText(String value) {
         return value != null && !value.trim().isEmpty();
+    }
+
+    private PlantCategory findOrCreateCategory(CreateCatalogItemRequest request) {
+        String name = request.categoryName();
+        return plantCategoryRepository.findByNameIgnoreCase(name)
+                .orElseGet(() -> new PlantCategory(name));
+    }
+
+    private PlantType findOrCreateType(CreateCatalogItemRequest request, PlantCategory category) {
+        String name = request.plantTypeName();
+        return plantTypeRepository.findByNameIgnoreCase(name)
+                .map(type -> {
+                    requireSameParent(type.getCategory().getId(), category.getId(), "Plant type belongs to another category");
+                    return type;
+                })
+                .orElseGet(() -> new PlantType(name, category));
+    }
+
+    private PlantSpecies findOrCreateSpecies(CreateCatalogItemRequest request, PlantType type) {
+        String name = request.speciesName();
+        return plantSpeciesRepository.findByNameIgnoreCase(name)
+                .map(species -> {
+                    requireSameParent(species.getType().getId(), type.getId(), "Species belongs to another plant type");
+                    return species;
+                })
+                .orElseGet(() -> new PlantSpecies(name, type));
+    }
+
+    private PlantVariety findOrCreateVariety(CreateCatalogItemRequest request, PlantSpecies species) {
+        String name = request.varietyName();
+        return plantVarietyRepository.findByNameIgnoreCase(name)
+                .map(variety -> {
+                    requireSameParent(variety.getSpecies().getId(), species.getId(), "Variety belongs to another species");
+                    return variety;
+                })
+                .orElseGet(() -> new PlantVariety(
+                        name,
+                        request.humidity(),
+                        request.soil(),
+                        request.instructions(),
+                        request.season(),
+                        species
+                ));
+    }
+
+    private void requireSameParent(Long actualParentId, Long expectedParentId, String message) {
+        if (actualParentId != null && expectedParentId != null && !actualParentId.equals(expectedParentId)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, message);
+        }
     }
 
     private List<KnapsackUnit> expandedUnits(

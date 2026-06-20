@@ -134,6 +134,16 @@ class RecommendationService:
         return {"status": "created" if summary.counters.nodes_created > 0 else "updated"}
 
     @staticmethod
+    def delete_plant_variety(plant_variety_id: int):
+        with Neo4jDB.driver.session() as session:
+            summary = session.execute_write(RecommendationRepository.delete_plant_variety, plant_variety_id)
+
+        if summary.counters.nodes_deleted == 0:
+            raise HTTPException(status_code=404, detail="Plant variety not found")
+
+        return {"status": "deleted"}
+
+    @staticmethod
     def create_search(payload):
         with Neo4jDB.driver.session() as session:
             records, summary = session.execute_write(

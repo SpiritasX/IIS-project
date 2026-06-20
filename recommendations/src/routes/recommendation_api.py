@@ -50,6 +50,11 @@ def create_plant_variety(payload: PlantVarietyCreate):
     return RecommendationService.create_plant_variety(payload)
 
 
+@router.delete("/plant/variety/{plant_variety_id}")
+def delete_plant_variety(plant_variety_id: int):
+    return RecommendationService.delete_plant_variety(plant_variety_id)
+
+
 @router.post("/search")
 def create_search(payload: SearchCreate):
     return RecommendationService.create_search(payload)

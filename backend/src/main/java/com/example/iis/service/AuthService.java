@@ -23,14 +23,16 @@ import java.util.stream.Stream;
 public class AuthService {
     private final CustomerRepository customerRepository;
     private final PasswordEncoder passwordEncoder;
-    private final RecommendationClient recommendationClient;
-    private final SearchClient searchClient;
+    private final NoSqlSyncSagaService noSqlSyncSagaService;
 
-    public AuthService(CustomerRepository customerRepository, PasswordEncoder passwordEncoder, RecommendationClient recommendationClient, SearchClient searchClient) {
+    public AuthService(
+            CustomerRepository customerRepository,
+            PasswordEncoder passwordEncoder,
+            NoSqlSyncSagaService noSqlSyncSagaService
+    ) {
         this.customerRepository = customerRepository;
         this.passwordEncoder = passwordEncoder;
-        this.recommendationClient = recommendationClient;
-        this.searchClient = searchClient;
+        this.noSqlSyncSagaService = noSqlSyncSagaService;
     }
 
     @Transactional
@@ -53,9 +55,7 @@ public class AuthService {
         );
 
         customer = customerRepository.save(customer);
-
-        recommendationClient.createCustomer(customer.getId(), customer.getFirstName(), customer.getLastName());
-        searchClient.createCustomer(customer.getId(), customer.getUsername(), customer.getFirstName(), customer.getLastName(), customer.getEmail());
+        noSqlSyncSagaService.syncCustomerCreated(customer);
 
         return toResponse(customer);
     }

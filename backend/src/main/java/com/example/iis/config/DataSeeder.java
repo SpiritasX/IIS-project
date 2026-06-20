@@ -2,8 +2,7 @@ package com.example.iis.config;
 
 import com.example.iis.model.*;
 import com.example.iis.repository.*;
-import com.example.iis.service.RecommendationClient;
-import com.example.iis.service.SearchClient;
+import com.example.iis.service.NoSqlSyncSagaService;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -23,8 +22,7 @@ public class DataSeeder {
             PlantVarietyRepository plantVarietyRepository,
             PlantRepository plantRepository,
             PlantPriceRepository plantPriceRepository,
-            RecommendationClient recommendationClient,
-            SearchClient searchClient
+            NoSqlSyncSagaService noSqlSyncSagaService
     ) {
         return args -> {
             seedOrderStatuses(offerStatusRepository);
@@ -91,17 +89,10 @@ public class DataSeeder {
                     roseSpecies
             ));
 
-            recommendationClient.createPlantVariety(lavender.getId(), lavender.getName(), lavender.getSeason());
-            recommendationClient.createPlantVariety(basil.getId(), basil.getName(), basil.getSeason());
-            recommendationClient.createPlantVariety(olive.getId(), olive.getName(), olive.getSeason());
-            recommendationClient.createPlantVariety(mint.getId(), mint.getName(), mint.getSeason());
-            recommendationClient.createPlantVariety(rose.getId(), rose.getName(), rose.getSeason());
-
             savePlantWithPrice(
                     plantRepository,
                     plantPriceRepository,
-                    recommendationClient,
-                    searchClient,
+                    noSqlSyncSagaService,
                     new Plant(
                             "Lavender starter",
                             "Hardy young lavender plant with rich fragrance and strong roots.",
@@ -114,8 +105,7 @@ public class DataSeeder {
             savePlantWithPrice(
                     plantRepository,
                     plantPriceRepository,
-                    recommendationClient,
-                    searchClient,
+                    noSqlSyncSagaService,
                     new Plant(
                             "Basil seedling",
                             "Fresh culinary basil seedling ready for a sunny kitchen window.",
@@ -128,8 +118,7 @@ public class DataSeeder {
             savePlantWithPrice(
                     plantRepository,
                     plantPriceRepository,
-                    recommendationClient,
-                    searchClient,
+                    noSqlSyncSagaService,
                     new Plant(
                             "Olive sapling",
                             "Mediterranean olive sapling suited for patios and warm gardens.",
@@ -142,8 +131,7 @@ public class DataSeeder {
             savePlantWithPrice(
                     plantRepository,
                     plantPriceRepository,
-                    recommendationClient,
-                    searchClient,
+                    noSqlSyncSagaService,
                     new Plant(
                             "Mint pot",
                             "Fast-growing mint in a compact nursery pot for easy transplanting.",
@@ -156,8 +144,7 @@ public class DataSeeder {
             savePlantWithPrice(
                     plantRepository,
                     plantPriceRepository,
-                    recommendationClient,
-                    searchClient,
+                    noSqlSyncSagaService,
                     new Plant(
                             "Rose bush",
                             "Classic rose bush with seasonal blooms and balanced growth.",
@@ -191,24 +178,12 @@ public class DataSeeder {
     private void savePlantWithPrice(
             PlantRepository plantRepository,
             PlantPriceRepository plantPriceRepository,
-            RecommendationClient recommendationClient,
-            SearchClient searchClient,
+            NoSqlSyncSagaService noSqlSyncSagaService,
             Plant plant,
             BigDecimal price
     ) {
         Plant savedPlant = plantRepository.save(plant);
-        recommendationClient.createPlant(savedPlant.getId(), savedPlant.getName(), savedPlant.getVariety().getId());
-        plantPriceRepository.save(new PlantPrice(price, savedPlant));
-        searchClient.createPlant(
-                savedPlant.getId(),
-                savedPlant.getName(),
-                savedPlant.getDescription(),
-                savedPlant.getVariety().getId(),
-                savedPlant.getVariety().getName(),
-                savedPlant.getVariety().getSpecies().getId(),
-                savedPlant.getVariety().getSpecies().getName(),
-                savedPlant.getVariety().getSpecies().getType().getId(),
-                savedPlant.getVariety().getSpecies().getType().getName(),
-                price);
+        PlantPrice savedPrice = plantPriceRepository.save(new PlantPrice(price, savedPlant));
+        noSqlSyncSagaService.syncCatalogItemCreated(savedPlant, savedPrice.getPrice());
     }
 }

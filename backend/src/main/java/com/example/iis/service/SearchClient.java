@@ -26,6 +26,13 @@ public class SearchClient {
                 .toBodilessEntity();
     }
 
+    public void deleteCustomer(Long customerId) {
+        restClient.delete()
+                .uri("/users/{customerId}", customerId)
+                .retrieve()
+                .toBodilessEntity();
+    }
+
     public void createPlant(
             Long id,
             String name,
@@ -41,6 +48,13 @@ public class SearchClient {
         restClient.post()
                 .uri("/plants")
                 .body(new PlantCreate(id, name, description, varietyId, varietyName, speciesId, speciesName, plantTypeId, plantTypeName, price, new Date(System.currentTimeMillis())))
+                .retrieve()
+                .toBodilessEntity();
+    }
+
+    public void deletePlant(Long plantId) {
+        restClient.delete()
+                .uri("/plants/{plantId}", plantId)
                 .retrieve()
                 .toBodilessEntity();
     }
