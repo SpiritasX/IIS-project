@@ -70,7 +70,12 @@ function productsForRecommendations(recommendations, productsById, sort, order) 
   return sortProducts(products, sort, order)
 }
 
+function plantCountLabel(count) {
+  return `${count} ${count === 1 ? 'plant' : 'plants'}`
+}
+
 function RecommendationList({
+  countLabel,
   emptyText,
   loading,
   onAddToCart,
@@ -79,10 +84,19 @@ function RecommendationList({
   quantities,
   title,
   titleId,
+  tone,
 }) {
   return (
-    <section className="recommendation-section" aria-labelledby={titleId}>
-      <h2 id={titleId}>{title}</h2>
+    <section
+      className={`recommendation-section recommendation-section-${tone}`}
+      aria-labelledby={titleId}
+    >
+      <div className="recommendation-section-header">
+        <h2 id={titleId}>{title}</h2>
+        {!loading && products.length > 0 ? (
+          <span className="recommendation-count">{countLabel}</span>
+        ) : null}
+      </div>
 
       <div className="recommendation-list">
         {loading ? (
@@ -110,6 +124,7 @@ function HomePage() {
   const { logout, user } = useAuth()
   const [catalogProducts, setCatalogProducts] = useState([])
   const [trendingRecommendations, setTrendingRecommendations] = useState([])
+  const [seasonalRecommendations, setSeasonalRecommendations] = useState([])
   const [personalRecommendations, setPersonalRecommendations] = useState([])
   const [loadingProducts, setLoadingProducts] = useState(true)
   const [productError, setProductError] = useState('')
@@ -135,15 +150,17 @@ function HomePage() {
         const personalRequest = user?.id
           ? api.get(`/recommendations/customer/${user.id}`)
           : Promise.resolve({ data: [] })
-        const [catalogResponse, trendingResponse, personalResponse] = await Promise.all([
+        const [catalogResponse, trendingResponse, seasonalResponse, personalResponse] = await Promise.all([
           api.get('/plants'),
-          api.get('/recommendations/'),
+          api.get('/recommendations/trending'),
+          api.get('/recommendations/seasonal'),
           personalRequest,
         ])
 
         if (!ignore) {
           setCatalogProducts(catalogResponse.data.map(normalizeProduct))
           setTrendingRecommendations(trendingResponse.data)
+          setSeasonalRecommendations(seasonalResponse.data)
           setPersonalRecommendations(personalResponse.data)
         }
       } catch {
@@ -202,10 +219,15 @@ function HomePage() {
     () => productsForRecommendations(trendingRecommendations, filteredProductsById, sort, order),
     [filteredProductsById, order, sort, trendingRecommendations],
   )
+  const seasonalProducts = useMemo(
+    () => productsForRecommendations(seasonalRecommendations, filteredProductsById, sort, order),
+    [filteredProductsById, order, seasonalRecommendations, sort],
+  )
   const personalProducts = useMemo(
     () => productsForRecommendations(personalRecommendations, filteredProductsById, sort, order),
     [filteredProductsById, order, personalRecommendations, sort],
   )
+  const showPersonalRecommendations = loadingProducts ? Boolean(user?.id) : personalRecommendations.length > 0
 
   async function handleBack() {
     await logout()
@@ -278,30 +300,48 @@ function HomePage() {
       <section className="home-body">
         <UserSidebar />
 
-        <div className="recommendation-columns" aria-live="polite">
+        <div className="recommendation-sections" aria-live="polite">
           {productError ? (
             <div className="product-empty recommendation-grid-message">{productError}</div>
           ) : (
             <>
+              {showPersonalRecommendations ? (
+                <RecommendationList
+                  countLabel={plantCountLabel(personalProducts.length)}
+                  emptyText="No personal recommendations match your filters."
+                  loading={loadingProducts}
+                  onAddToCart={addToCart}
+                  onRemoveFromCart={removeFromCart}
+                  products={personalProducts}
+                  quantities={cartItems}
+                  title="Personalized for you"
+                  titleId="personal-recommendations-title"
+                  tone="personal"
+                />
+              ) : null}
               <RecommendationList
+                countLabel={plantCountLabel(trendingProducts.length)}
                 emptyText="No trending plants match your filters."
                 loading={loadingProducts}
                 onAddToCart={addToCart}
                 onRemoveFromCart={removeFromCart}
                 products={trendingProducts}
                 quantities={cartItems}
-                title="Trending and seasonal plants"
+                title="Trending plants"
                 titleId="trending-plants-title"
+                tone="trending"
               />
               <RecommendationList
-                emptyText="No personal recommendations match your filters."
+                countLabel={plantCountLabel(seasonalProducts.length)}
+                emptyText="No seasonal plants match your filters."
                 loading={loadingProducts}
                 onAddToCart={addToCart}
                 onRemoveFromCart={removeFromCart}
-                products={personalProducts}
+                products={seasonalProducts}
                 quantities={cartItems}
-                title="Personal recommendations"
-                titleId="personal-recommendations-title"
+                title="Seasonal plants"
+                titleId="seasonal-plants-title"
+                tone="seasonal"
               />
             </>
           )}

@@ -263,6 +263,63 @@ class RecommendationRepository:
         )
         return result.data()
 
+    @staticmethod
+    def get_trending_plants(tx):
+        result = tx.run(
+            """
+            MATCH (p:Plant)
+
+            CALL (p) {
+                OPTIONAL MATCH ()-[v_recent:VIEWED]->(p)
+                WHERE v_recent.updated_at >= datetime() - duration('P30D')
+                RETURN coalesce(sum(v_recent.count), 0) AS recent_views
+            }
+
+            CALL (p) {
+                OPTIONAL MATCH ()-[v_prev:VIEWED]->(p)
+                WHERE v_prev.updated_at >= datetime() - duration('P60D')
+                  AND v_prev.updated_at < datetime() - duration('P30D')
+                RETURN coalesce(sum(v_prev.count), 0) AS prev_views
+            }
+
+            CALL (p) {
+                OPTIONAL MATCH ()-[l:LIKED]->(p)
+                RETURN coalesce(count(DISTINCT l), 0) AS likes
+            }
+
+            CALL (p) {
+                OPTIONAL MATCH ()-[p_recent:PURCHASES]->(p)
+                WHERE p_recent.timestamp >= datetime() - duration('P30D')
+                RETURN coalesce(sum(p_recent.quantity), 0) AS recent_purchases
+            }
+
+            CALL (p) {
+                OPTIONAL MATCH ()-[p_prev:PURCHASES]->(p)
+                WHERE p_prev.timestamp >= datetime() - duration('P60D')
+                  AND p_prev.timestamp < datetime() - duration('P30D')
+                RETURN coalesce(sum(p_prev.quantity), 0) AS prev_purchases
+            }
+
+            WITH p,
+                recent_views - prev_views AS views_growth,
+                likes AS likes,
+                recent_purchases - prev_purchases AS purchases_growth
+
+            WITH p,
+                (2 * views_growth) +
+                (3 * likes) +
+                (5 * purchases_growth) AS score
+
+            RETURN
+                p.id AS id,
+                p.name AS name,
+                score
+            ORDER BY score DESC, p.id ASC
+            LIMIT 20
+            """
+        )
+        return result.data()
+
 
     @staticmethod
     def get_customer_recommendations(tx, customer_id: int):

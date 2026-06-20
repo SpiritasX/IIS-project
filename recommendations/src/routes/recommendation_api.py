@@ -65,6 +65,16 @@ def get_general_recommendations():
     return RecommendationService.get_general_recommendations()
 
 
+@router.get("/trending")
+def get_trending_recommendations():
+    return RecommendationService.get_trending_recommendations()
+
+
+@router.get("/seasonal")
+def get_seasonal_recommendations():
+    return RecommendationService.get_seasonal_recommendations()
+
+
 @router.patch("/{recommendation_id}")
 def update_recommendation(recommendation_id: str, payload: RecommendationUpdate):
     return RecommendationService.update_recommendation(recommendation_id, payload)
