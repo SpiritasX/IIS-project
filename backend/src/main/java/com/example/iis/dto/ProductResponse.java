@@ -1,7 +1,5 @@
 package com.example.iis.dto;
 
-import java.math.BigDecimal;
-
 public record ProductResponse(
         Long id,
         Long priceId,
@@ -12,7 +10,7 @@ public record ProductResponse(
         String species,
         String variety,
         String season,
-        BigDecimal price,
+        Integer price,
         String status,
         boolean available
 ) {

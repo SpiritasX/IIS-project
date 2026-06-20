@@ -1,7 +1,5 @@
 package com.example.iis.dto;
 
-import java.math.BigDecimal;
-
 public record PlantOrderRecommendationItemResponse(
         Long id,
         Long priceId,
@@ -12,8 +10,8 @@ public record PlantOrderRecommendationItemResponse(
         String species,
         String variety,
         String season,
-        BigDecimal price,
+        Integer price,
         Integer quantity,
-        BigDecimal lineTotal
+        Integer lineTotal
 ) {
 }

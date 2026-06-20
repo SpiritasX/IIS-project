@@ -13,7 +13,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.math.BigDecimal;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -39,7 +38,7 @@ class CatalogServiceTest {
         PlantSpecies species = new PlantSpecies("Basil", type);
         PlantVariety variety = new PlantVariety("Genovese basil", 60.0, "Rich soil", "Keep warm", "SUMMER", species);
         Plant plant = new Plant("Basil seedling", "Fresh basil", "Seed", "Available", variety);
-        PlantPrice price = new PlantPrice(new BigDecimal("750"), plant);
+        PlantPrice price = new PlantPrice(750.0, plant);
         when(plantPriceRepository.findActiveCatalogPrices()).thenReturn(List.of(price));
 
         var products = catalogService.getProducts();
@@ -51,15 +50,15 @@ class CatalogServiceTest {
         assertEquals("Basil", products.get(0).species());
         assertEquals("Genovese basil", products.get(0).variety());
         assertEquals("SUMMER", products.get(0).season());
-        assertEquals(new BigDecimal("750"), products.get(0).price());
+        assertEquals(750, products.get(0).price());
         assertTrue(products.get(0).available());
     }
 
     @Test
     void catalogOptionsUseActivePlantTaxonomy() {
         when(plantPriceRepository.findActiveCatalogPrices()).thenReturn(List.of(
-                plantPrice("Lavender starter", "Flowers", "Flowering plants", "Lavender", "English lavender", "SUMMER", "1000"),
-                plantPrice("Basil seedling", "Herbs", "Culinary herbs", "Basil", "Genovese basil", "WINTER", "750")
+                plantPrice("Lavender starter", "Flowers", "Flowering plants", "Lavender", "English lavender", "SUMMER", 1000),
+                plantPrice("Basil seedling", "Herbs", "Culinary herbs", "Basil", "Genovese basil", "WINTER", 750)
         ));
 
         var options = catalogService.getCatalogOptions();
@@ -72,13 +71,13 @@ class CatalogServiceTest {
     @Test
     void recommendOrderFitsBudgetAndMatchingFilters() {
         when(plantPriceRepository.findActiveCatalogPrices()).thenReturn(List.of(
-                plantPrice("Lavender starter", "Flowers", "Flowering plants", "Lavender", "English lavender", "SUMMER", "1000"),
-                plantPrice("Rose bush", "Flowers", "Flowering plants", "Rose", "Garden rose", "SUMMER", "1400"),
-                plantPrice("Basil seedling", "Herbs", "Culinary herbs", "Basil", "Genovese basil", "WINTER", "750")
+                plantPrice("Lavender starter", "Flowers", "Flowering plants", "Lavender", "English lavender", "SUMMER", 1000),
+                plantPrice("Rose bush", "Flowers", "Flowering plants", "Rose", "Garden rose", "SUMMER", 1400),
+                plantPrice("Basil seedling", "Herbs", "Culinary herbs", "Basil", "Genovese basil", "WINTER", 750)
         ));
 
         var response = catalogService.recommendOrder(new com.example.iis.dto.PlantOrderRecommendationRequest(
-                new BigDecimal("2400"),
+                2400,
                 "SUMMER",
                 "Flowers",
                 null,
@@ -87,8 +86,8 @@ class CatalogServiceTest {
                 2
         ));
 
-        assertEquals(new BigDecimal("2400"), response.total());
-        assertEquals(new BigDecimal("0"), response.remainingBudget());
+        assertEquals(2400, response.total());
+        assertEquals(0, response.remainingBudget());
         assertEquals(2, response.itemCount());
         assertEquals(List.of("Lavender starter", "Rose bush"), response.items().stream().map(item -> item.name()).toList());
     }
@@ -96,11 +95,11 @@ class CatalogServiceTest {
     @Test
     void recommendOrderCanUseMultipleQuantitiesOfOnePlant() {
         when(plantPriceRepository.findActiveCatalogPrices()).thenReturn(List.of(
-                plantPrice("Lavender starter", "Flowers", "Flowering plants", "Lavender", "English lavender", "SUMMER", "1000")
+                plantPrice("Lavender starter", "Flowers", "Flowering plants", "Lavender", "English lavender", "SUMMER", 1000)
         ));
 
         var response = catalogService.recommendOrder(new com.example.iis.dto.PlantOrderRecommendationRequest(
-                new BigDecimal("2500"),
+                2500,
                 null,
                 null,
                 null,
@@ -109,8 +108,8 @@ class CatalogServiceTest {
                 3
         ));
 
-        assertEquals(new BigDecimal("2000"), response.total());
-        assertEquals(new BigDecimal("500"), response.remainingBudget());
+        assertEquals(2000, response.total());
+        assertEquals(500, response.remainingBudget());
         assertEquals(2, response.itemCount());
         assertEquals(2, response.items().get(0).quantity());
     }
@@ -122,13 +121,13 @@ class CatalogServiceTest {
             String speciesName,
             String varietyName,
             String season,
-            String price
+            Integer price
     ) {
         PlantCategory category = new PlantCategory(categoryName);
         PlantType type = new PlantType(typeName, category);
         PlantSpecies species = new PlantSpecies(speciesName, type);
         PlantVariety variety = new PlantVariety(varietyName, 60.0, "Soil", "Care", season, species);
         Plant plant = new Plant(plantName, plantName + " description", "Seed", "Available", variety);
-        return new PlantPrice(new BigDecimal(price), plant);
+        return new PlantPrice(price.doubleValue(), plant);
     }
 }

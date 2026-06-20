@@ -16,14 +16,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -31,7 +28,7 @@ import java.util.TreeSet;
 public class CatalogService {
     private static final int DEFAULT_MAX_QUANTITY_PER_PLANT = 5;
     private static final int MAX_QUANTITY_PER_PLANT = 25;
-    private static final int MAX_BUDGET_UNITS = 1_000_000;
+    private static final int MAX_BUDGET_RSD = 1_000_000;
 
     private final PlantPriceRepository plantPriceRepository;
 
@@ -62,7 +59,7 @@ public class CatalogService {
 
     @Transactional(readOnly = true)
     public PlantOrderRecommendationResponse recommendOrder(PlantOrderRecommendationRequest request) {
-        if (request == null || request.budget() == null || request.budget().compareTo(BigDecimal.ZERO) <= 0) {
+        if (request == null || request.budget() == null || request.budget() <= 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Budget must be greater than zero");
         }
 
@@ -81,21 +78,18 @@ public class CatalogService {
             return emptyRecommendation(request.budget());
         }
 
-        int scale = monetaryScale(request.budget(), candidates);
-        BigDecimal multiplier = BigDecimal.TEN.pow(scale);
-        int budgetUnits = toUnits(request.budget(), multiplier);
-
-        if (budgetUnits > MAX_BUDGET_UNITS) {
+        int budget = request.budget();
+        if (budget > MAX_BUDGET_RSD) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Budget is too large for automatic planning");
         }
 
-        List<KnapsackUnit> units = expandedUnits(candidates, maxQuantity, multiplier, budgetUnits);
-        PlanState[] states = new PlanState[budgetUnits + 1];
+        List<KnapsackUnit> units = expandedUnits(candidates, maxQuantity, budget);
+        PlanState[] states = new PlanState[budget + 1];
         states[0] = new PlanState(0, null, null);
 
         for (KnapsackUnit unit : units) {
-            for (int amount = budgetUnits; amount >= unit.priceUnits(); amount--) {
-                PlanState previous = states[amount - unit.priceUnits()];
+            for (int amount = budget; amount >= unit.price(); amount--) {
+                PlanState previous = states[amount - unit.price()];
 
                 if (previous == null) {
                     continue;
@@ -128,14 +122,14 @@ public class CatalogService {
                 .sorted(Comparator.comparing(entry -> entry.getKey().name()))
                 .map(entry -> toRecommendationItem(entry.getKey(), entry.getValue()))
                 .toList();
-        BigDecimal total = items.stream()
-                .map(PlantOrderRecommendationItemResponse::lineTotal)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        int total = items.stream()
+                .mapToInt(PlantOrderRecommendationItemResponse::lineTotal)
+                .sum();
 
         return new PlantOrderRecommendationResponse(
                 request.budget(),
                 total,
-                request.budget().subtract(total).max(BigDecimal.ZERO),
+                Math.max(0, request.budget() - total),
                 items.stream().mapToInt(PlantOrderRecommendationItemResponse::quantity).sum(),
                 items
         );
@@ -178,7 +172,7 @@ public class CatalogService {
                 item.season(),
                 item.price(),
                 quantity,
-                item.price().multiply(BigDecimal.valueOf(quantity))
+                item.price() * quantity
         );
     }
 
@@ -205,7 +199,7 @@ public class CatalogService {
                 species.getName(),
                 variety.getName(),
                 variety.getSeason(),
-                price.getPrice(),
+                price.getPrice().intValue(),
                 plant.getStatus(),
                 isAvailable(plant)
         );
@@ -242,47 +236,24 @@ public class CatalogService {
         return value != null && !value.trim().isEmpty();
     }
 
-    private int monetaryScale(BigDecimal budget, List<CatalogItem> items) {
-        int scale = Math.max(0, budget.stripTrailingZeros().scale());
-
-        for (CatalogItem item : items) {
-            scale = Math.max(scale, Math.max(0, item.price().stripTrailingZeros().scale()));
-        }
-
-        return Math.min(2, scale);
-    }
-
-    private int toUnits(BigDecimal value, BigDecimal multiplier) {
-        long units = value.multiply(multiplier)
-                .setScale(0, RoundingMode.HALF_UP)
-                .longValue();
-
-        if (units <= 0 || units > Integer.MAX_VALUE) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Budget or price is outside the supported range");
-        }
-
-        return (int) units;
-    }
-
     private List<KnapsackUnit> expandedUnits(
             List<CatalogItem> candidates,
             int maxQuantity,
-            BigDecimal multiplier,
-            int budgetUnits
+            int budget
     ) {
-        long diversityBonus = (long) budgetUnits + 1;
+        long diversityBonus = (long) budget + 1;
         List<KnapsackUnit> units = new ArrayList<>();
 
         for (CatalogItem candidate : candidates) {
-            int priceUnits = toUnits(candidate.price(), multiplier);
+            int price = candidate.price();
 
-            if (priceUnits > budgetUnits) {
+            if (price <= 0 || price > budget) {
                 continue;
             }
 
             for (int copy = 1; copy <= maxQuantity; copy++) {
-                long value = priceUnits + (copy == 1 ? diversityBonus : 0);
-                units.add(new KnapsackUnit(candidate, priceUnits, value));
+                long value = price + (copy == 1 ? diversityBonus : 0);
+                units.add(new KnapsackUnit(candidate, price, value));
             }
         }
 
@@ -301,10 +272,10 @@ public class CatalogService {
         return quantities;
     }
 
-    private PlantOrderRecommendationResponse emptyRecommendation(BigDecimal budget) {
+    private PlantOrderRecommendationResponse emptyRecommendation(Integer budget) {
         return new PlantOrderRecommendationResponse(
                 budget,
-                BigDecimal.ZERO,
+                0,
                 budget,
                 0,
                 List.of()
@@ -321,16 +292,13 @@ public class CatalogService {
             String species,
             String variety,
             String season,
-            BigDecimal price,
+            int price,
             String status,
             boolean available
     ) {
-        private CatalogItem {
-            Objects.requireNonNull(price);
-        }
     }
 
-    private record KnapsackUnit(CatalogItem item, int priceUnits, long value) {
+    private record KnapsackUnit(CatalogItem item, int price, long value) {
     }
 
     private record PlanState(long score, PlanState previous, KnapsackUnit unit) {

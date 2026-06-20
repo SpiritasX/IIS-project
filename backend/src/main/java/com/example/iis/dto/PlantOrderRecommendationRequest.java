@@ -1,9 +1,7 @@
 package com.example.iis.dto;
 
-import java.math.BigDecimal;
-
 public record PlantOrderRecommendationRequest(
-        BigDecimal budget,
+        Integer budget,
         String season,
         String category,
         String type,
