@@ -218,8 +218,10 @@ class RecommendationRepository:
             """
             MATCH (p:Plant)-[:PLANT_VARIETY]->(:PlantVariety { 
                 season: CASE
-                    WHEN datetime().month IN [4, 5, 6, 7, 8, 9] THEN 'SUMMER'
-                    ELSE 'WINTER' 
+                    WHEN datetime().month IN [3, 4] THEN 'SPRING'
+                    WHEN datetime().month IN [5, 6, 7, 8] THEN 'SUMMER'
+                    WHEN datetime().month IN [9, 10] THEN 'FALL'
+                    ELSE 'WINTER'
                 END
             })
 
@@ -269,7 +271,7 @@ class RecommendationRepository:
                 p.name AS name,
                 score
             ORDER BY score DESC, p.id ASC
-            LIMIT 20
+            LIMIT 5
             """
         )
         return result.data()
@@ -326,7 +328,7 @@ class RecommendationRepository:
                 p.name AS name,
                 score
             ORDER BY score DESC, p.id ASC
-            LIMIT 20
+            LIMIT 5
             """
         )
         return result.data()
@@ -530,7 +532,7 @@ class RecommendationRepository:
                 personal_score + popularity_tie_breaker AS score
     
             ORDER BY score DESC, candidate.id ASC
-            LIMIT 20
+            LIMIT 5
     
             MERGE (c)-[r:RECOMMENDED]->(candidate)
             ON CREATE SET
@@ -558,6 +560,141 @@ class RecommendationRepository:
                 score
             """,
             customer_id=customer_id,
+        )
+        return result.data()
+
+    @staticmethod
+    def get_recent_recommendations(tx, status: str, limit: int):
+        result = tx.run(
+            """
+            MATCH (c:Customer)-[r:RECOMMENDED]->(p:Plant)
+            OPTIONAL MATCH (p)-[:PLANT_VARIETY]->(pv:PlantVariety)
+            WHERE $status = 'all'
+               OR ($status = 'successful' AND r.successful = true)
+               OR ($status = 'unsuccessful' AND r.successful = false)
+               OR ($status = 'viewed' AND r.viewed = true)
+               OR ($status = 'liked' AND r.liked = true)
+               OR ($status = 'purchased' AND r.purchased = true)
+            RETURN
+                r.id AS recommendation_id,
+                c.id AS customer_id,
+                c.first_name + ' ' + c.last_name AS customer_name,
+                p.id AS plant_id,
+                p.name AS plant_name,
+                pv.name AS variety,
+                pv.season AS season,
+                toString(r.created_at) AS created_at,
+                r.viewed AS viewed,
+                r.liked AS liked,
+                r.purchased AS purchased,
+                r.successful AS successful
+            ORDER BY r.created_at DESC, recommendation_id ASC
+            LIMIT $limit
+            """,
+            status=status,
+            limit=limit,
+        )
+        return result.data()
+
+    @staticmethod
+    def get_recommendation_kpis(tx):
+        result = tx.run(
+            """
+            MATCH ()-[r:RECOMMENDED]->()
+            RETURN
+                count(r) AS total,
+                sum(CASE WHEN r.successful THEN 1 ELSE 0 END) AS successful,
+                sum(CASE WHEN r.viewed THEN 1 ELSE 0 END) AS viewed,
+                sum(CASE WHEN r.liked THEN 1 ELSE 0 END) AS liked,
+                sum(CASE WHEN r.purchased THEN 1 ELSE 0 END) AS purchased,
+                sum(CASE WHEN NOT r.successful THEN 1 ELSE 0 END) AS unsuccessful
+            """
+        )
+        return result.data()
+
+    @staticmethod
+    def get_recommendation_success_paths(tx):
+        result = tx.run(
+            """
+            MATCH ()-[r:RECOMMENDED]->()
+            WITH CASE
+                WHEN r.purchased THEN 'Purchased'
+                WHEN r.liked THEN 'Liked only'
+                WHEN r.viewed THEN 'Viewed only'
+                ELSE 'No interaction'
+            END AS path
+            RETURN path, count(*) AS count
+            ORDER BY count DESC, path ASC
+            """
+        )
+        return result.data()
+
+    @staticmethod
+    def get_top_recommended_plants(tx, limit: int):
+        result = tx.run(
+            """
+            MATCH ()-[r:RECOMMENDED]->(p:Plant)
+            OPTIONAL MATCH (p)-[:PLANT_VARIETY]->(pv:PlantVariety)
+            WITH
+                p,
+                pv,
+                count(r) AS recommendation_count,
+                sum(CASE WHEN r.successful THEN 1 ELSE 0 END) AS successful_count,
+                sum(CASE WHEN r.viewed THEN 1 ELSE 0 END) AS viewed_count,
+                sum(CASE WHEN r.liked THEN 1 ELSE 0 END) AS liked_count,
+                sum(CASE WHEN r.purchased THEN 1 ELSE 0 END) AS purchased_count
+            RETURN
+                p.id AS plant_id,
+                p.name AS plant_name,
+                pv.name AS variety,
+                pv.season AS season,
+                recommendation_count,
+                successful_count,
+                viewed_count,
+                liked_count,
+                purchased_count,
+                CASE
+                    WHEN recommendation_count = 0 THEN 0.0
+                    ELSE toFloat(successful_count) / recommendation_count
+                END AS success_rate
+            ORDER BY successful_count DESC, success_rate DESC, recommendation_count DESC, plant_name ASC
+            LIMIT $limit
+            """,
+            limit=limit,
+        )
+        return result.data()
+
+    @staticmethod
+    def get_recommendations_by_day(tx):
+        result = tx.run(
+            """
+            UNWIND [
+                {index: 1, name: 'Monday'},
+                {index: 2, name: 'Tuesday'},
+                {index: 3, name: 'Wednesday'},
+                {index: 4, name: 'Thursday'},
+                {index: 5, name: 'Friday'},
+                {index: 6, name: 'Saturday'},
+                {index: 7, name: 'Sunday'}
+            ] AS weekday
+            OPTIONAL MATCH ()-[r:RECOMMENDED]->()
+            WHERE r.created_at IS NOT NULL
+              AND date(r.created_at).dayOfWeek = weekday.index
+            WITH
+                weekday,
+                count(r) AS recommendation_count,
+                sum(CASE WHEN coalesce(r.successful, false) THEN 1 ELSE 0 END) AS successful_count
+            RETURN
+                weekday.index AS day_index,
+                weekday.name AS day,
+                recommendation_count,
+                successful_count,
+                CASE
+                    WHEN recommendation_count = 0 THEN 0.0
+                    ELSE toFloat(successful_count) / recommendation_count
+                END AS success_rate
+            ORDER BY day_index ASC
+            """,
         )
         return result.data()
 

@@ -80,6 +80,16 @@ def get_seasonal_recommendations():
     return RecommendationService.get_seasonal_recommendations()
 
 
+@router.get("/reports/recent")
+def get_recent_recommendations(status: str = "all", limit: int = 25):
+    return RecommendationService.get_recent_recommendations(status, limit)
+
+
+@router.get("/reports/effectiveness")
+def get_recommendation_effectiveness(limit: int = 10):
+    return RecommendationService.get_recommendation_effectiveness(limit)
+
+
 @router.patch("/{recommendation_id}")
 def update_recommendation(recommendation_id: str, payload: RecommendationUpdate):
     return RecommendationService.update_recommendation(recommendation_id, payload)

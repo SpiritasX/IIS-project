@@ -6,6 +6,15 @@ from src.repository.recommendation_repo import RecommendationRepository
 
 
 class RecommendationService:
+    RECENT_RECOMMENDATION_STATUSES = {
+        "all",
+        "successful",
+        "unsuccessful",
+        "viewed",
+        "liked",
+        "purchased",
+    }
+
     @staticmethod
     def create_customer(payload):
         with Neo4jDB.driver.session() as session:
@@ -213,3 +222,79 @@ class RecommendationService:
     def get_customer_recommendations(customer_id: int):
         with Neo4jDB.driver.session() as session:
             return session.execute_write(RecommendationRepository.get_customer_recommendations, customer_id)
+
+    @staticmethod
+    def get_recent_recommendations(status: str = "all", limit: int = 25):
+        normalized_status = RecommendationService._normalize_status(status)
+        normalized_limit = RecommendationService._normalize_limit(limit, 1, 100)
+
+        with Neo4jDB.driver.session() as session:
+            return session.execute_read(
+                RecommendationRepository.get_recent_recommendations,
+                normalized_status,
+                normalized_limit,
+            )
+
+    @staticmethod
+    def get_recommendation_effectiveness(limit: int = 10):
+        normalized_limit = RecommendationService._normalize_limit(limit, 1, 50)
+
+        with Neo4jDB.driver.session() as session:
+            kpis = session.execute_read(RecommendationRepository.get_recommendation_kpis)
+            success_paths = session.execute_read(RecommendationRepository.get_recommendation_success_paths)
+            top_plants = session.execute_read(
+                RecommendationRepository.get_top_recommended_plants,
+                normalized_limit,
+            )
+            weekday_histogram = session.execute_read(RecommendationRepository.get_recommendations_by_day)
+
+        summary = kpis[0] if kpis else {}
+        total = summary.get("total", 0) or 0
+
+        return {
+            "summary": {
+                **summary,
+                "success_rate": RecommendationService._rate(summary.get("successful", 0), total),
+                "view_rate": RecommendationService._rate(summary.get("viewed", 0), total),
+                "like_rate": RecommendationService._rate(summary.get("liked", 0), total),
+                "purchase_rate": RecommendationService._rate(summary.get("purchased", 0), total),
+            },
+            "success_paths": RecommendationService._with_share(success_paths, total),
+            "top_plants": top_plants,
+            "weekday_histogram": weekday_histogram,
+        }
+
+    @staticmethod
+    def _normalize_status(status: str | None):
+        normalized_status = (status or "all").strip().lower()
+
+        if normalized_status not in RecommendationService.RECENT_RECOMMENDATION_STATUSES:
+            raise HTTPException(status_code=400, detail="Invalid recommendation status")
+
+        return normalized_status
+
+    @staticmethod
+    def _normalize_limit(limit: int | str | None, minimum: int, maximum: int):
+        try:
+            numeric_limit = int(limit)
+        except (TypeError, ValueError):
+            raise HTTPException(status_code=400, detail="Invalid limit")
+
+        return max(minimum, min(maximum, numeric_limit))
+
+    @staticmethod
+    def _rate(value: int | float | None, total: int | float | None):
+        if not total:
+            return 0.0
+
+        return round(float(value or 0) / float(total), 4)
+
+    @staticmethod
+    def _with_share(records, total: int):
+        return [
+            {
+                **record,
+                "share": RecommendationService._rate(record.get("count", 0), total),
+            }
+            for record in records
+        ]
