@@ -3,6 +3,7 @@ from pydantic import BaseModel
 
 class PlantBase(BaseModel):
     id: int
+    priceId: int | None = None
     name: str
     description: str
     varietyId: int

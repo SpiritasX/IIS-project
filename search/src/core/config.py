@@ -6,7 +6,7 @@ class Settings(BaseSettings):
     USERS_INDEX: str = "users"
     PLANTS_INDEX: str = "plants"
     
-    SEED_DATA: bool = True
+    SEED_DATA: bool = False
     MIN_DOCS_FOR_SEEDING: int = 1000
 
     class Config:

@@ -45,6 +45,7 @@ PLANT_MAPPING = {
     "mappings": {
         "properties": {
             "id": {"type": "long"},
+            "priceId": {"type": "long"},
             "name": {
                 "type": "text",
                 "fields": {"keyword": {"type": "keyword"}}

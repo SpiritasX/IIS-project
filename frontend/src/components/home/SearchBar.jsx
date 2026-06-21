@@ -1,17 +1,26 @@
 import CloseIcon from '@mui/icons-material/Close'
 import SearchIcon from '@mui/icons-material/Search'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 function SearchBar({ onClear, onSearch, value }) {
   const [inputValue, setInputValue] = useState(value)
+
+  useEffect(() => {
+    setInputValue(value)
+  }, [value])
 
   function handleClear() {
     setInputValue('')
     onClear()
   }
 
+  function handleSubmit(event) {
+    event.preventDefault()
+    onSearch(inputValue)
+  }
+
   return (
-    <div className="home-search" role="search" aria-label="Search products">
+    <form className="home-search" role="search" aria-label="Search products" onSubmit={handleSubmit}>
       <input
         aria-label="Search products"
         className="home-search-input"
@@ -38,12 +47,11 @@ function SearchBar({ onClear, onSearch, value }) {
       <button
         aria-label="Search"
         className="home-search-submit"
-        onClick={() => onSearch(inputValue)}
-        type="button"
+        type="submit"
       >
         <SearchIcon className="home-search-icon" fontSize="inherit" aria-hidden="true" />
       </button>
-    </div>
+    </form>
   )
 }
 

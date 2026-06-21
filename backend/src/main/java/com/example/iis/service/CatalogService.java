@@ -183,7 +183,7 @@ public class CatalogService {
         ));
         PlantPrice price = plantPriceRepository.save(new PlantPrice(request.price(), plant));
 
-        noSqlSyncSagaService.syncCatalogItemCreated(plant, price.getPrice());
+        noSqlSyncSagaService.syncCatalogItemCreated(plant, price);
 
         return toResponse(price);
     }

@@ -5,6 +5,7 @@ import com.example.iis.model.Plant;
 import com.example.iis.model.PlantSpecies;
 import com.example.iis.model.PlantType;
 import com.example.iis.model.PlantVariety;
+import com.example.iis.model.PlantPrice;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -53,7 +54,7 @@ public class NoSqlSyncSagaService {
         }
     }
 
-    public void syncCatalogItemCreated(Plant plant, BigDecimal price) {
+    public void syncCatalogItemCreated(Plant plant, PlantPrice price) {
         PlantVariety variety = plant.getVariety();
         PlantSpecies species = variety.getSpecies();
         PlantType type = species.getType();
@@ -77,6 +78,7 @@ public class NoSqlSyncSagaService {
 
             searchClient.createPlant(
                     plant.getId(),
+                    price.getId(),
                     plant.getName(),
                     plant.getDescription(),
                     variety.getId(),
@@ -85,7 +87,7 @@ public class NoSqlSyncSagaService {
                     species.getName(),
                     type.getId(),
                     type.getName(),
-                    price
+                    price.getPrice()
             );
         } catch (RuntimeException exception) {
             if (graphPlantCreated) {

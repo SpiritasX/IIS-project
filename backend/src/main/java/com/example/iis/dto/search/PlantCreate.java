@@ -5,6 +5,7 @@ import java.util.Date;
 
 public record PlantCreate(
         Long id,
+        Long priceId,
         String name,
         String description,
         Long varietyId,

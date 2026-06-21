@@ -84,6 +84,7 @@ def seed_data():
                 "_index": settings.PLANTS_INDEX,
                 "_id": str(i),
                 "id": i,
+                "priceId": i,
                 "name": fake.word().capitalize() + " " + random.choice(VARIETIES),
                 "description": fake.text(max_nb_chars=200),
                 "varietyId": random.randint(1, 50),

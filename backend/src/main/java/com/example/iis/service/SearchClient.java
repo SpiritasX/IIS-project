@@ -35,6 +35,7 @@ public class SearchClient {
 
     public void createPlant(
             Long id,
+            Long priceId,
             String name,
             String description,
             Long varietyId,
@@ -47,7 +48,7 @@ public class SearchClient {
     ) {
         restClient.post()
                 .uri("/plants")
-                .body(new PlantCreate(id, name, description, varietyId, varietyName, speciesId, speciesName, plantTypeId, plantTypeName, price, new Date(System.currentTimeMillis())))
+                .body(new PlantCreate(id, priceId, name, description, varietyId, varietyName, speciesId, speciesName, plantTypeId, plantTypeName, price, new Date(System.currentTimeMillis())))
                 .retrieve()
                 .toBodilessEntity();
     }

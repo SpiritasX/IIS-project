@@ -8,35 +8,8 @@ import UserSidebar from '../components/home/UserSidebar'
 import { useAuth } from '../hooks/useAuth'
 import { useCart } from '../hooks/useCart'
 import '../styles/home.css'
-
-const homeSortOptions = [
-  { label: 'Recommended', value: 'recommended' },
-  { label: 'Price', value: 'price' },
-  { label: 'Name', value: 'name' },
-]
-
-function normalizeProduct(product) {
-  const available =
-    typeof product.available === 'boolean'
-      ? product.available
-      : product.availability === undefined
-        ? true
-        : Number(product.availability) > 0
-  const id = String(product.id)
-
-  return {
-    ...product,
-    available,
-    category: product.category || product.plantTypeName || 'Other',
-    description: product.description || '',
-    id,
-    imageAlt: `${product.name} placeholder`,
-    price: Number(product.price || 0),
-    priceId: String(product.priceId || product.id),
-    species: product.species || product.speciesName || '',
-    variety: product.variety || product.varietyName || '',
-  }
-}
+import { normalizeProduct } from '../utils/products'
+import { trackPlantSearch } from '../utils/searchTracking'
 
 function includesText(value, searchValue) {
   return !searchValue || String(value || '').toLowerCase().includes(searchValue)
@@ -72,6 +45,45 @@ function productsForRecommendations(recommendations, productsById, sort, order) 
 
 function plantCountLabel(count) {
   return `${count} ${count === 1 ? 'plant' : 'plants'}`
+}
+
+const homeSortOptions = [
+  { label: 'Recommended', value: 'recommended' },
+  { label: 'Price', value: 'price' },
+  { label: 'Name', value: 'name' },
+]
+
+function searchPathForFilters({ maxPrice, minPrice, order, plantType, query, sort, species, variety }) {
+  const params = new URLSearchParams()
+  const normalizedQuery = query.trim()
+
+  if (normalizedQuery) {
+    params.set('q', normalizedQuery)
+  }
+  if (plantType !== 'All') {
+    params.set('plant_type', plantType)
+  }
+  if (species.trim()) {
+    params.set('species', species.trim())
+  }
+  if (variety.trim()) {
+    params.set('variety', variety.trim())
+  }
+  if (minPrice !== '') {
+    params.set('min_price', minPrice)
+  }
+  if (maxPrice !== '') {
+    params.set('max_price', maxPrice)
+  }
+  if (sort !== 'recommended') {
+    params.set('sort_by', sort)
+  }
+  if (order !== 'asc') {
+    params.set('order', order)
+  }
+
+  const queryString = params.toString()
+  return queryString ? `/search?${queryString}` : '/search'
 }
 
 function RecommendationList({
@@ -182,8 +194,8 @@ function HomePage() {
   }, [user?.id])
 
   const categoryOptions = useMemo(() => {
-    const categories = catalogProducts.map((product) => product.category).filter(Boolean)
-    return ['All', ...new Set(categories)]
+    const types = catalogProducts.map((product) => product.type || product.category).filter(Boolean)
+    return ['All', ...new Set(types)]
   }, [catalogProducts])
 
   const filteredProductsById = useMemo(() => {
@@ -196,7 +208,7 @@ function HomePage() {
       const matchesSearch =
         includesText(product.name, normalizedSearch) ||
         includesText(product.description, normalizedSearch)
-      const matchesCategory = category === 'All' || product.category === category
+      const matchesCategory = category === 'All' || product.type === category || product.category === category
       const matchesSpecies = optionalIncludesText(product.species, normalizedSpecies)
       const matchesVariety = optionalIncludesText(product.variety, normalizedVariety)
       const matchesMinimumPrice = minimumPrice === null || product.price >= minimumPrice
@@ -248,23 +260,27 @@ function HomePage() {
   function handleSearch(value) {
     setSearchTerm(value)
 
-    if (!user?.id) {
-      return
-    }
+    void trackPlantSearch(api, user?.id, {
+      query: value,
+      minPrice,
+      maxPrice,
+      variety,
+      species,
+      plantType: category,
+    })
 
-    api
-      .post('/recommendations/search', {
-        customer_id: user.id,
+    navigate(
+      searchPathForFilters({
         query: value,
-        min_price: minPrice ? Number(minPrice) : null,
-        max_price: maxPrice ? Number(maxPrice) : null,
-        variety: variety || null,
-        species: species || null,
-        type: category !== 'All' ? category : null,
-      })
-      .catch(() => {
-        // Recommendation tracking should not block product search results.
-      })
+        plantType: category,
+        species,
+        variety,
+        minPrice,
+        maxPrice,
+        sort,
+        order,
+      }),
+    )
   }
 
   return (
@@ -272,6 +288,7 @@ function HomePage() {
       <HomeHeader
         cartCount={cartCount}
         category={category}
+        categoryLabel="Type"
         categoryOptions={categoryOptions}
         filterOpen={filterOpen}
         onCategoryChange={(event) => setCategory(event.target.value)}

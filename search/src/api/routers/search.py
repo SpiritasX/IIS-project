@@ -12,7 +12,9 @@ def search_plants(
     min_price = None,
     max_price = None,
     sort_by: str = "price",
-    order: str = "asc"
+    order: str = "asc",
+    page: int = 1,
+    page_size: int = 100
 ):
     return get_plant_service().search_plants(
         query=query,
@@ -22,7 +24,9 @@ def search_plants(
         min_price=min_price,
         max_price=max_price,
         sort_by=sort_by,
-        order=order
+        order=order,
+        page=page,
+        page_size=page_size
     )
 
 @router.get("/users")

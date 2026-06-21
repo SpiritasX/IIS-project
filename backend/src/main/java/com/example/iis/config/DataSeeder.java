@@ -238,7 +238,7 @@ public class DataSeeder {
     ) {
         Plant savedPlant = plantRepository.save(plant);
         PlantPrice savedPrice = plantPriceRepository.save(new PlantPrice(price, savedPlant));
-        noSqlSyncSagaService.syncCatalogItemCreated(savedPlant, savedPrice.getPrice());
+        noSqlSyncSagaService.syncCatalogItemCreated(savedPlant, savedPrice);
     }
 
     private static CatalogSeed seed(
