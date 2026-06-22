@@ -1,0 +1,250 @@
+/* ── Botanist header ── */
+.botanist-header {
+  grid-template-columns: 220px minmax(0, 1fr);
+}
+
+/* ── Sidebar additions ── */
+.botanist-sidebar {
+  min-height: 500px;
+}
+
+.botanist-location-wrap {
+  width: 100%;
+}
+
+.botanist-location-select {
+  appearance: none;
+  background: var(--color-page) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2322523a' stroke-width='1.8' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat right 12px center;
+  border: 1.5px solid var(--color-primary);
+  border-radius: var(--radius-control);
+  color: var(--color-text);
+  cursor: pointer;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  min-height: 40px;
+  padding: 0 36px 0 12px;
+  width: 100%;
+}
+
+.botanist-location-select:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* ── Dashboard grid ── */
+.dashboard-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  margin: 0 auto;
+  max-width: var(--layout-wide-content-width);
+  width: calc(100% - var(--layout-sidebar-offset));
+}
+
+/* Row 1 */
+.dashboard-grid > :nth-child(1) { grid-column: 1; grid-row: 1; }  /* Stock chart */
+.dashboard-grid > :nth-child(2) { grid-column: 2; grid-row: 1; }  /* Varieties */
+.dashboard-grid > :nth-child(3) { grid-column: 3; grid-row: 1; }  /* Nursery sites */
+.dashboard-grid > :nth-child(4) { grid-column: 4; grid-row: 1; }  /* Total plants */
+
+/* Row 2 */
+.dashboard-grid > :nth-child(5) { grid-column: 1; grid-row: 2; }  /* Logs */
+.dashboard-grid > :nth-child(6) { grid-column: 2; grid-row: 2; }  /* Active relocations */
+.dashboard-grid > :nth-child(7) { grid-column: 3 / 5; grid-row: 2; } /* Relocation chart */
+
+/* ── Stat card ── */
+.dashboard-stat-card-link {
+  cursor: pointer;
+  transition:
+    box-shadow 180ms ease,
+    transform 180ms ease;
+}
+
+.dashboard-stat-card-link:hover {
+  box-shadow: 5px 5px 4px rgba(0, 0, 0, 0.22);
+  transform: translateY(-2px);
+}
+
+.dashboard-stat-card {
+  align-items: center;
+  background: var(--color-surface);
+  border-radius: var(--radius-surface);
+  box-shadow: var(--shadow-surface);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  justify-content: center;
+  min-height: 130px;
+  padding: 24px 16px;
+  text-align: center;
+}
+
+.dashboard-stat-value {
+  color: var(--color-text);
+  font-size: 52px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.dashboard-stat-label {
+  color: var(--color-text-secondary);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+/* ── Chart card ── */
+.dashboard-chart-card {
+  background: var(--color-surface);
+  border-radius: var(--radius-surface);
+  box-shadow: var(--shadow-surface);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 20px 20px 16px;
+}
+
+.dashboard-chart-title {
+  color: var(--color-text);
+  font-size: 15px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.dashboard-chart-svg {
+  display: block;
+  width: 100%;
+}
+
+.dashboard-chart-placeholder {
+  background: #dddddd;
+  border-radius: 8px;
+  height: 130px;
+  opacity: 0.55;
+  width: 100%;
+}
+
+.dashboard-chart-legend {
+  color: var(--color-text-secondary);
+  display: flex;
+  font-size: 13px;
+  gap: 6px;
+}
+
+.dashboard-chart-legend::before {
+  background: var(--color-primary);
+  border-radius: 2px;
+  content: '';
+  display: inline-block;
+  height: 12px;
+  margin-top: 2px;
+  width: 12px;
+}
+
+/* ── Logs card ── */
+.dashboard-logs-card {
+  background: var(--color-surface);
+  border-radius: var(--radius-surface);
+  box-shadow: var(--shadow-surface);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+}
+
+.dashboard-logs-title {
+  color: var(--color-text);
+  font-size: 15px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.dashboard-logs-empty {
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  margin: 0;
+  padding: 12px 0;
+}
+
+.dashboard-logs-table {
+  border-collapse: collapse;
+  font-size: 14px;
+  width: 100%;
+}
+
+.dashboard-logs-table th {
+  border-bottom: 1.5px solid rgba(34, 82, 58, 0.18);
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 8px 8px;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.dashboard-logs-table td {
+  border-bottom: 1px solid rgba(34, 82, 58, 0.08);
+  padding: 8px;
+  vertical-align: middle;
+}
+
+.dashboard-logs-table tr:last-child td {
+  border-bottom: none;
+}
+
+.dashboard-log-date {
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.dashboard-log-badge {
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 6px;
+  text-transform: uppercase;
+}
+
+.dashboard-log-badge-health {
+  background: #d4edda;
+  color: #1a6e33;
+}
+
+.dashboard-log-badge-removal {
+  background: #fde8e8;
+  color: var(--color-danger);
+}
+
+/* ── Responsive ── */
+@media (max-width: 1200px) {
+  .dashboard-grid {
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr);
+    width: calc(100% - var(--layout-sidebar-mobile-offset));
+  }
+
+  .dashboard-grid > :nth-child(4) { grid-column: 3; grid-row: 1; }
+  .dashboard-grid > :nth-child(7) { grid-column: 3; grid-row: 2; }
+}
+
+@media (max-width: 900px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr 1fr;
+    width: 100%;
+  }
+
+  .dashboard-grid > :nth-child(1) { grid-column: 1 / 3; }
+  .dashboard-grid > :nth-child(5) { grid-column: 1 / 3; }
+  .dashboard-grid > :nth-child(7) { grid-column: 1 / 3; }
+}
+
+@media (max-width: 640px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-grid > * {
+    grid-column: 1 !important;
+  }
+}

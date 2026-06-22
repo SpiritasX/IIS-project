@@ -18,11 +18,8 @@ public class LocationUnit {
     @Column(nullable = false)
     private String type;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    private LocationParcel parcel;
-
     @OneToMany(mappedBy = "unit", cascade = CascadeType.ALL, fetch = FetchType.EAGER, orphanRemoval = true)
-    private List<NurserySite> sites = new ArrayList<>();
+    private List<LocationParcel> parcels = new ArrayList<>();
 
     public LocationUnit() {
     }
@@ -44,30 +41,18 @@ public class LocationUnit {
         return type;
     }
 
-    public LocationParcel getParcel() {
-        return parcel;
+    public List<LocationParcel> getParcels() {
+        return parcels;
     }
 
-    public void setParcel(LocationParcel parcel) {
-        this.parcel = parcel;
+    public void addParcel(LocationParcel parcel) {
+        parcels.add(parcel);
+        parcel.setUnit(this);
     }
 
-    public List<NurserySite> getSites() {
-        return sites;
-    }
-
-    public List<NurserySite> getSite() {
-        return sites;
-    }
-
-    public void addSite(NurserySite site) {
-        this.sites.add(site);
-        site.setUnit(this);
-    }
-
-    public void removeSite(NurserySite site) {
-        this.sites.remove(site);
-        site.setUnit(null);
+    public void removeParcel(LocationParcel parcel) {
+        parcels.remove(parcel);
+        parcel.setUnit(null);
     }
 
     @Override

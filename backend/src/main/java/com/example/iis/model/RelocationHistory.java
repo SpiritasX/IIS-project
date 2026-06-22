@@ -28,6 +28,9 @@ public class RelocationHistory {
     private LocationParcel locationParcel;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    private NurserySite nurserySite;
+
+    @ManyToOne(fetch = FetchType.LAZY)
     private Worker worker;
 
     public RelocationHistory() {
@@ -88,6 +91,14 @@ public class RelocationHistory {
 
     public void setLocationParcel(LocationParcel locationParcel) {
         this.locationParcel = locationParcel;
+    }
+
+    public NurserySite getNurserySite() {
+        return nurserySite;
+    }
+
+    public void setNurserySite(NurserySite nurserySite) {
+        this.nurserySite = nurserySite;
     }
 
     public Worker getWorker() {

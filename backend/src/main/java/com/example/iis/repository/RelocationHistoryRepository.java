@@ -24,4 +24,26 @@ public interface RelocationHistoryRepository extends JpaRepository<RelocationHis
             group by history.plant.id
             """)
     List<PlantStockView> findActiveStockByPlantIds(@Param("plantIds") Collection<Long> plantIds);
+
+    List<RelocationHistory> findByNurserySiteIsNull();
+
+    List<RelocationHistory> findByNurserySite_IdAndEndTimeIsNull(Long siteId);
+
+    List<RelocationHistory> findByEndTimeIsNull();
+
+    List<RelocationHistory> findByNurserySite_Id(Long siteId);
+
+    @Query("SELECT rh.plant.id FROM RelocationHistory rh WHERE rh.nurserySite.id = :siteId AND rh.endTime IS NULL")
+    List<Long> findActivePlantIdsBySite(@Param("siteId") Long siteId);
+
+    @Query("SELECT rh.plant.id FROM RelocationHistory rh WHERE rh.endTime IS NULL")
+    List<Long> findAllActivePlantIds();
+
+    long countByEndTimeIsNull();
+
+    List<RelocationHistory> findByNurserySite_Parcel_IdAndEndTimeIsNull(Long parcelId);
+
+    List<RelocationHistory> findTop20ByNurserySite_IdOrderByStartTimeDesc(Long siteId);
+
+    List<RelocationHistory> findTop20ByOrderByStartTimeDesc();
 }

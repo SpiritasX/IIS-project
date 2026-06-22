@@ -2,6 +2,10 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import ProtectedRoute from './components/routing/ProtectedRoute'
 import AuthProvider from './contexts/AuthProvider'
 import CartProvider from './contexts/CartProvider'
+import BotanistDashboardPage from './pages/BotanistDashboardPage'
+import VarietiesPage from './pages/VarietiesPage'
+import WorkerDashboardPage from './pages/WorkerDashboardPage'
+import AddPlantsPage from './pages/AddPlantsPage'
 import CartPage from './pages/CartPage'
 import HomePage from './pages/HomePage'
 import LoginPage from './pages/LoginPage'
@@ -65,10 +69,15 @@ function App() {
             path="/botanist"
             element={
               <ProtectedRoute allowedRoles={['BOTANIST']}>
-                <RoleDashboardPage
-                  subtitle="Botanist workspace foundations are ready for future plant-care features."
-                  title="Botanist dashboard"
-                />
+                <BotanistDashboardPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/botanist/varieties"
+            element={
+              <ProtectedRoute allowedRoles={['BOTANIST']}>
+                <VarietiesPage />
               </ProtectedRoute>
             }
           />
@@ -76,10 +85,15 @@ function App() {
             path="/worker"
             element={
               <ProtectedRoute allowedRoles={['WORKER']}>
-                <RoleDashboardPage
-                  subtitle="Sales process operations will be connected here in the workflow part."
-                  title="Worker dashboard"
-                />
+                <WorkerDashboardPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/worker/plants"
+            element={
+              <ProtectedRoute allowedRoles={['WORKER']}>
+                <AddPlantsPage />
               </ProtectedRoute>
             }
           />

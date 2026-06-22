@@ -2,6 +2,7 @@ package com.example.iis.model;
 
 import jakarta.persistence.*;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -15,6 +16,10 @@ public class Plant {
     private String description;
     private String propagationMethod;
     private String status;
+    private LocalDate hatchingDate;
+    private String color;
+    private Double height;
+    private String state;
 
     @OneToMany(mappedBy = "plant", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<RelocationHistory> relocationHistory = new ArrayList<>();
@@ -79,6 +84,38 @@ public class Plant {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public LocalDate getHatchingDate() {
+        return hatchingDate;
+    }
+
+    public void setHatchingDate(LocalDate hatchingDate) {
+        this.hatchingDate = hatchingDate;
+    }
+
+    public String getColor() {
+        return color;
+    }
+
+    public void setColor(String color) {
+        this.color = color;
+    }
+
+    public Double getHeight() {
+        return height;
+    }
+
+    public void setHeight(Double height) {
+        this.height = height;
+    }
+
+    public String getState() {
+        return state;
+    }
+
+    public void setState(String state) {
+        this.state = state;
     }
 
     public List<RelocationHistory> getRelocationHistory() {

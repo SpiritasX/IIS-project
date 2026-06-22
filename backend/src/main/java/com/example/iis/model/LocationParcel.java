@@ -20,8 +20,11 @@ public class LocationParcel {
 
     private Long capacity;
 
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    private LocationUnit unit;
+
     @OneToMany(mappedBy = "parcel", cascade = CascadeType.ALL, fetch = FetchType.EAGER, orphanRemoval = true)
-    private List<LocationUnit> units = new ArrayList<>();
+    private List<NurserySite> sites = new ArrayList<>();
 
     @OneToMany(mappedBy = "locationParcel")
     private List<RelocationHistory> relocationHistory = new ArrayList<>();
@@ -55,18 +58,26 @@ public class LocationParcel {
         this.capacity = capacity;
     }
 
-    public List<LocationUnit> getUnits() {
-        return units;
+    public LocationUnit getUnit() {
+        return unit;
     }
 
-    public void addUnit(LocationUnit unit) {
-        units.add(unit);
-        unit.setParcel(this);
+    public void setUnit(LocationUnit unit) {
+        this.unit = unit;
     }
 
-    public void removeUnit(LocationUnit unit) {
-        units.remove(unit);
-        unit.setParcel(null);
+    public List<NurserySite> getSites() {
+        return sites;
+    }
+
+    public void addSite(NurserySite site) {
+        sites.add(site);
+        site.setParcel(this);
+    }
+
+    public void removeSite(NurserySite site) {
+        sites.remove(site);
+        site.setParcel(null);
     }
 
     public List<RelocationHistory> getRelocationHistory() {

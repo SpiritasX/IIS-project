@@ -20,6 +20,9 @@ public class PlantVariety {
     @ManyToOne(fetch = FetchType.EAGER, optional = false)
     private PlantSpecies species;
 
+    @ManyToOne(fetch = FetchType.EAGER, optional = false)
+    private LocationUnit locationType;
+
     @OneToMany(mappedBy = "variety")
     private Set<Plant> plants = new LinkedHashSet<>();
 
@@ -27,11 +30,16 @@ public class PlantVariety {
     }
 
     public PlantVariety(String name, Double humidity, String soil, String instructions, PlantSpecies species) {
+        this(name, humidity, soil, instructions, species, null);
+    }
+
+    public PlantVariety(String name, Double humidity, String soil, String instructions, PlantSpecies species, LocationUnit locationType) {
         this.name = name;
         this.humidity = humidity;
         this.soil = soil;
         this.instructions = instructions;
         this.species = species;
+        this.locationType = locationType;
     }
 
     public Long getId() {
@@ -72,6 +80,14 @@ public class PlantVariety {
 
     public void setSpecies(PlantSpecies species) {
         this.species = species;
+    }
+
+    public LocationUnit getLocationType() {
+        return locationType;
+    }
+
+    public void setLocationType(LocationUnit locationType) {
+        this.locationType = locationType;
     }
 
     public Set<Plant> getPlants() {

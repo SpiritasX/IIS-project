@@ -3,6 +3,8 @@ package com.example.iis.config;
 import com.example.iis.model.Admin;
 import com.example.iis.model.Botanist;
 import com.example.iis.model.LocationParcel;
+import com.example.iis.model.LocationUnit;
+import com.example.iis.model.NurserySite;
 import com.example.iis.model.OfferStatus;
 import com.example.iis.model.PhaseType;
 import com.example.iis.model.Plant;
@@ -14,7 +16,7 @@ import com.example.iis.model.PlantVariety;
 import com.example.iis.model.RelocationHistory;
 import com.example.iis.model.Worker;
 import com.example.iis.repository.AccountRepository;
-import com.example.iis.repository.LocationParcelRepository;
+import com.example.iis.repository.LocationUnitRepository;
 import com.example.iis.repository.OfferStatusRepository;
 import com.example.iis.repository.PhaseTypeRepository;
 import com.example.iis.repository.PlantCategoryRepository;
@@ -40,7 +42,7 @@ public class DataSeeder {
             OfferStatusRepository offerStatusRepository,
             PhaseTypeRepository phaseTypeRepository,
             PlantCategoryRepository plantCategoryRepository,
-            LocationParcelRepository locationParcelRepository,
+            LocationUnitRepository locationUnitRepository,
             PlantTypeRepository plantTypeRepository,
             PlantSpeciesRepository plantSpeciesRepository,
             PlantVarietyRepository plantVarietyRepository,
@@ -54,6 +56,10 @@ public class DataSeeder {
             seedOrderStatuses(offerStatusRepository);
             seedPhaseTypes(phaseTypeRepository);
 
+            LocationUnit defaultUnit = ensureDefaultUnit(locationUnitRepository);
+            LocationParcel defaultParcel = defaultUnit.getParcels().get(0);
+            NurserySite defaultSite = defaultParcel.getSites().get(0);
+
             if (plantPriceRepository.count() == 0) {
                 seedCatalog(
                         plantCategoryRepository,
@@ -61,12 +67,27 @@ public class DataSeeder {
                         plantSpeciesRepository,
                         plantVarietyRepository,
                         plantRepository,
-                        plantPriceRepository
+                        plantPriceRepository,
+                        defaultUnit
                 );
             }
 
-            seedInitialStock(plantRepository, locationParcelRepository, relocationHistoryRepository);
+            seedInitialStock(plantRepository, defaultParcel, defaultSite, relocationHistoryRepository);
         };
+    }
+
+    private LocationUnit ensureDefaultUnit(LocationUnitRepository locationUnitRepository) {
+        return locationUnitRepository.findAll().stream()
+                .filter(u -> u.getName().equals("Main Unit"))
+                .findFirst()
+                .orElseGet(() -> {
+                    LocationUnit unit = new LocationUnit("Main Unit", "Greenhouse");
+                    LocationParcel parcel = new LocationParcel("Default sales parcel", "Sales stock", 1000L);
+                    NurserySite site = new NurserySite("Site A", 45.2671, 19.8335);
+                    parcel.addSite(site);
+                    unit.addParcel(parcel);
+                    return locationUnitRepository.save(unit);
+                });
     }
 
     private void seedCatalog(
@@ -75,7 +96,8 @@ public class DataSeeder {
             PlantSpeciesRepository plantSpeciesRepository,
             PlantVarietyRepository plantVarietyRepository,
             PlantRepository plantRepository,
-            PlantPriceRepository plantPriceRepository
+            PlantPriceRepository plantPriceRepository,
+            LocationUnit defaultUnit
     ) {
         PlantCategory flowers = plantCategoryRepository.save(new PlantCategory("Flowers"));
         PlantCategory herbs = plantCategoryRepository.save(new PlantCategory("Herbs"));
@@ -92,127 +114,47 @@ public class DataSeeder {
         PlantSpecies oliveSpecies = plantSpeciesRepository.save(new PlantSpecies("Olive", fruitTrees));
 
         PlantVariety lavender = plantVarietyRepository.save(new PlantVariety(
-                "English lavender",
-                45.0,
-                "Well-drained alkaline soil",
-                "Keep in full sun and water sparingly.",
-                lavenderSpecies
-        ));
+                "English lavender", 45.0, "Well-drained alkaline soil",
+                "Keep in full sun and water sparingly.", lavenderSpecies, defaultUnit));
         PlantVariety basil = plantVarietyRepository.save(new PlantVariety(
-                "Genovese basil",
-                60.0,
-                "Rich, moist soil",
-                "Pinch top leaves often to encourage growth.",
-                basilSpecies
-        ));
+                "Genovese basil", 60.0, "Rich, moist soil",
+                "Pinch top leaves often to encourage growth.", basilSpecies, defaultUnit));
         PlantVariety olive = plantVarietyRepository.save(new PlantVariety(
-                "Arbequina olive",
-                40.0,
-                "Sandy loam",
-                "Place in a warm bright spot and avoid overwatering.",
-                oliveSpecies
-        ));
+                "Arbequina olive", 40.0, "Sandy loam",
+                "Place in a warm bright spot and avoid overwatering.", oliveSpecies, defaultUnit));
         PlantVariety mint = plantVarietyRepository.save(new PlantVariety(
-                "Spearmint",
-                65.0,
-                "Moist garden soil",
-                "Trim runners and keep soil evenly moist.",
-                mintSpecies
-        ));
+                "Spearmint", 65.0, "Moist garden soil",
+                "Trim runners and keep soil evenly moist.", mintSpecies, defaultUnit));
         PlantVariety rose = plantVarietyRepository.save(new PlantVariety(
-                "Garden rose",
-                55.0,
-                "Loamy soil",
-                "Prune spent blooms and water at the base.",
-                roseSpecies
-        ));
+                "Garden rose", 55.0, "Loamy soil",
+                "Prune spent blooms and water at the base.", roseSpecies, defaultUnit));
 
-        savePlantWithPrice(
-                plantRepository,
-                plantPriceRepository,
-                new Plant(
-                        "Lavender starter",
-                        "Hardy young lavender plant with rich fragrance and strong roots.",
-                        "Cuttings",
-                        "Available",
-                        lavender
-                ),
-                new BigDecimal("1000")
-        );
-        savePlantWithPrice(
-                plantRepository,
-                plantPriceRepository,
-                new Plant(
-                        "Basil seedling",
-                        "Fresh culinary basil seedling ready for a sunny kitchen window.",
-                        "Seed",
-                        "Available",
-                        basil
-                ),
-                new BigDecimal("750")
-        );
-        savePlantWithPrice(
-                plantRepository,
-                plantPriceRepository,
-                new Plant(
-                        "Olive sapling",
-                        "Mediterranean olive sapling suited for patios and warm gardens.",
-                        "Grafting",
-                        "Available",
-                        olive
-                ),
-                new BigDecimal("1800")
-        );
-        savePlantWithPrice(
-                plantRepository,
-                plantPriceRepository,
-                new Plant(
-                        "Mint pot",
-                        "Fast-growing mint in a compact nursery pot for easy transplanting.",
-                        "Division",
-                        "Available",
-                        mint
-                ),
-                new BigDecimal("650")
-        );
-        savePlantWithPrice(
-                plantRepository,
-                plantPriceRepository,
-                new Plant(
-                        "Rose bush",
-                        "Classic rose bush with seasonal blooms and balanced growth.",
-                        "Cuttings",
-                        "Available",
-                        rose
-                ),
-                new BigDecimal("1400")
-        );
+        savePlantWithPrice(plantRepository, plantPriceRepository,
+                new Plant("Lavender starter", "Hardy young lavender plant with rich fragrance and strong roots.",
+                        "Cuttings", "Available", lavender), new BigDecimal("1000"));
+        savePlantWithPrice(plantRepository, plantPriceRepository,
+                new Plant("Basil seedling", "Fresh culinary basil seedling ready for a sunny kitchen window.",
+                        "Seed", "Available", basil), new BigDecimal("750"));
+        savePlantWithPrice(plantRepository, plantPriceRepository,
+                new Plant("Olive sapling", "Mediterranean olive sapling suited for patios and warm gardens.",
+                        "Grafting", "Available", olive), new BigDecimal("1800"));
+        savePlantWithPrice(plantRepository, plantPriceRepository,
+                new Plant("Mint pot", "Fast-growing mint in a compact nursery pot for easy transplanting.",
+                        "Division", "Available", mint), new BigDecimal("650"));
+        savePlantWithPrice(plantRepository, plantPriceRepository,
+                new Plant("Rose bush", "Classic rose bush with seasonal blooms and balanced growth.",
+                        "Cuttings", "Available", rose), new BigDecimal("1400"));
     }
 
     private void seedOrderStatuses(OfferStatusRepository offerStatusRepository) {
-        List.of(
-                "Pending",
-                "Delivered",
-                "Cancelled",
-                "Ponuda",
-                "Rezervacija",
-                "Spremno",
-                "Isporuka",
-                "Isporuceno",
-                "Odbijeno",
-                "Isteklo",
-                "Otkazano"
-        ).forEach(status -> saveStatusIfMissing(offerStatusRepository, status));
+        List.of("Pending", "Delivered", "Cancelled", "Ponuda", "Rezervacija",
+                "Spremno", "Isporuka", "Isporuceno", "Odbijeno", "Isteklo", "Otkazano")
+                .forEach(status -> saveStatusIfMissing(offerStatusRepository, status));
     }
 
     private void seedPhaseTypes(PhaseTypeRepository phaseTypeRepository) {
-        List.of(
-                "Order placed",
-                "Ponuda",
-                "Rezervacija",
-                "Spremno",
-                "Isporuka"
-        ).forEach(name -> savePhaseTypeIfMissing(phaseTypeRepository, name));
+        List.of("Order placed", "Ponuda", "Rezervacija", "Spremno", "Isporuka")
+                .forEach(name -> savePhaseTypeIfMissing(phaseTypeRepository, name));
     }
 
     private void saveStatusIfMissing(OfferStatusRepository offerStatusRepository, String name) {
@@ -229,76 +171,53 @@ public class DataSeeder {
 
     private void seedStaffAccounts(AccountRepository accountRepository, PasswordEncoder passwordEncoder) {
         if (!accountRepository.existsByEmail("admin@example.com")) {
-            accountRepository.save(new Admin(
-                    uniqueUsername(accountRepository, "admin"),
-                    passwordEncoder.encode("admin"),
-                    "Admin",
-                    "User",
-                    "admin@example.com"
-            ));
+            accountRepository.save(new Admin(uniqueUsername(accountRepository, "admin"),
+                    passwordEncoder.encode("admin"), "Admin", "User", "admin@example.com"));
         }
-
         if (!accountRepository.existsByEmail("botanist@example.com")) {
-            accountRepository.save(new Botanist(
-                    uniqueUsername(accountRepository, "botanist"),
-                    passwordEncoder.encode("botanist"),
-                    "Botanist",
-                    "User",
-                    "botanist@example.com"
-            ));
+            accountRepository.save(new Botanist(uniqueUsername(accountRepository, "botanist"),
+                    passwordEncoder.encode("botanist"), "Botanist", "User", "botanist@example.com"));
         }
-
         if (!accountRepository.existsByEmail("worker@example.com")) {
-            accountRepository.save(new Worker(
-                    uniqueUsername(accountRepository, "worker"),
-                    passwordEncoder.encode("worker"),
-                    "Worker",
-                    "User",
-                    "worker@example.com"
-            ));
+            accountRepository.save(new Worker(uniqueUsername(accountRepository, "worker"),
+                    passwordEncoder.encode("worker"), "Worker", "User", "worker@example.com"));
         }
     }
 
     private String uniqueUsername(AccountRepository accountRepository, String base) {
         String candidate = base;
         int suffix = 1;
-
         while (accountRepository.existsByUsername(candidate)) {
-            candidate = base + suffix;
-            suffix++;
+            candidate = base + suffix++;
         }
-
         return candidate;
     }
 
     private void seedInitialStock(
             PlantRepository plantRepository,
-            LocationParcelRepository locationParcelRepository,
+            LocationParcel parcel,
+            NurserySite defaultSite,
             RelocationHistoryRepository relocationHistoryRepository
     ) {
-        LocationParcel parcel = locationParcelRepository.findByName("Default sales parcel")
-                .orElseGet(() -> locationParcelRepository.save(
-                        new LocationParcel("Default sales parcel", "Sales stock", 1000L)
-                ));
+        List<RelocationHistory> unassigned = relocationHistoryRepository.findByNurserySiteIsNull();
+        if (!unassigned.isEmpty()) {
+            for (RelocationHistory rh : unassigned) {
+                rh.setNurserySite(defaultSite);
+            }
+            relocationHistoryRepository.saveAll(unassigned);
+        }
 
         for (Plant plant : plantRepository.findAll()) {
             if (relocationHistoryRepository.countByPlant_IdAndEndTimeIsNull(plant.getId()) == 0) {
-                relocationHistoryRepository.save(new RelocationHistory(
-                        "Initial stock",
-                        plant,
-                        parcel,
-                        20L
-                ));
+                RelocationHistory rh = new RelocationHistory("Initial stock", plant, parcel, 20L);
+                rh.setNurserySite(defaultSite);
+                relocationHistoryRepository.save(rh);
             }
         }
     }
 
-    private void savePlantWithPrice(
-            PlantRepository plantRepository,
-            PlantPriceRepository plantPriceRepository,
-            Plant plant,
-            BigDecimal price
-    ) {
+    private void savePlantWithPrice(PlantRepository plantRepository, PlantPriceRepository plantPriceRepository,
+                                    Plant plant, BigDecimal price) {
         Plant savedPlant = plantRepository.save(plant);
         plantPriceRepository.save(new PlantPrice(price, savedPlant));
     }
