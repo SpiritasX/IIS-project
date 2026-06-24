@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../api/client'
 import PageTitle from '../components/home/PageTitle'
+import OrderHistory from '../components/requests/OrderHistory'
 import '../styles/home.css'
 import '../styles/requests.css'
 
@@ -89,19 +90,26 @@ function normalizeProcess(process) {
       endTime: formatDateTime(phase.endTime),
       startTime: formatDateTime(phase.startTime),
     })),
+    orderHistory: (process.orderHistory || []).map((snapshot) => ({
+      ...snapshot,
+      changedAt: formatDateTime(snapshot.changedAt),
+      total: Number(snapshot.total || 0),
+      items: (snapshot.items || []).map((item) => ({
+        ...item,
+        price: Number(item.price || 0),
+        priceId: String(item.priceId),
+        quantity: Number(item.quantity || 0),
+      })),
+    })),
     rawStartTime: process.startTime,
     startDate: formatDate(process.startTime),
-    startTime: formatDateTime(process.startTime),
     total: Number(process.total || 0),
     items: (process.items || []).map((item) => ({
       ...item,
       adjusted: Boolean(item.adjusted),
       offeredQuantity: Number(item.offeredQuantity ?? item.quantity ?? 0),
-      price: Number(item.price || 0),
       priceId: String(item.priceId),
       quantity: Number(item.quantity ?? item.offeredQuantity ?? 0),
-      requestedQuantity: Number(item.requestedQuantity ?? item.quantity ?? 0),
-      reservedQuantity: Number(item.reservedQuantity || 0),
     })),
   }
 }
@@ -421,6 +429,8 @@ function StaffRequestsPage({ backPath, emptyMessage, title, variant }) {
                 ))}
               </div>
             ) : null}
+
+            <OrderHistory snapshots={selectedProcess.orderHistory} />
 
             {actionError ? (
               <p className="request-action-error" role="alert">

@@ -366,17 +366,12 @@ function CartPage() {
       return
     }
 
-    if (!cancelReason.trim()) {
-      setOfferActionError('Cancellation reason is required.')
-      return
-    }
-
     setOfferActionError('')
     setOfferActionLoading(true)
 
     try {
       await api.post(`/orders/${adjustedOffer.id}/cancel`, {
-        reason: cancelReason.trim(),
+        reason: cancelReason.trim() || null,
       })
       navigate('/requests')
     } catch (error) {
@@ -493,7 +488,7 @@ function CartPage() {
               {adjustedOffer.canCancel ? (
                 <form className="offer-cancel-form" onSubmit={handleCancelOffer}>
                   <label>
-                    <span>Cancellation reason</span>
+                    <span>Cancellation reason (optional)</span>
                     <textarea
                       onChange={(event) => setCancelReason(event.target.value)}
                       rows="3"

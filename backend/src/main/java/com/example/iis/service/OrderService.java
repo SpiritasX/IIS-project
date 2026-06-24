@@ -2,17 +2,22 @@ package com.example.iis.service;
 
 import com.example.iis.dto.CancelRequest;
 import com.example.iis.dto.CreateOrderRequest;
+import com.example.iis.dto.OrderHistoryItemResponse;
+import com.example.iis.dto.OrderHistoryResponse;
 import com.example.iis.dto.OrderItemRequest;
 import com.example.iis.dto.OrderItemResponse;
 import com.example.iis.dto.OrderResponse;
 import com.example.iis.dto.PhaseHistoryResponse;
 import com.example.iis.dto.StaffProcessResponse;
 import com.example.iis.dto.StaffTransitionRequest;
+import com.example.iis.dto.UpdateOrderRequest;
 import com.example.iis.model.Cancellation;
 import com.example.iis.model.CancellationReason;
 import com.example.iis.model.Customer;
 import com.example.iis.model.Offer;
 import com.example.iis.model.OfferStatus;
+import com.example.iis.model.OrderHistory;
+import com.example.iis.model.OrderHistoryItem;
 import com.example.iis.model.OrderItem;
 import com.example.iis.model.Phase;
 import com.example.iis.model.PhaseType;
@@ -39,14 +44,7 @@ import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.Date;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -131,9 +129,7 @@ public class OrderService {
             PlantPrice price = pricesById.get(priceId);
             long availableQuantity = stockByPlantId.getOrDefault(price.getPlant().getId(), 0L);
             int offeredQuantity = (int) Math.min(requestedQuantity, availableQuantity);
-
             if (offeredQuantity > 0) {
-                offer.addPrice(price);
                 offer.addItem(new OrderItem(price, requestedQuantity, offeredQuantity, 0));
             }
         });
@@ -147,11 +143,13 @@ public class OrderService {
         process.addPhase(new Phase(process, offerPhaseType, savedOffer));
         processRepository.save(process);
 
+        // ako je request u potpunosti ispunjen, automatski prihvati ponudu.
         if (Boolean.TRUE.equals(request.autoAcceptIfUnchanged()) && offerMatchesRequest(savedOffer, requestedQuantities)) {
             reserveStock(savedOffer);
             finishCurrentPhase(process);
             savedOffer.setStatus(status(STATUS_RESERVATION));
             process.addPhase(new Phase(process, phaseType(PHASE_RESERVATION), savedOffer));
+            addOrderHistorySnapshot(savedOffer, currentPhase(process).getStartTime());
         }
 
         return toResponse(savedOffer, process);
@@ -159,34 +157,50 @@ public class OrderService {
 
     @Transactional
     public List<OrderResponse> getOrdersForCustomer(Long customerId) {
-        if (customerId == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Customer is required");
+        List<OrderResponse> responses = new ArrayList<>();
+
+        for (Offer offer : offerRepository.findOrdersForCustomer(customerId)) {
+            Process process = processForCustomerOffer(customerId, offer.getId());
+            expireIfNeeded(offer, process);
+            responses.add(toResponse(offer, process));
         }
 
-        return offerRepository.findOrdersForCustomer(customerId)
-                .stream()
-                .map(offer -> {
-                    Process process = processForCustomerOffer(customerId, offer.getId());
-                    expireIfNeeded(offer, process);
-                    return toResponse(offer, process);
-                })
-                .toList();
+        return responses;
     }
 
     @Transactional
     public OrderResponse getOrderForCustomer(Long customerId, Long orderId) {
-        if (customerId == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Customer is required");
-        }
 
-        if (orderId == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Order is required");
-        }
-
-        Offer offer = offerRepository.findOrderForCustomer(orderId, customerId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
-        Process process = processForCustomerOffer(customerId, orderId);
+        Offer offer = offerRepository.findOrderForCustomer(orderId, customerId).orElseThrow(() -> new ResponseStatusException((HttpStatus.NOT_FOUND), "Order not found"));
+        Process process = processForCustomerOffer(customerId,orderId);
         expireIfNeeded(offer, process);
+        return toResponse(offer, process);
+    }
+
+    @Transactional
+    public OrderResponse updateOrder(Long customerId, Long orderId, UpdateOrderRequest request) {
+        Offer offer = customerOffer(customerId, orderId);
+        Process process = processForCustomerOffer(customerId, orderId);
+        requireCurrentPhase(process, PHASE_RESERVATION);
+
+        Map<Long, Integer> updatedQuantities = normalizeItems(request == null ? null : request.items());
+        Map<Long, Integer> currentQuantities = currentQuantities(offer);
+
+        if (currentQuantities.equals(updatedQuantities)) {
+            return toResponse(offer, process);
+        }
+
+        Map<Long, PlantPrice> pricesById = loadEditPrices(offer, updatedQuantities.keySet());
+
+        restoreReservedStock(offer);
+        offer.getItems().clear();
+
+        updatedQuantities.forEach((priceId, quantity) ->
+                offer.addItem(new OrderItem(pricesById.get(priceId), quantity, quantity, 0))
+        );
+
+        reserveStock(offer);
+        addOrderHistorySnapshot(offer, new Date(System.currentTimeMillis()));
 
         return toResponse(offer, process);
     }
@@ -198,15 +212,13 @@ public class OrderService {
         expireIfNeeded(offer, process);
         requireCurrentPhase(process, PHASE_OFFER);
 
-        if (!STATUS_OFFER.equals(offer.getStatus().getName())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Offer can no longer be accepted");
-        }
 
         verifyStockIsStillAvailable(offer);
         reserveStock(offer);
         finishCurrentPhase(process);
         offer.setStatus(status(STATUS_RESERVATION));
         process.addPhase(new Phase(process, phaseType(PHASE_RESERVATION), offer));
+        addOrderHistorySnapshot(offer, currentPhase(process).getStartTime());
 
         return toResponse(offer, process);
     }
@@ -236,7 +248,7 @@ public class OrderService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Process cannot be cancelled in this phase");
         }
 
-        cancelProcess(offer, process, request == null ? null : request.reason(), CUSTOMER_CANCELLATION_REASON);
+        cancelProcess(offer, process, request == null ? null : request.reason(), CUSTOMER_CANCELLATION_REASON, false);
         return toResponse(offer, process);
     }
 
@@ -244,16 +256,21 @@ public class OrderService {
     public List<StaffProcessResponse> getStaffProcesses(String role) {
         String staffRole = staffRole(role);
 
-        return processRepository.findAllByOrderByStartTimeDesc()
-                .stream()
-                .map(process -> {
-                    Offer offer = offerForProcess(process);
-                    expireIfNeeded(offer, process);
-                    return process;
-                })
-                .filter(process -> canViewStaffProcess(process, staffRole))
-                .map(process -> toStaffResponse(process, staffRole))
-                .toList();
+        List<StaffProcessResponse> responses = new ArrayList<>();
+
+        List<Process> processes = processRepository.findAllByOrderByStartTimeDesc();
+
+        for (Process process : processes) {
+            Offer offer = offerForProcess(process);
+            expireIfNeeded(offer, process);
+
+            if (canViewStaffProcess(process, staffRole)) {
+                StaffProcessResponse response = toStaffResponse(process, staffRole);
+                responses.add(response);
+            }
+        }
+
+        return responses;
     }
 
     @Transactional
@@ -282,10 +299,6 @@ public class OrderService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Process not found"));
         Offer offer = offerForProcess(process);
         expireIfNeeded(offer, process);
-
-        if (!canViewStaffProcess(process, staffRole)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Process is not available for this role");
-        }
 
         String action = requireText(request == null ? null : request.action(), "Action is required");
         String currentPhase = currentPhaseName(process);
@@ -318,7 +331,7 @@ public class OrderService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Process cannot be cancelled in this phase");
         }
 
-        cancelProcess(offer, process, request == null ? null : request.reason(), STAFF_CANCELLATION_REASON);
+        cancelProcess(offer, process, request == null ? null : request.reason(), STAFF_CANCELLATION_REASON, true);
         return toStaffResponse(process, staffRole);
     }
 
@@ -328,8 +341,16 @@ public class OrderService {
         process.addPhase(new Phase(process, phaseType(nextPhase), offer));
     }
 
-    private void cancelProcess(Offer offer, Process process, String reason, String reasonName) {
-        String cancellationReason = requireText(reason, "Cancellation reason is required");
+    private void cancelProcess(
+            Offer offer,
+            Process process,
+            String reason,
+            String reasonName,
+            boolean reasonRequired
+    ) {
+        String cancellationReason = reasonRequired
+                ? requireText(reason, "Cancellation reason is required")
+                : optionalText(reason);
         restoreReservedStock(offer);
         offer.setStatus(status(STATUS_CANCELLED));
         Phase currentPhase = currentPhase(process);
@@ -373,8 +394,10 @@ public class OrderService {
             }
         }
     }
-
+// prolazi kroz sve iteme u offeru, i za svaki od njih prolazi kroz sve lokacije i proverava koliko je itema available na toj lokaciji, i uzima toliko itema.
     private void reserveStock(Offer offer) {
+
+
         for (OrderItem item : offer.getItems()) {
             int remainingQuantity = offeredQuantity(item);
             List<RelocationHistory> histories = relocationHistoryRepository
@@ -459,17 +482,46 @@ public class OrderService {
         return quantities;
     }
 
-    private Map<Long, PlantPrice> loadPrices(Collection<Long> priceIds) {
+    private Map<Long, Integer> currentQuantities(Offer offer) {
+        Map<Long, Integer> quantities = new LinkedHashMap<>();
+        for (OrderItem item : offer.getItems()) {
+            quantities.put(item.getPlantPrice().getId(), reservedQuantity(item));
+        }
+        return quantities;
+    }
+
+    private Map<Long, PlantPrice> loadEditPrices(Offer offer, Collection<Long> priceIds) {
+        Map<Long, PlantPrice> existingPrices = offer.getItems()
+                .stream()
+                .collect(Collectors.toMap(item -> item.getPlantPrice().getId(), OrderItem::getPlantPrice));
         Map<Long, PlantPrice> pricesById = new LinkedHashMap<>();
 
         for (Long priceId : priceIds) {
+            PlantPrice existingPrice = existingPrices.get(priceId);
+            if (existingPrice != null) {
+                pricesById.put(priceId, existingPrice);
+                continue;
+            }
+
             PlantPrice price = plantPriceRepository.findById(priceId)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Plant price not found"));
-
             if (price.getEndTime() != null) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Plant price is no longer active");
             }
+            pricesById.put(priceId, price);
+        }
 
+        return pricesById;
+    }
+
+    private Map<Long, PlantPrice> loadPrices(Collection<Long> priceIds) {
+        Map<Long, PlantPrice> pricesById = new LinkedHashMap<>();
+        for(Long priceId : priceIds) {
+            PlantPrice price = plantPriceRepository.findById(priceId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "plant price not found"));
+            if(price.getEndTime() != null) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Plant price is no longer active");
+            }
             pricesById.put(priceId, price);
         }
 
@@ -477,22 +529,17 @@ public class OrderService {
     }
 
     private Map<Long, Long> stockByPlantId(Collection<PlantPrice> prices) {
-        List<Long> plantIds = prices.stream()
-                .map(price -> price.getPlant().getId())
-                .distinct()
-                .toList();
 
-        if (plantIds.isEmpty()) {
-            return Map.of();
+        List<Long> plantIds = new ArrayList<>();
+        for( PlantPrice price : prices) {
+            plantIds.add(price.getPlant().getId());
         }
-
-        return relocationHistoryRepository.findActiveStockByPlantIds(plantIds)
-                .stream()
-                .collect(Collectors.toMap(
-                        RelocationHistoryRepository.PlantStockView::getPlantId,
-                        RelocationHistoryRepository.PlantStockView::getAvailableQuantity,
-                        Long::sum
-                ));
+        List<RelocationHistoryRepository.PlantStockView> activeStocks = relocationHistoryRepository.findActiveStockByPlantIds((plantIds));
+        Map<Long, Long> StocksByPlantId = new HashMap<>();
+        for(RelocationHistoryRepository.PlantStockView stockView : activeStocks){
+            StocksByPlantId.put(stockView.getPlantId(), stockView.getAvailableQuantity());
+        }
+        return StocksByPlantId;
     }
 
     private Offer customerOffer(Long customerId, Long offerId) {
@@ -583,6 +630,7 @@ public class OrderService {
                 currentPhaseName(process),
                 formatDate(offer.getExpiresAt()),
                 phaseHistoryFor(process),
+                orderHistoryFor(offer),
                 canCustomerAccept(offer, process),
                 canCustomerReject(offer, process),
                 canCustomerCancel(offer, process)
@@ -608,6 +656,7 @@ public class OrderService {
                 totalFor(items),
                 items,
                 phaseHistoryFor(process),
+                orderHistoryFor(offer),
                 staffAllowedActions(process, role)
         );
     }
@@ -660,6 +709,56 @@ public class OrderService {
         return items.stream()
                 .map(item -> item.price().multiply(BigDecimal.valueOf(item.quantity())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+
+
+    private void addOrderHistorySnapshot(Offer offer, Date changedAt) {
+        OrderHistory snapshot = new OrderHistory(offer, changedAt);
+        offer.getItems()
+                .stream()
+                .sorted(Comparator.comparing(item -> item.getPlantPrice().getId()))
+                .forEach(item -> snapshot.addItem(new OrderHistoryItem(
+                        item.getPlantPrice(),
+                        reservedQuantity(item)
+                )));
+        offer.addOrderHistory(snapshot);
+    }
+
+    private List<OrderHistoryResponse> orderHistoryFor(Offer offer) {
+        return offer.getOrderHistory()
+                .stream()
+                .sorted(Comparator.comparing(OrderHistory::getChangedAt)
+                        .thenComparing(OrderHistory::getId, Comparator.nullsLast(Long::compareTo)))
+                .map(this::toOrderHistoryResponse)
+                .toList();
+    }
+
+    private OrderHistoryResponse toOrderHistoryResponse(OrderHistory snapshot) {
+        List<OrderHistoryItemResponse> items = snapshot.getItems()
+                .stream()
+                .map(item -> {
+                    PlantPrice price = item.getPlantPrice();
+                    Plant plant = price.getPlant();
+                    return new OrderHistoryItemResponse(
+                            plant.getId(),
+                            price.getId(),
+                            plant.getName(),
+                            item.getQuantity(),
+                            price.getPrice()
+                    );
+                })
+                .toList();
+        BigDecimal total = items.stream()
+                .map(item -> item.price().multiply(BigDecimal.valueOf(item.quantity())))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        return new OrderHistoryResponse(
+                snapshot.getId(),
+                formatDate(snapshot.getChangedAt()),
+                total,
+                items
+        );
     }
 
     private List<PhaseHistoryResponse> phaseHistoryFor(Process process) {
@@ -732,7 +831,9 @@ public class OrderService {
         }
 
         String currentPhase = currentPhaseName(process);
-        return Set.of(PHASE_RESERVATION, PHASE_READY).contains(currentPhase);
+        return (PHASE_RESERVATION.equals(currentPhase) || PHASE_READY.equals(currentPhase));
+//        return Set.of(PHASE_RESERVATION, PHASE_READY).contains(currentPhase);
+
     }
 
     private boolean canCancelStaffProcess(String role, String currentPhase) {
@@ -798,6 +899,14 @@ public class OrderService {
     private String requireText(String value, String message) {
         if (value == null || value.trim().isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, message);
+        }
+
+        return value.trim();
+    }
+
+    private String optionalText(String value) {
+        if (value == null || value.trim().isEmpty()) {
+            return null;
         }
 
         return value.trim();

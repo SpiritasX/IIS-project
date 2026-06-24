@@ -13,6 +13,7 @@ public record OrderResponse(
         String currentPhase,
         String expiresAt,
         List<PhaseHistoryResponse> phaseHistory,
+        List<OrderHistoryResponse> orderHistory,
         boolean canAccept,
         boolean canReject,
         boolean canCancel

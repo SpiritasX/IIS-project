@@ -5,6 +5,7 @@ import HomeHeader from '../components/home/HomeHeader'
 import PageTitle from '../components/home/PageTitle'
 import UserSidebar from '../components/home/UserSidebar'
 import RequestCard from '../components/requests/RequestCard'
+import OrderHistory from '../components/requests/OrderHistory'
 import { useCart } from '../hooks/useCart'
 import '../styles/home.css'
 import '../styles/requests.css'
@@ -74,6 +75,15 @@ function errorMessageFor(error) {
   )
 }
 
+function normalizeProduct(product) {
+  return {
+    ...product,
+    availableQuantity: Number(product.availableQuantity || 0),
+    price: Number(product.price || 0),
+    priceId: String(product.priceId),
+  }
+}
+
 function normalizeOrder(order) {
   return {
     ...order,
@@ -86,17 +96,25 @@ function normalizeOrder(order) {
       endTime: formatDateTime(phase.endTime),
       startTime: formatDateTime(phase.startTime),
     })),
+    orderHistory: (order.orderHistory || []).map((snapshot) => ({
+      ...snapshot,
+      changedAt: formatDateTime(snapshot.changedAt),
+      total: Number(snapshot.total || 0),
+      items: (snapshot.items || []).map((item) => ({
+        ...item,
+        price: Number(item.price || 0),
+        priceId: String(item.priceId),
+        quantity: Number(item.quantity || 0),
+      })),
+    })),
     rawDate: order.date,
     total: Number(order.total || 0),
     items: (order.items || []).map((item) => ({
       ...item,
       adjusted: Boolean(item.adjusted),
       offeredQuantity: Number(item.offeredQuantity ?? item.quantity ?? 0),
-      price: Number(item.price || 0),
       priceId: String(item.priceId),
       quantity: Number(item.quantity ?? item.offeredQuantity ?? 0),
-      requestedQuantity: Number(item.requestedQuantity ?? item.quantity ?? 0),
-      reservedQuantity: Number(item.reservedQuantity || 0),
     })),
   }
 }
@@ -115,6 +133,10 @@ function RequestsPage() {
   const [actionError, setActionError] = useState('')
   const [actionLoading, setActionLoading] = useState(false)
   const [cancelReason, setCancelReason] = useState('')
+  const [editingOrder, setEditingOrder] = useState(false)
+  const [editLoading, setEditLoading] = useState(false)
+  const [editProducts, setEditProducts] = useState([])
+  const [editQuantities, setEditQuantities] = useState({})
 
   useEffect(() => {
     let ignore = false
@@ -196,12 +218,14 @@ function RequestsPage() {
   function handleModalBackdropMouseDown(event) {
     if (event.target === event.currentTarget) {
       setSelectedOrder(null)
+      setEditingOrder(false)
     }
   }
 
   async function handleViewDetails(order) {
     setActionError('')
     setCancelReason('')
+    setEditingOrder(false)
 
     try {
       const response = await api.get(`/orders/${order.id}`)
@@ -209,6 +233,88 @@ function RequestsPage() {
       updateOrder(normalized)
     } catch {
       setSelectedOrder(order)
+    }
+  }
+
+  async function handleStartEditing() {
+    if (!selectedOrder) {
+      return
+    }
+
+    setActionError('')
+    setEditLoading(true)
+
+    try {
+      const response = await api.get('/plants')
+      const currentQuantities = Object.fromEntries(
+        selectedOrder.items.map((item) => [item.priceId, item.offeredQuantity]),
+      )
+      const products = response.data.map(normalizeProduct).map((product) => ({
+        ...product,
+        availableToOrder:
+          product.availableQuantity + Number(currentQuantities[product.priceId] || 0),
+      }))
+      const productIds = new Set(products.map((product) => product.priceId))
+
+      selectedOrder.items.forEach((item) => {
+        if (!productIds.has(item.priceId)) {
+          products.push({
+            availableToOrder: item.offeredQuantity,
+            name: item.name,
+            price: Number(item.price || 0),
+            priceId: item.priceId,
+          })
+        }
+      })
+
+      setEditProducts(products)
+      setEditQuantities(currentQuantities)
+      setEditingOrder(true)
+    } catch (error) {
+      setActionError(errorMessageFor(error))
+    } finally {
+      setEditLoading(false)
+    }
+  }
+
+  function changeEditQuantity(priceId, change) {
+    const product = editProducts.find((item) => item.priceId === priceId)
+    const maximum = product?.availableToOrder || 0
+
+    setEditQuantities((current) => {
+      const quantity = Number(current[priceId] || 0)
+      const nextQuantity = Math.max(0, Math.min(maximum, quantity + change))
+      return { ...current, [priceId]: nextQuantity }
+    })
+  }
+
+  async function handleEditSubmit(event) {
+    event.preventDefault()
+
+    if (!selectedOrder) {
+      return
+    }
+
+    const items = Object.entries(editQuantities)
+      .filter(([, quantity]) => quantity > 0)
+      .map(([plantPriceId, quantity]) => ({ plantPriceId, quantity }))
+
+    if (items.length === 0) {
+      setActionError('At least one product must remain in the request.')
+      return
+    }
+
+    setActionError('')
+    setActionLoading(true)
+
+    try {
+      const response = await api.put(`/orders/${selectedOrder.id}`, { items })
+      updateOrder(normalizeOrder(response.data))
+      setEditingOrder(false)
+    } catch (error) {
+      setActionError(errorMessageFor(error))
+    } finally {
+      setActionLoading(false)
     }
   }
 
@@ -244,17 +350,12 @@ function RequestsPage() {
       return
     }
 
-    if (!cancelReason.trim()) {
-      setActionError('Cancellation reason is required.')
-      return
-    }
-
     setActionError('')
     setActionLoading(true)
 
     try {
       const response = await api.post(`/orders/${selectedOrder.id}/cancel`, {
-        reason: cancelReason.trim(),
+        reason: cancelReason.trim() || null,
       })
       updateOrder(normalizeOrder(response.data))
       setCancelReason('')
@@ -327,16 +428,68 @@ function RequestsPage() {
             {selectedOrder.currentPhase === 'Ponuda' && selectedOrder.expiresAt ? (
               <p className="request-modal-muted">Valid until {selectedOrder.expiresAt}</p>
             ) : null}
-            <div className="request-modal-items">
-              {selectedOrder.items.map((item) => (
-                <div className="request-modal-item" key={`${selectedOrder.id}-modal-${item.priceId}`}>
-                  <strong>{item.name}</strong>
-                  <span>Amount: {item.offeredQuantity}</span>
-                  {item.adjusted ? <em>Adjusted</em> : null}
+            {editingOrder ? (
+              <form className="request-edit-form" onSubmit={handleEditSubmit}>
+                <div className="request-edit-products">
+                  {editProducts.map((product) => {
+                    const quantity = Number(editQuantities[product.priceId] || 0)
+                    return (
+                      <div className="request-edit-product" key={`edit-${product.priceId}`}>
+                        <div>
+                          <strong>{product.name}</strong>
+                          <span>{product.price}</span>
+                        </div>
+                        <div className="request-edit-quantity">
+                          <button
+                            aria-label={`Remove one ${product.name}`}
+                            disabled={quantity === 0 || actionLoading}
+                            onClick={() => changeEditQuantity(product.priceId, -1)}
+                            type="button"
+                          >
+                            −
+                          </button>
+                          <strong>{quantity}</strong>
+                          <button
+                            aria-label={`Add one ${product.name}`}
+                            disabled={quantity >= product.availableToOrder || actionLoading}
+                            onClick={() => changeEditQuantity(product.priceId, 1)}
+                            type="button"
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  })}
                 </div>
-              ))}
-            </div>
-            <strong>Price: {selectedOrder.total}</strong>
+                <div className="request-edit-actions">
+                  <button className="request-modal-button" disabled={actionLoading} type="submit">
+                    {actionLoading ? 'Saving...' : 'Save changes'}
+                  </button>
+                  <button
+                    className="request-modal-secondary"
+                    disabled={actionLoading}
+                    onClick={() => setEditingOrder(false)}
+                    type="button"
+                  >
+                    Keep current request
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <>
+                <div className="request-modal-items">
+                  {selectedOrder.items.map((item) => (
+                    <div className="request-modal-item" key={`${selectedOrder.id}-modal-${item.priceId}`}>
+                      <strong>{item.name}</strong>
+                      <span>Amount: {item.offeredQuantity}</span>
+                      {item.adjusted ? <em>Adjusted</em> : null}
+                    </div>
+                  ))}
+                </div>
+                <strong>Price: {selectedOrder.total}</strong>
+              </>
+            )}
 
             {selectedOrder.phaseHistory.length > 0 ? (
               <div className="request-phase-history">
@@ -362,6 +515,8 @@ function RequestsPage() {
               </div>
             ) : null}
 
+            <OrderHistory snapshots={selectedOrder.orderHistory} />
+
             {actionError ? (
               <p className="request-action-error" role="alert">
                 {actionError}
@@ -369,7 +524,7 @@ function RequestsPage() {
             ) : null}
 
             <div className="request-modal-actions">
-              {selectedOrder.canAccept ? (
+              {!editingOrder && selectedOrder.canAccept ? (
                 <button
                   className="request-modal-button"
                   disabled={actionLoading}
@@ -379,7 +534,7 @@ function RequestsPage() {
                   {actionLoading ? 'Working...' : 'Accept offer'}
                 </button>
               ) : null}
-              {selectedOrder.canReject ? (
+              {!editingOrder && selectedOrder.canReject ? (
                 <button
                   className="request-modal-secondary"
                   disabled={actionLoading}
@@ -389,19 +544,32 @@ function RequestsPage() {
                   Reject offer
                 </button>
               ) : null}
+              {!editingOrder && selectedOrder.currentPhase === 'Rezervacija' ? (
+                <button
+                  className="request-modal-button"
+                  disabled={editLoading || actionLoading}
+                  onClick={handleStartEditing}
+                  type="button"
+                >
+                  {editLoading ? 'Loading products...' : 'Edit request'}
+                </button>
+              ) : null}
               <button
                 className="request-modal-secondary"
-                onClick={() => setSelectedOrder(null)}
+                onClick={() => {
+                  setSelectedOrder(null)
+                  setEditingOrder(false)
+                }}
                 type="button"
               >
                 Close
               </button>
             </div>
 
-            {selectedOrder.canCancel ? (
+            {!editingOrder && selectedOrder.canCancel ? (
               <form className="request-cancel-form" onSubmit={handleCancelSubmit}>
                 <label>
-                  <span>Cancellation reason</span>
+                  <span>Cancellation reason (optional)</span>
                   <textarea
                     onChange={(event) => setCancelReason(event.target.value)}
                     rows="3"

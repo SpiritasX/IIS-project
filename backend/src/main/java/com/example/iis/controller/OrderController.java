@@ -3,12 +3,14 @@ package com.example.iis.controller;
 import com.example.iis.dto.CancelRequest;
 import com.example.iis.dto.CreateOrderRequest;
 import com.example.iis.dto.OrderResponse;
+import com.example.iis.dto.UpdateOrderRequest;
 import com.example.iis.security.AccountPrincipal;
 import com.example.iis.service.OrderService;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -43,6 +45,15 @@ public class OrderController {
             @PathVariable Long orderId
     ) {
         return orderService.getOrderForCustomer(principal.getAccountId(), orderId);
+    }
+
+    @PutMapping("/orders/{orderId}")
+    public OrderResponse updateOrder(
+            @AuthenticationPrincipal AccountPrincipal principal,
+            @PathVariable Long orderId,
+            @RequestBody UpdateOrderRequest request
+    ) {
+        return orderService.updateOrder(principal.getAccountId(), orderId, request);
     }
 
     @PostMapping("/orders/{orderId}/accept")

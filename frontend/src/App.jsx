@@ -57,7 +57,7 @@ function App() {
               <ProtectedRoute allowedRoles={['ADMIN']}>
                 <RoleDashboardPage
                   actions={[{ label: 'Requests', path: '/admin/requests' }]}
-                  subtitle="Customer management and process dashboards will be added in the next parts."
+                  subtitle="Review all customer requests and cancel active sales processes when needed."
                   title="Admin dashboard"
                 />
               </ProtectedRoute>
@@ -80,7 +80,7 @@ function App() {
               <ProtectedRoute allowedRoles={['WORKER']}>
                 <RoleDashboardPage
                   actions={[{ label: 'Requests', path: '/worker/requests' }]}
-                  subtitle="Sales process operations will be connected here in the workflow part."
+                  subtitle="Prepare reserved requests, mark them ready, and start delivery handoff."
                   title="Worker dashboard"
                 />
               </ProtectedRoute>

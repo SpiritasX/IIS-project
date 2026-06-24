@@ -17,6 +17,7 @@ public record StaffProcessResponse(
         BigDecimal total,
         List<OrderItemResponse> items,
         List<PhaseHistoryResponse> phaseHistory,
+        List<OrderHistoryResponse> orderHistory,
         List<String> allowedActions
 ) {
 }
