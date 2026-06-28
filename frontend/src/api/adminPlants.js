@@ -12,10 +12,6 @@ export function getSectors(storageSpaceId) {
   return api.get('/admin/plants/sectors', { params: { storageSpaceId } })
 }
 
-export function getNurserySites(sectorId) {
-  return api.get('/admin/plants/nursery-sites', { params: { sectorId } })
-}
-
 export function addPlantLot(data) {
   return api.post('/admin/plants', data)
 }

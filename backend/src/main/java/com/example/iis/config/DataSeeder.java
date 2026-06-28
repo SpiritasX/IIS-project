@@ -4,6 +4,7 @@ import com.example.iis.model.Admin;
 import com.example.iis.model.Botanist;
 import com.example.iis.model.Sector;
 import com.example.iis.model.StorageSpace;
+import com.example.iis.model.StorageSpaceType;
 import com.example.iis.model.NurserySite;
 import com.example.iis.model.OfferStatus;
 import com.example.iis.model.PhaseType;
@@ -16,7 +17,9 @@ import com.example.iis.model.PlantVariety;
 import com.example.iis.model.RelocationHistory;
 import com.example.iis.model.Worker;
 import com.example.iis.repository.AccountRepository;
+import com.example.iis.repository.NurserySiteRepository;
 import com.example.iis.repository.StorageSpaceRepository;
+import com.example.iis.repository.StorageSpaceTypeRepository;
 import com.example.iis.repository.OfferStatusRepository;
 import com.example.iis.repository.PhaseTypeRepository;
 import com.example.iis.repository.PlantCategoryRepository;
@@ -43,6 +46,8 @@ public class DataSeeder {
             PhaseTypeRepository phaseTypeRepository,
             PlantCategoryRepository plantCategoryRepository,
             StorageSpaceRepository storageSpaceRepository,
+            StorageSpaceTypeRepository storageSpaceTypeRepository,
+            NurserySiteRepository nurserySiteRepository,
             PlantTypeRepository plantTypeRepository,
             PlantSpeciesRepository plantSpeciesRepository,
             PlantVarietyRepository plantVarietyRepository,
@@ -55,10 +60,11 @@ public class DataSeeder {
             seedStaffAccounts(accountRepository, passwordEncoder);
             seedOrderStatuses(offerStatusRepository);
             seedPhaseTypes(phaseTypeRepository);
+            seedStorageSpaceTypes(storageSpaceTypeRepository);
 
-            StorageSpace defaultStorageSpace = ensureDefaultStorageSpace(storageSpaceRepository);
+            StorageSpace defaultStorageSpace = ensureDefaultStorageSpace(storageSpaceRepository, nurserySiteRepository);
             Sector defaultSector = defaultStorageSpace.getSectors().get(0);
-            NurserySite defaultSite = defaultSector.getSites().get(0);
+            NurserySite defaultSite = defaultStorageSpace.getNurserySite();
 
             if (plantPriceRepository.count() == 0) {
                 seedCatalog(
@@ -76,15 +82,19 @@ public class DataSeeder {
         };
     }
 
-    private StorageSpace ensureDefaultStorageSpace(StorageSpaceRepository storageSpaceRepository) {
+    private StorageSpace ensureDefaultStorageSpace(StorageSpaceRepository storageSpaceRepository,
+                                                    NurserySiteRepository nurserySiteRepository) {
         return storageSpaceRepository.findAll().stream()
                 .filter(u -> u.getName().equals("Main Storage Space"))
                 .findFirst()
                 .orElseGet(() -> {
-                    StorageSpace storageSpace = new StorageSpace("Main Storage Space", "Greenhouse");
-                    Sector sector = new Sector("Default sector", "Sales stock", 1000L);
-                    NurserySite site = new NurserySite("Site A", 45.2671, 19.8335);
-                    sector.addSite(site);
+                    NurserySite site = nurserySiteRepository.findAll().stream()
+                            .filter(s -> "Novi Sad".equals(s.getName()))
+                            .findFirst()
+                            .orElseGet(() -> nurserySiteRepository.save(new NurserySite("Novi Sad", 45.2671, 19.8335)));
+                    StorageSpace storageSpace = new StorageSpace("Main Storage Space", "Staklenik");
+                    storageSpace.setNurserySite(site);
+                    Sector sector = new Sector("Default sector", 1000L);
                     storageSpace.addSector(sector);
                     return storageSpaceRepository.save(storageSpace);
                 });
@@ -144,6 +154,15 @@ public class DataSeeder {
         savePlantWithPrice(plantRepository, plantPriceRepository,
                 new Plant("Rose bush", "Classic rose bush with seasonal blooms and balanced growth.",
                         "Cuttings", "Available", rose), new BigDecimal("1400"));
+    }
+
+    private void seedStorageSpaceTypes(StorageSpaceTypeRepository storageSpaceTypeRepository) {
+        List.of("Staklenik", "Plastenik", "Unutrašnje skladište", "Hangar", "Dvorište")
+                .forEach(name -> {
+                    if (!storageSpaceTypeRepository.existsByName(name)) {
+                        storageSpaceTypeRepository.save(new StorageSpaceType(name));
+                    }
+                });
     }
 
     private void seedOrderStatuses(OfferStatusRepository offerStatusRepository) {

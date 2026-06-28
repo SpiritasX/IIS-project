@@ -15,16 +15,10 @@ public class Sector {
     @Column(nullable = false)
     private String name;
 
-    @Column(nullable = false)
-    private String type;
-
     private Long capacity;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     private StorageSpace storageSpace;
-
-    @OneToMany(mappedBy = "sector", cascade = CascadeType.ALL, fetch = FetchType.EAGER, orphanRemoval = true)
-    private List<NurserySite> sites = new ArrayList<>();
 
     @OneToMany(mappedBy = "sector")
     private List<RelocationHistory> relocationHistory = new ArrayList<>();
@@ -32,9 +26,8 @@ public class Sector {
     public Sector() {
     }
 
-    public Sector(String name, String type, Long capacity) {
+    public Sector(String name, Long capacity) {
         this.name = name;
-        this.type = type;
         this.capacity = capacity;
     }
 
@@ -46,8 +39,8 @@ public class Sector {
         return name;
     }
 
-    public String getType() {
-        return type;
+    public void setName(String name) {
+        this.name = name;
     }
 
     public Long getCapacity() {
@@ -64,20 +57,6 @@ public class Sector {
 
     public void setStorageSpace(StorageSpace storageSpace) {
         this.storageSpace = storageSpace;
-    }
-
-    public List<NurserySite> getSites() {
-        return sites;
-    }
-
-    public void addSite(NurserySite site) {
-        sites.add(site);
-        site.setSector(this);
-    }
-
-    public void removeSite(NurserySite site) {
-        sites.remove(site);
-        site.setSector(null);
     }
 
     public List<RelocationHistory> getRelocationHistory() {

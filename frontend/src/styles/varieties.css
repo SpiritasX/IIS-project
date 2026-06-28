@@ -167,6 +167,10 @@
   outline-offset: 4px;
 }
 
+.btn-danger {
+  background: var(--color-danger);
+}
+
 /* ── Varieties list table ── */
 .varieties-empty {
   color: var(--color-text-secondary);

@@ -3,18 +3,16 @@ package com.example.iis.service;
 import com.example.iis.dto.AddPlantLotRequest;
 import com.example.iis.dto.SectorSummaryResponse;
 import com.example.iis.dto.StorageSpaceResponse;
-import com.example.iis.dto.NurserySiteResponse;
 import com.example.iis.dto.PlantLotResponse;
 import com.example.iis.dto.VarietyResponse;
+import com.example.iis.model.NurserySite;
 import com.example.iis.model.Sector;
 import com.example.iis.model.StorageSpace;
-import com.example.iis.model.NurserySite;
 import com.example.iis.model.Plant;
 import com.example.iis.model.PlantVariety;
 import com.example.iis.model.RelocationHistory;
 import com.example.iis.repository.SectorRepository;
 import com.example.iis.repository.StorageSpaceRepository;
-import com.example.iis.repository.NurserySiteRepository;
 import com.example.iis.repository.PlantRepository;
 import com.example.iis.repository.PlantVarietyRepository;
 import com.example.iis.repository.RelocationHistoryRepository;
@@ -33,7 +31,6 @@ public class WorkerPlantService {
     private final PlantVarietyRepository varietyRepository;
     private final StorageSpaceRepository storageSpaceRepository;
     private final SectorRepository sectorRepository;
-    private final NurserySiteRepository nurserySiteRepository;
     private final PlantRepository plantRepository;
     private final RelocationHistoryRepository relocationHistoryRepository;
 
@@ -41,14 +38,12 @@ public class WorkerPlantService {
             PlantVarietyRepository varietyRepository,
             StorageSpaceRepository storageSpaceRepository,
             SectorRepository sectorRepository,
-            NurserySiteRepository nurserySiteRepository,
             PlantRepository plantRepository,
             RelocationHistoryRepository relocationHistoryRepository
     ) {
         this.varietyRepository = varietyRepository;
         this.storageSpaceRepository = storageSpaceRepository;
         this.sectorRepository = sectorRepository;
-        this.nurserySiteRepository = nurserySiteRepository;
         this.plantRepository = plantRepository;
         this.relocationHistoryRepository = relocationHistoryRepository;
     }
@@ -80,16 +75,6 @@ public class WorkerPlantService {
                 .toList();
     }
 
-    public List<NurserySiteResponse> getNurserySites(Long sectorId) {
-        return nurserySiteRepository.findBySector_Id(sectorId).stream()
-                .map(s -> new NurserySiteResponse(
-                        s.getId(), s.getName(),
-                        s.getSector().getStorageSpace().getName(),
-                        s.getSector().getName()
-                ))
-                .toList();
-    }
-
     @Transactional
     public PlantLotResponse addPlantLot(AddPlantLotRequest request) {
         PlantVariety variety = varietyRepository.findById(request.varietyId())
@@ -101,15 +86,6 @@ public class WorkerPlantService {
 
         if (!sector.getStorageSpace().getId().equals(storageSpace.getId())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Sector does not belong to the selected storage space");
-        }
-
-        NurserySite site = null;
-        if (request.nurserySiteId() != null) {
-            site = nurserySiteRepository.findById(request.nurserySiteId())
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Nursery site not found"));
-            if (!site.getSector().getId().equals(sector.getId())) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Site does not belong to the selected sector");
-            }
         }
 
         String plantName = (request.name() != null && !request.name().isBlank())
@@ -127,6 +103,7 @@ public class WorkerPlantService {
 
         RelocationHistory rh = new RelocationHistory("Added to nursery", plant, sector,
                 request.quantity() != null ? request.quantity() : 0L);
+        NurserySite site = sector.getStorageSpace().getNurserySite();
         if (site != null) rh.setNurserySite(site);
         relocationHistoryRepository.save(rh);
 

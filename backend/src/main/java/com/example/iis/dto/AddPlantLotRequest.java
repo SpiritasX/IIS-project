@@ -6,7 +6,6 @@ public record AddPlantLotRequest(
         Long varietyId,
         Long storageSpaceId,
         Long sectorId,
-        Long nurserySiteId,
         Long quantity,
         String name,
         String propagationMethod,

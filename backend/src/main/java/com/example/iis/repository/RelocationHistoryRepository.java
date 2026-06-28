@@ -41,9 +41,9 @@ public interface RelocationHistoryRepository extends JpaRepository<RelocationHis
 
     long countByEndTimeIsNull();
 
-    List<RelocationHistory> findByNurserySite_Sector_IdAndEndTimeIsNull(Long sectorId);
-
     List<RelocationHistory> findTop20ByNurserySite_IdOrderByStartTimeDesc(Long siteId);
 
     List<RelocationHistory> findTop20ByOrderByStartTimeDesc();
+
+    boolean existsBySector_Id(Long sectorId);
 }

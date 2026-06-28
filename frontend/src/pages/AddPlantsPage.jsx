@@ -4,7 +4,6 @@ import {
   addPlantLot,
   getCompatibleStorageSpaces,
   getSectors,
-  getNurserySites,
   getVarieties,
 } from '../api/plants'
 import WorkerSidebar from '../components/worker/WorkerSidebar'
@@ -21,7 +20,6 @@ const EMPTY_FORM = {
   varietyId: '',
   storageSpaceId: '',
   sectorId: '',
-  nurserySiteId: '',
   quantity: '',
   name: '',
   propagationMethod: '',
@@ -38,7 +36,6 @@ function AddPlantsPage() {
   const [varieties, setVarieties] = useState([])
   const [storageSpaces, setStorageSpaces] = useState([])
   const [sectors, setSectors] = useState([])
-  const [sites, setSites] = useState([])
   const [recommendedStorageSpaceType, setRecommendedStorageSpaceType] = useState('')
 
   const [lots, setLots] = useState([])
@@ -63,9 +60,8 @@ function AddPlantsPage() {
     if (!form.varietyId) {
       setStorageSpaces([])
       setSectors([])
-      setSites([])
       setRecommendedStorageSpaceType('')
-      setForm((prev) => ({ ...prev, storageSpaceId: '', sectorId: '', nurserySiteId: '' }))
+      setForm((prev) => ({ ...prev, storageSpaceId: '', sectorId: '' }))
       return
     }
     let ignore = false
@@ -74,9 +70,8 @@ function AddPlantsPage() {
         setStorageSpaces(res.data)
         const variety = varieties.find((v) => String(v.id) === String(form.varietyId))
         setRecommendedStorageSpaceType(variety?.storageSpaceTypeName ?? '')
-        setForm((prev) => ({ ...prev, storageSpaceId: res.data[0]?.id ?? '', sectorId: '', nurserySiteId: '' }))
+        setForm((prev) => ({ ...prev, storageSpaceId: res.data[0]?.id ?? '', sectorId: '' }))
         setSectors([])
-        setSites([])
       }
     })
     return () => { ignore = true }
@@ -85,36 +80,18 @@ function AddPlantsPage() {
   useEffect(() => {
     if (!form.storageSpaceId) {
       setSectors([])
-      setSites([])
-      setForm((prev) => ({ ...prev, sectorId: '', nurserySiteId: '' }))
+      setForm((prev) => ({ ...prev, sectorId: '' }))
       return
     }
     let ignore = false
     getSectors(form.storageSpaceId).then((res) => {
       if (!ignore) {
         setSectors(res.data)
-        setForm((prev) => ({ ...prev, sectorId: '', nurserySiteId: '' }))
-        setSites([])
+        setForm((prev) => ({ ...prev, sectorId: '' }))
       }
     })
     return () => { ignore = true }
   }, [form.storageSpaceId])
-
-  useEffect(() => {
-    if (!form.sectorId) {
-      setSites([])
-      setForm((prev) => ({ ...prev, nurserySiteId: '' }))
-      return
-    }
-    let ignore = false
-    getNurserySites(form.sectorId).then((res) => {
-      if (!ignore) {
-        setSites(res.data)
-        setForm((prev) => ({ ...prev, nurserySiteId: '' }))
-      }
-    })
-    return () => { ignore = true }
-  }, [form.sectorId])
 
   function handleField(e) {
     const { name, value } = e.target
@@ -138,7 +115,6 @@ function AddPlantsPage() {
         varietyId: Number(form.varietyId),
         storageSpaceId: Number(form.storageSpaceId),
         sectorId: Number(form.sectorId),
-        nurserySiteId: form.nurserySiteId ? Number(form.nurserySiteId) : null,
         quantity: Number(form.quantity),
         name: form.name.trim() || null,
         propagationMethod: form.propagationMethod || null,
@@ -151,7 +127,6 @@ function AddPlantsPage() {
       setForm(EMPTY_FORM)
       setStorageSpaces([])
       setSectors([])
-      setSites([])
       setFormSuccess(true)
       setTimeout(() => setFormSuccess(false), 4000)
     } catch (err) {
@@ -253,7 +228,7 @@ function AddPlantsPage() {
                 </div>
               </div>
 
-              <div className="variety-form-row variety-form-row-3">
+              <div className="variety-form-row variety-form-row-2">
                 <div className="variety-field">
                   <label className="variety-label" htmlFor="storageSpaceId">
                     Storage space *
@@ -293,27 +268,6 @@ function AddPlantsPage() {
                     {sectors.map((s) => (
                       <option key={s.id} value={s.id}>
                         {s.name}{s.capacity ? ` (cap. ${s.capacity})` : ''}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="variety-field">
-                  <label className="variety-label" htmlFor="nurserySiteId">
-                    Nursery site (optional)
-                  </label>
-                  <select
-                    className="variety-select"
-                    disabled={!form.sectorId}
-                    id="nurserySiteId"
-                    name="nurserySiteId"
-                    onChange={handleField}
-                    value={form.nurserySiteId}
-                  >
-                    <option value="">No specific site</option>
-                    {sites.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name}
                       </option>
                     ))}
                   </select>

@@ -47,12 +47,7 @@ public class WorkerDashboardService {
 
     public List<NurserySiteResponse> getSites() {
         return nurserySiteRepository.findAll().stream()
-                .map(s -> new NurserySiteResponse(
-                        s.getId(),
-                        s.getName(),
-                        s.getSector().getStorageSpace().getName(),
-                        s.getSector().getName()
-                ))
+                .map(s -> new NurserySiteResponse(s.getId(), s.getName(), s.getAddress()))
                 .toList();
     }
 
@@ -91,23 +86,14 @@ public class WorkerDashboardService {
     }
 
     public List<PlantCountByUnitPoint> getPlantCountByUnit(Long siteId) {
-        List<RelocationHistory> active;
-
-        if (siteId != null) {
-            Long sectorId = nurserySiteRepository.findSectorIdBySiteId(siteId).orElse(null);
-            active = sectorId != null
-                    ? relocationHistoryRepository.findByNurserySite_Sector_IdAndEndTimeIsNull(sectorId)
-                    : relocationHistoryRepository.findByNurserySite_IdAndEndTimeIsNull(siteId);
-        } else {
-            active = relocationHistoryRepository.findByEndTimeIsNull();
-        }
+        List<RelocationHistory> active = siteId != null
+                ? relocationHistoryRepository.findByNurserySite_IdAndEndTimeIsNull(siteId)
+                : relocationHistoryRepository.findByEndTimeIsNull();
 
         Map<String, Set<Long>> plantsByUnit = new HashMap<>();
         for (RelocationHistory rh : active) {
-            if (rh.getNurserySite() != null) {
-                String unitName = rh.getNurserySite().getSector().getStorageSpace().getName();
-                plantsByUnit.computeIfAbsent(unitName, k -> new HashSet<>()).add(rh.getPlant().getId());
-            }
+            String unitName = rh.getSector().getStorageSpace().getName();
+            plantsByUnit.computeIfAbsent(unitName, k -> new HashSet<>()).add(rh.getPlant().getId());
         }
 
         return plantsByUnit.entrySet().stream()

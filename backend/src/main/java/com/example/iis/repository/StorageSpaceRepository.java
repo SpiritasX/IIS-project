@@ -7,4 +7,8 @@ import java.util.List;
 
 public interface StorageSpaceRepository extends JpaRepository<StorageSpace, Long> {
     List<StorageSpace> findByType(String type);
+
+    List<StorageSpace> findByNurserySite_Id(Long nurserySiteId);
+
+    boolean existsByNurserySite_Id(Long nurserySiteId);
 }

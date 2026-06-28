@@ -4,7 +4,7 @@ const sidebarItems = [
   { label: 'Profile', path: '/admin' },
   { label: 'Requests', path: '/admin' },
   { label: 'Reports', path: '/admin' },
-  { label: 'Locations', path: '/admin' },
+  { label: 'Locations', path: '/admin/locations' },
   { label: 'Plants', path: '/admin/plants' },
   { label: 'Health logs', path: '/admin' },
   { label: 'Relocation logs', path: '/admin' },

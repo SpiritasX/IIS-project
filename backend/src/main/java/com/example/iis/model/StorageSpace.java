@@ -18,6 +18,10 @@ public class StorageSpace {
     @Column(nullable = false)
     private String type;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "nursery_site_id")
+    private NurserySite nurserySite;
+
     @OneToMany(mappedBy = "storageSpace", cascade = CascadeType.ALL, fetch = FetchType.EAGER, orphanRemoval = true)
     private List<Sector> sectors = new ArrayList<>();
 
@@ -37,8 +41,24 @@ public class StorageSpace {
         return name;
     }
 
+    public void setName(String name) {
+        this.name = name;
+    }
+
     public String getType() {
         return type;
+    }
+
+    public void setType(String type) {
+        this.type = type;
+    }
+
+    public NurserySite getNurserySite() {
+        return nurserySite;
+    }
+
+    public void setNurserySite(NurserySite nurserySite) {
+        this.nurserySite = nurserySite;
     }
 
     public List<Sector> getSectors() {
