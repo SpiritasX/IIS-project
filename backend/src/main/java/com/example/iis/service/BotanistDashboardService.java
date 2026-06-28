@@ -48,8 +48,8 @@ public class BotanistDashboardService {
                 .map(s -> new NurserySiteResponse(
                         s.getId(),
                         s.getName(),
-                        s.getParcel().getUnit().getName(),
-                        s.getParcel().getName()
+                        s.getSector().getStorageSpace().getName(),
+                        s.getSector().getName()
                 ))
                 .toList();
     }
@@ -65,8 +65,8 @@ public class BotanistDashboardService {
             activeRelocations = active.size();
             totalPlants = active.stream().map(rh -> rh.getPlant().getId()).distinct().count();
             varietiesCount = active.stream().map(rh -> rh.getPlant().getVariety().getId()).distinct().count();
-            Long parcelId = nurserySiteRepository.findParcelIdBySiteId(siteId).orElse(null);
-            nurserySitesCount = parcelId != null ? nurserySiteRepository.countByParcel_Id(parcelId) : 0;
+            Long sectorId = nurserySiteRepository.findSectorIdBySiteId(siteId).orElse(null);
+            nurserySitesCount = sectorId != null ? nurserySiteRepository.countBySector_Id(sectorId) : 0;
         } else {
             List<RelocationHistory> active = relocationHistoryRepository.findByEndTimeIsNull();
             activeRelocations = active.size();

@@ -21,7 +21,7 @@ public class PlantVariety {
     private PlantSpecies species;
 
     @ManyToOne(fetch = FetchType.EAGER, optional = false)
-    private LocationUnit locationType;
+    private StorageSpace storageSpaceType;
 
     @OneToMany(mappedBy = "variety")
     private Set<Plant> plants = new LinkedHashSet<>();
@@ -33,13 +33,13 @@ public class PlantVariety {
         this(name, humidity, soil, instructions, species, null);
     }
 
-    public PlantVariety(String name, Double humidity, String soil, String instructions, PlantSpecies species, LocationUnit locationType) {
+    public PlantVariety(String name, Double humidity, String soil, String instructions, PlantSpecies species, StorageSpace storageSpaceType) {
         this.name = name;
         this.humidity = humidity;
         this.soil = soil;
         this.instructions = instructions;
         this.species = species;
-        this.locationType = locationType;
+        this.storageSpaceType = storageSpaceType;
     }
 
     public Long getId() {
@@ -82,12 +82,12 @@ public class PlantVariety {
         this.species = species;
     }
 
-    public LocationUnit getLocationType() {
-        return locationType;
+    public StorageSpace getStorageSpaceType() {
+        return storageSpaceType;
     }
 
-    public void setLocationType(LocationUnit locationType) {
-        this.locationType = locationType;
+    public void setStorageSpaceType(StorageSpace storageSpaceType) {
+        this.storageSpaceType = storageSpaceType;
     }
 
     public Set<Plant> getPlants() {

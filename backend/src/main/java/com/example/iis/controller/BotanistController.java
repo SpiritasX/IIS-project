@@ -3,7 +3,7 @@ package com.example.iis.controller;
 import com.example.iis.dto.AddVarietyRequest;
 import com.example.iis.dto.CategoryResponse;
 import com.example.iis.dto.DashboardLogEntry;
-import com.example.iis.dto.LocationTypeResponse;
+import com.example.iis.dto.StorageSpaceResponse;
 import com.example.iis.dto.DashboardStatsResponse;
 import com.example.iis.dto.NurserySiteResponse;
 import com.example.iis.dto.RelocationDataPoint;
@@ -94,8 +94,8 @@ public class BotanistController {
         return ResponseEntity.ok(varietyService.getSpeciesByType(typeId));
     }
 
-    @GetMapping("/taxonomy/location-types")
-    public ResponseEntity<List<LocationTypeResponse>> getLocationTypes() {
-        return ResponseEntity.ok(varietyService.getLocationTypes());
+    @GetMapping("/taxonomy/storage-spaces")
+    public ResponseEntity<List<StorageSpaceResponse>> getStorageSpaces() {
+        return ResponseEntity.ok(varietyService.getStorageSpaces());
     }
 }

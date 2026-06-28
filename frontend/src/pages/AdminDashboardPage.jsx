@@ -6,11 +6,11 @@ import {
   getRelocationLogs,
   getSites,
   getStockByVariety,
-} from '../api/worker'
+} from '../api/admin'
 import PlantCountChart from '../components/worker/PlantCountChart'
 import RelocationLogsTable from '../components/worker/RelocationLogsTable'
 import StockByVarietyChart from '../components/worker/StockByVarietyChart'
-import WorkerSidebar from '../components/worker/WorkerSidebar'
+import AdminSidebar from '../components/admin/AdminSidebar'
 import StatCard from '../components/botanist/StatCard'
 import PageTitle from '../components/home/PageTitle'
 import SearchBar from '../components/home/SearchBar'
@@ -19,7 +19,7 @@ import '../styles/home.css'
 import '../styles/botanist.css'
 import '../styles/worker.css'
 
-function WorkerDashboardPage() {
+function AdminDashboardPage() {
   const navigate = useNavigate()
   const { logout } = useAuth()
 
@@ -88,9 +88,9 @@ function WorkerDashboardPage() {
     <main className="home-page">
       <header className="home-header botanist-header">
         <button
-          aria-label="Worker dashboard"
+          aria-label="Admin dashboard"
           className="home-logo-placeholder"
-          onClick={() => navigate('/worker')}
+          onClick={() => navigate('/admin')}
           type="button"
         >
           <span aria-hidden="true" />
@@ -105,10 +105,10 @@ function WorkerDashboardPage() {
         </div>
       </header>
 
-      <PageTitle label="Worker" onBack={handleLogout} />
+      <PageTitle label="Admin" onBack={handleLogout} />
 
       <section className="home-body">
-        <WorkerSidebar
+        <AdminSidebar
           onSiteChange={setSelectedSiteId}
           selectedSiteId={selectedSiteId}
           sites={sites}
@@ -120,7 +120,7 @@ function WorkerDashboardPage() {
 
           <StatCard label="Varieties" loading={loadingData} value={stats?.varietiesCount} />
           <StatCard label="Storage spaces" loading={loadingData} value={stats?.storageSpacesCount} />
-          <StatCard label="Plants" loading={loadingData} onClick={() => navigate('/worker/plants')} value={stats?.plantsCount} />
+          <StatCard label="Plants" loading={loadingData} onClick={() => navigate('/admin/plants')} value={stats?.plantsCount} />
           <StatCard label="Active relocations" loading={loadingData} value={stats?.activeRelocations} />
 
           <RelocationLogsTable loading={loadingData} logs={logs} searchTerm={searchTerm} />
@@ -130,4 +130,4 @@ function WorkerDashboardPage() {
   )
 }
 
-export default WorkerDashboardPage
+export default AdminDashboardPage

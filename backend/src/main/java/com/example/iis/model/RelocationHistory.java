@@ -25,7 +25,7 @@ public class RelocationHistory {
     private Plant plant;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    private LocationParcel locationParcel;
+    private Sector sector;
 
     @ManyToOne(fetch = FetchType.LAZY)
     private NurserySite nurserySite;
@@ -42,10 +42,10 @@ public class RelocationHistory {
         this.reason = reason;
     }
 
-    public RelocationHistory(String reason, Plant plant, LocationParcel locationParcel, Long inStock) {
+    public RelocationHistory(String reason, Plant plant, Sector sector, Long inStock) {
         this(reason);
         this.plant = plant;
-        this.locationParcel = locationParcel;
+        this.sector = sector;
         this.inStock = inStock;
     }
 
@@ -85,12 +85,12 @@ public class RelocationHistory {
         this.plant = plant;
     }
 
-    public LocationParcel getLocationParcel() {
-        return locationParcel;
+    public Sector getSector() {
+        return sector;
     }
 
-    public void setLocationParcel(LocationParcel locationParcel) {
-        this.locationParcel = locationParcel;
+    public void setSector(Sector sector) {
+        this.sector = sector;
     }
 
     public NurserySite getNurserySite() {

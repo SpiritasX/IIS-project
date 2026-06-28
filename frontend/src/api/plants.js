@@ -4,16 +4,16 @@ export function getVarieties() {
   return api.get('/worker/plants/varieties')
 }
 
-export function getCompatibleUnits(varietyId) {
-  return api.get('/worker/plants/compatible-units', { params: { varietyId } })
+export function getCompatibleStorageSpaces(varietyId) {
+  return api.get('/worker/plants/compatible-storage-spaces', { params: { varietyId } })
 }
 
-export function getLocationParcels(unitId) {
-  return api.get('/worker/plants/location-parcels', { params: { unitId } })
+export function getSectors(storageSpaceId) {
+  return api.get('/worker/plants/sectors', { params: { storageSpaceId } })
 }
 
-export function getNurserySites(parcelId) {
-  return api.get('/worker/plants/nursery-sites', { params: { parcelId } })
+export function getNurserySites(sectorId) {
+  return api.get('/worker/plants/nursery-sites', { params: { sectorId } })
 }
 
 export function addPlantLot(data) {

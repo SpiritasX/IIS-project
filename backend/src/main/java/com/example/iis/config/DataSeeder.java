@@ -2,8 +2,8 @@ package com.example.iis.config;
 
 import com.example.iis.model.Admin;
 import com.example.iis.model.Botanist;
-import com.example.iis.model.LocationParcel;
-import com.example.iis.model.LocationUnit;
+import com.example.iis.model.Sector;
+import com.example.iis.model.StorageSpace;
 import com.example.iis.model.NurserySite;
 import com.example.iis.model.OfferStatus;
 import com.example.iis.model.PhaseType;
@@ -16,7 +16,7 @@ import com.example.iis.model.PlantVariety;
 import com.example.iis.model.RelocationHistory;
 import com.example.iis.model.Worker;
 import com.example.iis.repository.AccountRepository;
-import com.example.iis.repository.LocationUnitRepository;
+import com.example.iis.repository.StorageSpaceRepository;
 import com.example.iis.repository.OfferStatusRepository;
 import com.example.iis.repository.PhaseTypeRepository;
 import com.example.iis.repository.PlantCategoryRepository;
@@ -42,7 +42,7 @@ public class DataSeeder {
             OfferStatusRepository offerStatusRepository,
             PhaseTypeRepository phaseTypeRepository,
             PlantCategoryRepository plantCategoryRepository,
-            LocationUnitRepository locationUnitRepository,
+            StorageSpaceRepository storageSpaceRepository,
             PlantTypeRepository plantTypeRepository,
             PlantSpeciesRepository plantSpeciesRepository,
             PlantVarietyRepository plantVarietyRepository,
@@ -56,9 +56,9 @@ public class DataSeeder {
             seedOrderStatuses(offerStatusRepository);
             seedPhaseTypes(phaseTypeRepository);
 
-            LocationUnit defaultUnit = ensureDefaultUnit(locationUnitRepository);
-            LocationParcel defaultParcel = defaultUnit.getParcels().get(0);
-            NurserySite defaultSite = defaultParcel.getSites().get(0);
+            StorageSpace defaultStorageSpace = ensureDefaultStorageSpace(storageSpaceRepository);
+            Sector defaultSector = defaultStorageSpace.getSectors().get(0);
+            NurserySite defaultSite = defaultSector.getSites().get(0);
 
             if (plantPriceRepository.count() == 0) {
                 seedCatalog(
@@ -68,25 +68,25 @@ public class DataSeeder {
                         plantVarietyRepository,
                         plantRepository,
                         plantPriceRepository,
-                        defaultUnit
+                        defaultStorageSpace
                 );
             }
 
-            seedInitialStock(plantRepository, defaultParcel, defaultSite, relocationHistoryRepository);
+            seedInitialStock(plantRepository, defaultSector, defaultSite, relocationHistoryRepository);
         };
     }
 
-    private LocationUnit ensureDefaultUnit(LocationUnitRepository locationUnitRepository) {
-        return locationUnitRepository.findAll().stream()
-                .filter(u -> u.getName().equals("Main Unit"))
+    private StorageSpace ensureDefaultStorageSpace(StorageSpaceRepository storageSpaceRepository) {
+        return storageSpaceRepository.findAll().stream()
+                .filter(u -> u.getName().equals("Main Storage Space"))
                 .findFirst()
                 .orElseGet(() -> {
-                    LocationUnit unit = new LocationUnit("Main Unit", "Greenhouse");
-                    LocationParcel parcel = new LocationParcel("Default sales parcel", "Sales stock", 1000L);
+                    StorageSpace storageSpace = new StorageSpace("Main Storage Space", "Greenhouse");
+                    Sector sector = new Sector("Default sector", "Sales stock", 1000L);
                     NurserySite site = new NurserySite("Site A", 45.2671, 19.8335);
-                    parcel.addSite(site);
-                    unit.addParcel(parcel);
-                    return locationUnitRepository.save(unit);
+                    sector.addSite(site);
+                    storageSpace.addSector(sector);
+                    return storageSpaceRepository.save(storageSpace);
                 });
     }
 
@@ -97,7 +97,7 @@ public class DataSeeder {
             PlantVarietyRepository plantVarietyRepository,
             PlantRepository plantRepository,
             PlantPriceRepository plantPriceRepository,
-            LocationUnit defaultUnit
+            StorageSpace defaultStorageSpace
     ) {
         PlantCategory flowers = plantCategoryRepository.save(new PlantCategory("Flowers"));
         PlantCategory herbs = plantCategoryRepository.save(new PlantCategory("Herbs"));
@@ -115,19 +115,19 @@ public class DataSeeder {
 
         PlantVariety lavender = plantVarietyRepository.save(new PlantVariety(
                 "English lavender", 45.0, "Well-drained alkaline soil",
-                "Keep in full sun and water sparingly.", lavenderSpecies, defaultUnit));
+                "Keep in full sun and water sparingly.", lavenderSpecies, defaultStorageSpace));
         PlantVariety basil = plantVarietyRepository.save(new PlantVariety(
                 "Genovese basil", 60.0, "Rich, moist soil",
-                "Pinch top leaves often to encourage growth.", basilSpecies, defaultUnit));
+                "Pinch top leaves often to encourage growth.", basilSpecies, defaultStorageSpace));
         PlantVariety olive = plantVarietyRepository.save(new PlantVariety(
                 "Arbequina olive", 40.0, "Sandy loam",
-                "Place in a warm bright spot and avoid overwatering.", oliveSpecies, defaultUnit));
+                "Place in a warm bright spot and avoid overwatering.", oliveSpecies, defaultStorageSpace));
         PlantVariety mint = plantVarietyRepository.save(new PlantVariety(
                 "Spearmint", 65.0, "Moist garden soil",
-                "Trim runners and keep soil evenly moist.", mintSpecies, defaultUnit));
+                "Trim runners and keep soil evenly moist.", mintSpecies, defaultStorageSpace));
         PlantVariety rose = plantVarietyRepository.save(new PlantVariety(
                 "Garden rose", 55.0, "Loamy soil",
-                "Prune spent blooms and water at the base.", roseSpecies, defaultUnit));
+                "Prune spent blooms and water at the base.", roseSpecies, defaultStorageSpace));
 
         savePlantWithPrice(plantRepository, plantPriceRepository,
                 new Plant("Lavender starter", "Hardy young lavender plant with rich fragrance and strong roots.",
@@ -195,7 +195,7 @@ public class DataSeeder {
 
     private void seedInitialStock(
             PlantRepository plantRepository,
-            LocationParcel parcel,
+            Sector sector,
             NurserySite defaultSite,
             RelocationHistoryRepository relocationHistoryRepository
     ) {
@@ -209,7 +209,7 @@ public class DataSeeder {
 
         for (Plant plant : plantRepository.findAll()) {
             if (relocationHistoryRepository.countByPlant_IdAndEndTimeIsNull(plant.getId()) == 0) {
-                RelocationHistory rh = new RelocationHistory("Initial stock", plant, parcel, 20L);
+                RelocationHistory rh = new RelocationHistory("Initial stock", plant, sector, 20L);
                 rh.setNurserySite(defaultSite);
                 relocationHistoryRepository.save(rh);
             }

@@ -6,6 +6,6 @@ public record AddVarietyRequest(
         String soil,
         String instructions,
         Long speciesId,
-        Long locationTypeId
+        Long storageSpaceTypeId
 ) {
 }

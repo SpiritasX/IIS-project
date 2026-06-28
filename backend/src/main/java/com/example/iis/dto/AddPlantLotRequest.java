@@ -4,8 +4,8 @@ import java.time.LocalDate;
 
 public record AddPlantLotRequest(
         Long varietyId,
-        Long locationUnitId,
-        Long locationParcelId,
+        Long storageSpaceId,
+        Long sectorId,
         Long nurserySiteId,
         Long quantity,
         String name,

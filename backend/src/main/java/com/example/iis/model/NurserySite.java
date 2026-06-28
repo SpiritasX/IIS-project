@@ -20,7 +20,7 @@ public class NurserySite {
     private Double longitude;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    private LocationParcel parcel;
+    private Sector sector;
 
     public NurserySite() {
     }
@@ -51,12 +51,12 @@ public class NurserySite {
         return longitude;
     }
 
-    public LocationParcel getParcel() {
-        return parcel;
+    public Sector getSector() {
+        return sector;
     }
 
-    public void setParcel(LocationParcel parcel) {
-        this.parcel = parcel;
+    public void setSector(Sector sector) {
+        this.sector = sector;
     }
 
     @Override

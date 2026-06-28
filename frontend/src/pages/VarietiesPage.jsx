@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   addVariety,
   getCategories,
-  getLocationTypes,
+  getStorageSpaces,
   getSpeciesByType,
   getTypesByCategory,
   getVarieties,
@@ -24,7 +24,7 @@ const EMPTY_FORM = {
   categoryId: '',
   typeId: '',
   speciesId: '',
-  locationTypeId: '',
+  storageSpaceTypeId: '',
 }
 
 function VarietiesPage() {
@@ -33,7 +33,7 @@ function VarietiesPage() {
 
   const [varieties, setVarieties] = useState([])
   const [categories, setCategories] = useState([])
-  const [locationTypes, setLocationTypes] = useState([])
+  const [storageSpaces, setStorageSpaces] = useState([])
   const [types, setTypes] = useState([])
   const [species, setSpecies] = useState([])
 
@@ -50,11 +50,11 @@ function VarietiesPage() {
 
     async function load() {
       try {
-        const [varRes, catRes, locRes] = await Promise.all([getVarieties(), getCategories(), getLocationTypes()])
+        const [varRes, catRes, locRes] = await Promise.all([getVarieties(), getCategories(), getStorageSpaces()])
         if (!ignore) {
           setVarieties(varRes.data)
           setCategories(catRes.data)
-          setLocationTypes(locRes.data)
+          setStorageSpaces(locRes.data)
         }
       } catch {
         // leave empty
@@ -116,8 +116,8 @@ function VarietiesPage() {
       setFormError('Please select a category, type and species.')
       return
     }
-    if (!form.locationTypeId) {
-      setFormError('Please select a location type.')
+    if (!form.storageSpaceTypeId) {
+      setFormError('Please select a storage space type.')
       return
     }
     if (!form.name.trim()) {
@@ -135,7 +135,7 @@ function VarietiesPage() {
         soil: form.soil.trim() || null,
         instructions: form.instructions.trim() || null,
         speciesId: Number(form.speciesId),
-        locationTypeId: Number(form.locationTypeId),
+        storageSpaceTypeId: Number(form.storageSpaceTypeId),
       })
       setVarieties((prev) => [...prev, res.data])
       setForm(EMPTY_FORM)
@@ -266,19 +266,19 @@ function VarietiesPage() {
                 </div>
 
                 <div className="variety-field">
-                  <label className="variety-label" htmlFor="locationTypeId">
-                    Location type (tip lokacije) *
+                  <label className="variety-label" htmlFor="storageSpaceTypeId">
+                    Storage space type *
                   </label>
                   <select
                     className="variety-select"
-                    id="locationTypeId"
-                    name="locationTypeId"
+                    id="storageSpaceTypeId"
+                    name="storageSpaceTypeId"
                     onChange={handleField}
                     required
-                    value={form.locationTypeId}
+                    value={form.storageSpaceTypeId}
                   >
-                    <option value="">Select location type</option>
-                    {locationTypes.map((l) => (
+                    <option value="">Select storage space type</option>
+                    {storageSpaces.map((l) => (
                       <option key={l.id} value={l.id}>
                         {l.name} — {l.type}
                       </option>

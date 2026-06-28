@@ -9,13 +9,13 @@ import java.util.List;
 import java.util.Optional;
 
 public interface NurserySiteRepository extends JpaRepository<NurserySite, Long> {
-    long countByParcel_Id(Long parcelId);
+    long countBySector_Id(Long sectorId);
 
-    @Query("SELECT s.parcel.id FROM NurserySite s WHERE s.id = :siteId")
-    Optional<Long> findParcelIdBySiteId(@Param("siteId") Long siteId);
+    @Query("SELECT s.sector.id FROM NurserySite s WHERE s.id = :siteId")
+    Optional<Long> findSectorIdBySiteId(@Param("siteId") Long siteId);
 
-    @Query("SELECT s.parcel.unit.id FROM NurserySite s WHERE s.id = :siteId")
-    Optional<Long> findUnitIdBySiteId(@Param("siteId") Long siteId);
+    @Query("SELECT s.sector.storageSpace.id FROM NurserySite s WHERE s.id = :siteId")
+    Optional<Long> findStorageSpaceIdBySiteId(@Param("siteId") Long siteId);
 
-    List<NurserySite> findByParcel_Id(Long parcelId);
+    List<NurserySite> findBySector_Id(Long sectorId);
 }

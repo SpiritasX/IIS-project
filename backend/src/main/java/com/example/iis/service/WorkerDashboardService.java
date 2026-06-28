@@ -6,7 +6,7 @@ import com.example.iis.dto.RelocationLogEntry;
 import com.example.iis.dto.StockByVarietyPoint;
 import com.example.iis.dto.WorkerStatsResponse;
 import com.example.iis.model.RelocationHistory;
-import com.example.iis.repository.LocationUnitRepository;
+import com.example.iis.repository.StorageSpaceRepository;
 import com.example.iis.repository.NurserySiteRepository;
 import com.example.iis.repository.PlantRepository;
 import com.example.iis.repository.PlantVarietyRepository;
@@ -29,20 +29,20 @@ public class WorkerDashboardService {
     private final RelocationHistoryRepository relocationHistoryRepository;
     private final PlantVarietyRepository plantVarietyRepository;
     private final PlantRepository plantRepository;
-    private final LocationUnitRepository locationUnitRepository;
+    private final StorageSpaceRepository storageSpaceRepository;
 
     public WorkerDashboardService(
             NurserySiteRepository nurserySiteRepository,
             RelocationHistoryRepository relocationHistoryRepository,
             PlantVarietyRepository plantVarietyRepository,
             PlantRepository plantRepository,
-            LocationUnitRepository locationUnitRepository
+            StorageSpaceRepository storageSpaceRepository
     ) {
         this.nurserySiteRepository = nurserySiteRepository;
         this.relocationHistoryRepository = relocationHistoryRepository;
         this.plantVarietyRepository = plantVarietyRepository;
         this.plantRepository = plantRepository;
-        this.locationUnitRepository = locationUnitRepository;
+        this.storageSpaceRepository = storageSpaceRepository;
     }
 
     public List<NurserySiteResponse> getSites() {
@@ -50,8 +50,8 @@ public class WorkerDashboardService {
                 .map(s -> new NurserySiteResponse(
                         s.getId(),
                         s.getName(),
-                        s.getParcel().getUnit().getName(),
-                        s.getParcel().getName()
+                        s.getSector().getStorageSpace().getName(),
+                        s.getSector().getName()
                 ))
                 .toList();
     }
@@ -62,12 +62,12 @@ public class WorkerDashboardService {
             long varietiesCount = active.stream().map(rh -> rh.getPlant().getVariety().getId()).distinct().count();
             long plantsCount = active.stream().map(rh -> rh.getPlant().getId()).distinct().count();
             long activeRelocations = active.size();
-            return new WorkerStatsResponse(varietiesCount, locationUnitRepository.count(), plantsCount, activeRelocations);
+            return new WorkerStatsResponse(varietiesCount, storageSpaceRepository.count(), plantsCount, activeRelocations);
         }
 
         return new WorkerStatsResponse(
                 plantVarietyRepository.count(),
-                locationUnitRepository.count(),
+                storageSpaceRepository.count(),
                 plantRepository.count(),
                 relocationHistoryRepository.countByEndTimeIsNull()
         );
@@ -94,9 +94,9 @@ public class WorkerDashboardService {
         List<RelocationHistory> active;
 
         if (siteId != null) {
-            Long parcelId = nurserySiteRepository.findParcelIdBySiteId(siteId).orElse(null);
-            active = parcelId != null
-                    ? relocationHistoryRepository.findByNurserySite_Parcel_IdAndEndTimeIsNull(parcelId)
+            Long sectorId = nurserySiteRepository.findSectorIdBySiteId(siteId).orElse(null);
+            active = sectorId != null
+                    ? relocationHistoryRepository.findByNurserySite_Sector_IdAndEndTimeIsNull(sectorId)
                     : relocationHistoryRepository.findByNurserySite_IdAndEndTimeIsNull(siteId);
         } else {
             active = relocationHistoryRepository.findByEndTimeIsNull();
@@ -105,7 +105,7 @@ public class WorkerDashboardService {
         Map<String, Set<Long>> plantsByUnit = new HashMap<>();
         for (RelocationHistory rh : active) {
             if (rh.getNurserySite() != null) {
-                String unitName = rh.getNurserySite().getParcel().getUnit().getName();
+                String unitName = rh.getNurserySite().getSector().getStorageSpace().getName();
                 plantsByUnit.computeIfAbsent(unitName, k -> new HashSet<>()).add(rh.getPlant().getId());
             }
         }
@@ -126,7 +126,7 @@ public class WorkerDashboardService {
                         rh.getStartTime(),
                         rh.getEndTime(),
                         rh.getPlant().getName(),
-                        rh.getLocationParcel().getName(),
+                        rh.getSector().getName(),
                         rh.getReason(),
                         rh.getInStock()
                 ))

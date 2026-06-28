@@ -2,14 +2,14 @@ package com.example.iis.service;
 
 import com.example.iis.dto.AddVarietyRequest;
 import com.example.iis.dto.CategoryResponse;
-import com.example.iis.dto.LocationTypeResponse;
+import com.example.iis.dto.StorageSpaceResponse;
 import com.example.iis.dto.SpeciesResponse;
 import com.example.iis.dto.TypeResponse;
 import com.example.iis.dto.VarietyResponse;
-import com.example.iis.model.LocationUnit;
+import com.example.iis.model.StorageSpace;
 import com.example.iis.model.PlantSpecies;
 import com.example.iis.model.PlantVariety;
-import com.example.iis.repository.LocationUnitRepository;
+import com.example.iis.repository.StorageSpaceRepository;
 import com.example.iis.repository.PlantCategoryRepository;
 import com.example.iis.repository.PlantSpeciesRepository;
 import com.example.iis.repository.PlantTypeRepository;
@@ -29,20 +29,20 @@ public class PlantVarietyService {
     private final PlantTypeRepository typeRepository;
     private final PlantSpeciesRepository speciesRepository;
     private final PlantVarietyRepository varietyRepository;
-    private final LocationUnitRepository locationUnitRepository;
+    private final StorageSpaceRepository storageSpaceRepository;
 
     public PlantVarietyService(
             PlantCategoryRepository categoryRepository,
             PlantTypeRepository typeRepository,
             PlantSpeciesRepository speciesRepository,
             PlantVarietyRepository varietyRepository,
-            LocationUnitRepository locationUnitRepository
+            StorageSpaceRepository storageSpaceRepository
     ) {
         this.categoryRepository = categoryRepository;
         this.typeRepository = typeRepository;
         this.speciesRepository = speciesRepository;
         this.varietyRepository = varietyRepository;
-        this.locationUnitRepository = locationUnitRepository;
+        this.storageSpaceRepository = storageSpaceRepository;
     }
 
     public List<CategoryResponse> getCategories() {
@@ -63,9 +63,9 @@ public class PlantVarietyService {
                 .toList();
     }
 
-    public List<LocationTypeResponse> getLocationTypes() {
-        return locationUnitRepository.findAll().stream()
-                .map(u -> new LocationTypeResponse(u.getId(), u.getName(), u.getType()))
+    public List<StorageSpaceResponse> getStorageSpaces() {
+        return storageSpaceRepository.findAll().stream()
+                .map(u -> new StorageSpaceResponse(u.getId(), u.getName(), u.getType()))
                 .toList();
     }
 
@@ -80,8 +80,8 @@ public class PlantVarietyService {
         PlantSpecies species = speciesRepository.findById(request.speciesId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Species not found"));
 
-        LocationUnit locationType = locationUnitRepository.findById(request.locationTypeId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Location type not found"));
+        StorageSpace storageSpaceType = storageSpaceRepository.findById(request.storageSpaceTypeId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Storage space type not found"));
 
         PlantVariety variety = new PlantVariety(
                 request.name(),
@@ -89,7 +89,7 @@ public class PlantVarietyService {
                 request.soil(),
                 request.instructions(),
                 species,
-                locationType
+                storageSpaceType
         );
 
         return toResponse(varietyRepository.save(variety));
@@ -97,7 +97,7 @@ public class PlantVarietyService {
 
     private VarietyResponse toResponse(PlantVariety v) {
         PlantSpecies species = v.getSpecies();
-        LocationUnit locationType = v.getLocationType();
+        StorageSpace storageSpaceType = v.getStorageSpaceType();
         return new VarietyResponse(
                 v.getId(),
                 v.getName(),
@@ -110,8 +110,8 @@ public class PlantVarietyService {
                 species.getType().getName(),
                 species.getType().getCategory().getId(),
                 species.getType().getCategory().getName(),
-                locationType.getId(),
-                locationType.getType()
+                storageSpaceType.getId(),
+                storageSpaceType.getType()
         );
     }
 }

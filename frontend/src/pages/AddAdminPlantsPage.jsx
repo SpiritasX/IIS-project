@@ -6,8 +6,8 @@ import {
   getSectors,
   getNurserySites,
   getVarieties,
-} from '../api/plants'
-import WorkerSidebar from '../components/worker/WorkerSidebar'
+} from '../api/adminPlants'
+import AdminSidebar from '../components/admin/AdminSidebar'
 import PageTitle from '../components/home/PageTitle'
 import SearchBar from '../components/home/SearchBar'
 import { useAuth } from '../hooks/useAuth'
@@ -31,7 +31,7 @@ const EMPTY_FORM = {
   state: '',
 }
 
-function AddPlantsPage() {
+function AddAdminPlantsPage() {
   const navigate = useNavigate()
   const { logout } = useAuth()
 
@@ -179,9 +179,9 @@ function AddPlantsPage() {
     <main className="home-page">
       <header className="home-header botanist-header">
         <button
-          aria-label="Back to worker dashboard"
+          aria-label="Back to admin dashboard"
           className="home-logo-placeholder"
-          onClick={() => navigate('/worker')}
+          onClick={() => navigate('/admin')}
           type="button"
         >
           <span aria-hidden="true" />
@@ -198,7 +198,7 @@ function AddPlantsPage() {
       <PageTitle label="Add Plants" onBack={handleLogout} />
 
       <section className="home-body">
-        <WorkerSidebar onSiteChange={() => {}} selectedSiteId={null} sites={[]} />
+        <AdminSidebar onSiteChange={() => {}} selectedSiteId={null} sites={[]} />
 
         <div className="varieties-content">
           <section className="variety-form-card" aria-labelledby="add-plants-heading">
@@ -207,7 +207,6 @@ function AddPlantsPage() {
             </h2>
 
             <form className="variety-form" noValidate onSubmit={handleSubmit}>
-              {/* Variety + location cascade */}
               <div className="variety-form-row variety-form-row-2">
                 <div className="variety-field">
                   <label className="variety-label" htmlFor="varietyId">
@@ -320,7 +319,6 @@ function AddPlantsPage() {
                 </div>
               </div>
 
-              {/* Optional plant details */}
               <div className="variety-form-row variety-form-row-2">
                 <div className="variety-field">
                   <label className="variety-label" htmlFor="name">
@@ -481,4 +479,4 @@ function AddPlantsPage() {
   )
 }
 
-export default AddPlantsPage
+export default AddAdminPlantsPage

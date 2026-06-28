@@ -20,6 +20,6 @@ export function getSpeciesByType(typeId) {
   return api.get('/botanist/taxonomy/species', { params: { typeId } })
 }
 
-export function getLocationTypes() {
-  return api.get('/botanist/taxonomy/location-types')
+export function getStorageSpaces() {
+  return api.get('/botanist/taxonomy/storage-spaces')
 }

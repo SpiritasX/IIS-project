@@ -24,48 +24,48 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/worker")
-public class WorkerController {
+@RequestMapping("/api/admin")
+public class AdminController {
 
-    private final WorkerDashboardService service;
+    private final WorkerDashboardService dashboardService;
     private final WorkerPlantService plantService;
 
-    public WorkerController(WorkerDashboardService service, WorkerPlantService plantService) {
-        this.service = service;
+    public AdminController(WorkerDashboardService dashboardService, WorkerPlantService plantService) {
+        this.dashboardService = dashboardService;
         this.plantService = plantService;
     }
 
     @GetMapping("/sites")
     public ResponseEntity<List<NurserySiteResponse>> getSites() {
-        return ResponseEntity.ok(service.getSites());
+        return ResponseEntity.ok(dashboardService.getSites());
     }
 
     @GetMapping("/dashboard/stats")
     public ResponseEntity<WorkerStatsResponse> getStats(
             @RequestParam(required = false) Long siteId
     ) {
-        return ResponseEntity.ok(service.getStats(siteId));
+        return ResponseEntity.ok(dashboardService.getStats(siteId));
     }
 
     @GetMapping("/dashboard/stock-by-variety")
     public ResponseEntity<List<StockByVarietyPoint>> getStockByVariety(
             @RequestParam(required = false) Long siteId
     ) {
-        return ResponseEntity.ok(service.getStockByVariety(siteId));
+        return ResponseEntity.ok(dashboardService.getStockByVariety(siteId));
     }
 
     @GetMapping("/dashboard/plant-count")
     public ResponseEntity<List<PlantCountByUnitPoint>> getPlantCountByUnit(
             @RequestParam(required = false) Long siteId
     ) {
-        return ResponseEntity.ok(service.getPlantCountByUnit(siteId));
+        return ResponseEntity.ok(dashboardService.getPlantCountByUnit(siteId));
     }
 
     @GetMapping("/dashboard/relocation-logs")
     public ResponseEntity<List<RelocationLogEntry>> getRelocationLogs(
             @RequestParam(required = false) Long siteId
     ) {
-        return ResponseEntity.ok(service.getRelocationLogs(siteId));
+        return ResponseEntity.ok(dashboardService.getRelocationLogs(siteId));
     }
 
     @GetMapping("/plants/varieties")

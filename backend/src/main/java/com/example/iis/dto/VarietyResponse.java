@@ -12,7 +12,7 @@ public record VarietyResponse(
         String typeName,
         Long categoryId,
         String categoryName,
-        Long locationTypeId,
-        String locationTypeName
+        Long storageSpaceTypeId,
+        String storageSpaceTypeName
 ) {
 }
