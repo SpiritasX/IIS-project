@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import ProtectedRoute from './components/routing/ProtectedRoute'
 import AuthProvider from './contexts/AuthProvider'
 import CartProvider from './contexts/CartProvider'
+import AdminOrderAnalysisPage from './pages/AdminOrderAnalysisPage'
 import CartPage from './pages/CartPage'
 import HomePage from './pages/HomePage'
 import LoginPage from './pages/LoginPage'
@@ -56,7 +57,10 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['ADMIN']}>
                 <RoleDashboardPage
-                  actions={[{ label: 'Requests', path: '/admin/requests' }]}
+                  actions={[
+                    { label: 'Requests', path: '/admin/requests' },
+                    { label: 'Order analysis', path: '/admin/order-analysis' },
+                  ]}
                   subtitle="Review all customer requests and cancel active sales processes when needed."
                   title="Admin dashboard"
                 />
@@ -96,6 +100,14 @@ function App() {
                   title="Admin Requests"
                   variant="admin"
                 />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/order-analysis"
+            element={
+              <ProtectedRoute allowedRoles={['ADMIN']}>
+                <AdminOrderAnalysisPage />
               </ProtectedRoute>
             }
           />
