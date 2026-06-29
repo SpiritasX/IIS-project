@@ -37,12 +37,71 @@ function normalizeProduct(product) {
   }
 }
 
+function normalizeOrder(order) {
+  return {
+    ...order,
+    date: formatDate(order.date),
+    expiresAt: formatDateTime(order.expiresAt),
+    id: String(order.id),
+    rawDate: order.date,
+    total: Number(order.total || 0),
+    items: (order.items || []).map((item) => ({
+      ...item,
+      adjusted: Boolean(item.adjusted),
+      offeredQuantity: Number(item.offeredQuantity ?? item.quantity ?? 0),
+      price: Number(item.price || 0),
+      priceId: String(item.priceId),
+      quantity: Number(item.quantity ?? item.offeredQuantity ?? 0),
+      requestedQuantity: Number(item.requestedQuantity ?? item.quantity ?? 0),
+      reservedQuantity: Number(item.reservedQuantity || 0),
+    })),
+  }
+}
+
+function formatDate(value) {
+  if (!value) {
+    return 'Request Date'
+  }
+
+  const date = new Date(value)
+
+  if (Number.isNaN(date.getTime())) {
+    return value
+  }
+
+  return new Intl.DateTimeFormat('en', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  }).format(date)
+}
+
+function formatDateTime(value) {
+  if (!value) {
+    return ''
+  }
+
+  const date = new Date(value)
+
+  if (Number.isNaN(date.getTime())) {
+    return value
+  }
+
+  return new Intl.DateTimeFormat('en', {
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  }).format(date)
+}
+
 function errorMessageFor(error) {
   return (
     error.response?.data?.detail ||
     error.response?.data?.message ||
     error.response?.data?.error ||
-    'Unable to place the order right now.'
+    'Unable to create the request right now.'
   )
 }
 
@@ -75,10 +134,36 @@ function useCheckoutColumnCount() {
   )
 }
 
+function adjustmentRowsFor(snapshot, offer) {
+  const offerItemsByPriceId = new Map(offer.items.map((item) => [item.priceId, item]))
+
+  return snapshot
+    .map((item) => {
+      const offeredItem = offerItemsByPriceId.get(item.priceId)
+
+      if (!offeredItem) {
+        return {
+          ...item,
+          offeredQuantity: 0,
+        }
+      }
+
+      if (offeredItem.offeredQuantity < item.requestedQuantity) {
+        return {
+          ...item,
+          offeredQuantity: offeredItem.offeredQuantity,
+        }
+      }
+
+      return null
+    })
+    .filter(Boolean)
+}
+
 function CartPage() {
   const navigate = useNavigate()
   const { updateUser, user } = useAuth()
-  const { cartCount, cartItems, clearCart } = useCart()
+  const { addToCart, cartCount, cartItems, clearCart, removeFromCart } = useCart()
   const [catalogProducts, setCatalogProducts] = useState([])
   const [loadingProducts, setLoadingProducts] = useState(false)
   const [productError, setProductError] = useState('')
@@ -86,9 +171,15 @@ function CartPage() {
   const [filterOpen, setFilterOpen] = useState(false)
   const [category, setCategory] = useState('All')
   const [sort, setSort] = useState('featured')
-  const [orderPlaced, setOrderPlaced] = useState(false)
-  const [orderError, setOrderError] = useState('')
-  const [placingOrder, setPlacingOrder] = useState(false)
+  const [reservationCreated, setReservationCreated] = useState(null)
+  const [adjustedOffer, setAdjustedOffer] = useState(null)
+  const [adjustmentRows, setAdjustmentRows] = useState([])
+  const [adjustmentModalOpen, setAdjustmentModalOpen] = useState(false)
+  const [requestError, setRequestError] = useState('')
+  const [creatingRequest, setCreatingRequest] = useState(false)
+  const [offerActionError, setOfferActionError] = useState('')
+  const [offerActionLoading, setOfferActionLoading] = useState(false)
+  const [cancelReason, setCancelReason] = useState('')
   const [productsExpanded, setProductsExpanded] = useState(false)
   const [addressModalOpen, setAddressModalOpen] = useState(false)
   const [addressForm, setAddressForm] = useState(addressFormFor(user))
@@ -140,15 +231,19 @@ function CartPage() {
     return ['All', ...new Set(categories)]
   }, [catalogProducts])
 
+  const selectedProducts = useMemo(
+    () =>
+      Object.entries(cartItems)
+        .map(([productId, quantity]) => {
+          const product = catalogProducts.find((item) => item.priceId === productId)
+
+          return product ? { product, quantity } : null
+        })
+        .filter(Boolean),
+    [cartItems, catalogProducts],
+  )
+
   const checkoutProducts = useMemo(() => {
-    const selectedProducts = Object.entries(cartItems)
-      .map(([productId, quantity]) => {
-        const product = catalogProducts.find((item) => item.priceId === productId)
-
-        return product ? { product, quantity } : null
-      })
-      .filter(Boolean)
-
     const normalizedSearch = searchTerm.trim().toLowerCase()
 
     const filtered = selectedProducts.filter(({ product }) => {
@@ -170,9 +265,11 @@ function CartPage() {
     }
 
     return filtered
-  }, [cartItems, catalogProducts, category, searchTerm, sort])
+  }, [selectedProducts, category, searchTerm, sort])
 
   const productsCanExpand = checkoutProducts.length > checkoutColumnCount
+  const canCreateRequest =
+    cartCount > 0 && !loadingProducts && !productError && !creatingRequest && selectedProducts.length > 0
 
   function handleResetFilters() {
     setCategory('All')
@@ -181,29 +278,119 @@ function CartPage() {
     setProductsExpanded(false)
   }
 
-  async function handlePlaceOrder() {
-    if (cartCount === 0) {
+  function cartSnapshot() {
+    return Object.entries(cartItems).map(([plantPriceId, quantity]) => {
+      const product = catalogProducts.find((item) => item.priceId === plantPriceId)
+
+      return {
+        name: product?.name || `Product ${plantPriceId}`,
+        priceId: String(plantPriceId),
+        requestedQuantity: Number(quantity),
+      }
+    })
+  }
+
+  async function handleCreateRequest() {
+    if (!canCreateRequest) {
       return
     }
 
-    setOrderError('')
-    setPlacingOrder(true)
+    const snapshot = cartSnapshot()
+    setRequestError('')
+    setOfferActionError('')
+    setCreatingRequest(true)
 
     try {
-      await api.post('/orders', {
+      const response = await api.post('/orders', {
+        autoAcceptIfUnchanged: true,
         deliveryAddress,
         items: Object.entries(cartItems).map(([plantPriceId, quantity]) => ({
           plantPriceId: Number(plantPriceId),
           quantity,
         })),
       })
+      const order = normalizeOrder(response.data)
 
       clearCart()
-      setOrderPlaced(true)
+      setAdjustedOffer(null)
+      setAdjustmentRows([])
+      setAdjustmentModalOpen(false)
+
+      if (order.status === 'Rezervacija') {
+        setReservationCreated(order)
+      } else {
+        const rows = adjustmentRowsFor(snapshot, order)
+        setAdjustedOffer(order)
+        setAdjustmentRows(rows)
+        setAdjustmentModalOpen(rows.length > 0)
+      }
     } catch (error) {
-      setOrderError(errorMessageFor(error))
+      setRequestError(errorMessageFor(error))
     } finally {
-      setPlacingOrder(false)
+      setCreatingRequest(false)
+    }
+  }
+
+  async function refreshAdjustedOffer(offerId) {
+    try {
+      const response = await api.get(`/orders/${offerId}`)
+      setAdjustedOffer(normalizeOrder(response.data))
+    } catch {
+      // Keep the current offer visible if refresh fails.
+    }
+  }
+
+  async function handleAcceptOffer() {
+    if (!adjustedOffer) {
+      return
+    }
+
+    setOfferActionError('')
+    setOfferActionLoading(true)
+
+    try {
+      await api.post(`/orders/${adjustedOffer.id}/accept`)
+      navigate('/requests')
+    } catch (error) {
+      setOfferActionError(errorMessageFor(error))
+      await refreshAdjustedOffer(adjustedOffer.id)
+    } finally {
+      setOfferActionLoading(false)
+    }
+  }
+
+  async function handleCancelOffer(event) {
+    event.preventDefault()
+
+    if (!adjustedOffer) {
+      return
+    }
+
+    setOfferActionError('')
+    setOfferActionLoading(true)
+
+    try {
+      await api.post(`/orders/${adjustedOffer.id}/cancel`, {
+        reason: cancelReason.trim() || null,
+      })
+      navigate('/requests')
+    } catch (error) {
+      setOfferActionError(errorMessageFor(error))
+      await refreshAdjustedOffer(adjustedOffer.id)
+    } finally {
+      setOfferActionLoading(false)
+    }
+  }
+
+  function handleReservationBackdropMouseDown(event) {
+    if (event.target === event.currentTarget) {
+      setReservationCreated(null)
+    }
+  }
+
+  function handleAdjustmentBackdropMouseDown(event) {
+    if (event.target === event.currentTarget) {
+      setAdjustmentModalOpen(false)
     }
   }
 
@@ -260,91 +447,177 @@ function CartPage() {
         sort={sort}
       />
 
-      <PageTitle label="Checkout" onBack={() => navigate('/home')} wide />
+      <PageTitle label="Request" onBack={() => navigate('/home')} wide />
 
       <section className="checkout-shell">
         <UserSidebar />
 
         <div className="checkout-main">
-          <h2>Products</h2>
-
-          {cartCount === 0 ? (
-            <div className="checkout-empty">Your cart is empty.</div>
-          ) : loadingProducts ? (
-            <div className="checkout-empty">Loading cart...</div>
-          ) : productError ? (
-            <div className="checkout-empty">{productError}</div>
-          ) : checkoutProducts.length > 0 ? (
-            <div
-              className={
-                productsExpanded && productsCanExpand
-                  ? 'checkout-product-grid checkout-product-grid-expanded'
-                  : 'checkout-product-grid checkout-product-grid-collapsed'
-              }
-            >
-              {checkoutProducts.map(({ product, quantity }) => (
-                <CheckoutProductCard key={product.priceId} product={product} quantity={quantity} />
-              ))}
-            </div>
+          {adjustedOffer ? (
+            <section className="offer-review" aria-labelledby="offer-review-title">
+              <p className="offer-review-eyebrow">{adjustedOffer.status}</p>
+              <h2 id="offer-review-title">Adjusted offer</h2>
+              {adjustedOffer.expiresAt ? <p>Valid until {adjustedOffer.expiresAt}</p> : null}
+              <div className="offer-review-items">
+                {adjustedOffer.items.map((item) => (
+                  <div className="offer-review-item" key={`${adjustedOffer.id}-${item.priceId}`}>
+                    <strong>{item.name}</strong>
+                    <span>
+                      Requested {item.requestedQuantity}, offered {item.offeredQuantity}
+                    </span>
+                    {item.adjusted ? <em>Adjusted</em> : null}
+                  </div>
+                ))}
+              </div>
+              <strong className="offer-review-total">Price: {adjustedOffer.total}</strong>
+              {offerActionError ? (
+                <p className="checkout-order-error" role="alert">
+                  {offerActionError}
+                </p>
+              ) : null}
+              <div className="offer-review-actions">
+                <button
+                  className="checkout-order-button"
+                  disabled={!adjustedOffer.canAccept || offerActionLoading}
+                  onClick={handleAcceptOffer}
+                  type="button"
+                >
+                  {offerActionLoading ? 'Working...' : 'Accept offer'}
+                </button>
+              </div>
+              {adjustedOffer.canCancel ? (
+                <form className="offer-cancel-form" onSubmit={handleCancelOffer}>
+                  <label>
+                    <span>Cancellation reason (optional)</span>
+                    <textarea
+                      onChange={(event) => setCancelReason(event.target.value)}
+                      rows="3"
+                      value={cancelReason}
+                    />
+                  </label>
+                  <button className="offer-cancel-button" disabled={offerActionLoading} type="submit">
+                    Cancel request
+                  </button>
+                </form>
+              ) : null}
+            </section>
           ) : (
-            <div className="checkout-empty">No cart products match your filters.</div>
+            <>
+              <h2>Products</h2>
+
+              {cartCount === 0 ? (
+                <div className="checkout-empty">Your cart is empty.</div>
+              ) : loadingProducts ? (
+                <div className="checkout-empty">Loading cart...</div>
+              ) : productError ? (
+                <div className="checkout-empty">{productError}</div>
+              ) : checkoutProducts.length > 0 ? (
+                <div
+                  className={
+                    productsExpanded && productsCanExpand
+                      ? 'checkout-product-grid checkout-product-grid-expanded'
+                      : 'checkout-product-grid checkout-product-grid-collapsed'
+                  }
+                >
+                  {checkoutProducts.map(({ product, quantity }) => (
+                    <CheckoutProductCard
+                      disabled={creatingRequest}
+                      key={product.priceId}
+                      onAdd={addToCart}
+                      onRemove={removeFromCart}
+                      product={product}
+                      quantity={quantity}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="checkout-empty">No cart products match your filters.</div>
+              )}
+
+              {productsCanExpand ? (
+                <button
+                  aria-expanded={productsExpanded}
+                  aria-label={productsExpanded ? 'Collapse products' : 'Show all products'}
+                  className={productsExpanded ? 'checkout-down-cue checkout-down-cue-open' : 'checkout-down-cue'}
+                  onClick={() => setProductsExpanded((current) => !current)}
+                  type="button"
+                >
+                  <KeyboardArrowDownIcon fontSize="inherit" />
+                </button>
+              ) : null}
+
+              <h2>Delivery Address</h2>
+              <AddressCard
+                address={deliveryAddress}
+                onEdit={() => {
+                  setAddressForm(addressFormFor(user))
+                  setAddressModalOpen(true)
+                }}
+              />
+
+              <div className="checkout-order-actions">
+                <button
+                  className="checkout-order-button"
+                  disabled={!canCreateRequest}
+                  onClick={handleCreateRequest}
+                  type="button"
+                >
+                  {creatingRequest ? 'Creating request...' : 'Create request'}
+                </button>
+                {requestError ? (
+                  <p className="checkout-order-error" role="alert">
+                    {requestError}
+                  </p>
+                ) : null}
+              </div>
+            </>
           )}
-
-          {productsCanExpand ? (
-            <button
-              aria-expanded={productsExpanded}
-              aria-label={productsExpanded ? 'Collapse products' : 'Show all products'}
-              className={productsExpanded ? 'checkout-down-cue checkout-down-cue-open' : 'checkout-down-cue'}
-              onClick={() => setProductsExpanded((current) => !current)}
-              type="button"
-            >
-              <KeyboardArrowDownIcon fontSize="inherit" />
-            </button>
-          ) : null}
-
-          <h2>Delivery Address</h2>
-          <AddressCard
-            address={deliveryAddress}
-            onEdit={() => {
-              setAddressForm(addressFormFor(user))
-              setAddressModalOpen(true)
-            }}
-          />
-
-          <div className="checkout-order-actions">
-            <button
-              className="checkout-order-button"
-              disabled={cartCount === 0 || loadingProducts || placingOrder}
-              onClick={handlePlaceOrder}
-              type="button"
-            >
-              {placingOrder ? 'Ordering...' : 'Order'}
-            </button>
-            {orderError ? (
-              <p className="checkout-order-error" role="alert">
-                {orderError}
-              </p>
-            ) : null}
-          </div>
         </div>
       </section>
 
-      {orderPlaced ? (
-        <div className="order-modal-backdrop" role="presentation">
+      {reservationCreated ? (
+        <div className="order-modal-backdrop" onMouseDown={handleReservationBackdropMouseDown} role="presentation">
           <section
             aria-labelledby="order-success-title"
             aria-modal="true"
             className="order-modal"
             role="dialog"
           >
-            <h2 id="order-success-title">Order placed successfully!</h2>
-            <p>returning home</p>
+            <h2 id="order-success-title">Request accepted!</h2>
+            <p>Your reservation is ready to track.</p>
             <button
               className="order-modal-button"
-              onClick={() => navigate('/home')}
+              onClick={() => navigate('/requests')}
               type="button"
             >
-              Okay
+              View requests
+            </button>
+          </section>
+        </div>
+      ) : null}
+      {adjustmentModalOpen ? (
+        <div className="order-modal-backdrop" onMouseDown={handleAdjustmentBackdropMouseDown} role="presentation">
+          <section
+            aria-labelledby="adjusted-offer-title"
+            aria-modal="true"
+            className="order-modal adjusted-offer-modal"
+            role="dialog"
+          >
+            <h2 id="adjusted-offer-title">Adjusted offer</h2>
+            <p>Some products from your request may not be available. We've adjusted the offer.</p>
+            <div className="adjusted-offer-list">
+              {adjustmentRows.map((item) => (
+                <span key={`adjusted-${item.priceId}`}>
+                  {item.name}: requested {item.requestedQuantity}, offered {item.offeredQuantity}
+                </span>
+              ))}
+            </div>
+            <button
+              className="order-modal-button"
+              onClick={() => setAdjustmentModalOpen(false)}
+              type="button"
+            >
+              Review offer
             </button>
           </section>
         </div>

@@ -9,6 +9,10 @@ function RequestCard({ onViewDetails, order }) {
 
       <div className="request-copy">
         <h2>{order.date}</h2>
+        <p className="request-status-line">
+          {order.status}
+          {order.currentPhase ? ` / ${order.currentPhase}` : ''}
+        </p>
         <div className="request-items">
           {order.items.map((item) => (
             <p key={`${order.id}-${item.name}`}>

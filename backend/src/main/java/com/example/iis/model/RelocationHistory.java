@@ -24,7 +24,7 @@ public class RelocationHistory {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     private Plant plant;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @ManyToOne(fetch = FetchType.LAZY)
     private Sector sector;
 
     @ManyToOne(fetch = FetchType.LAZY)

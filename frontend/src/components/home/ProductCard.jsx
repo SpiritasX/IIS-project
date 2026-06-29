@@ -1,6 +1,8 @@
 import ImageOutlinedIcon from '@mui/icons-material/ImageOutlined'
 
 function ProductCard({ onAddToCart, onRemoveFromCart, product, quantity }) {
+  const canAdd = product.available && quantity < product.availableQuantity
+
   return (
     <article className="product-card">
       <div className="product-image" role="img" aria-label={product.imageAlt}>
@@ -30,6 +32,7 @@ function ProductCard({ onAddToCart, onRemoveFromCart, product, quantity }) {
           <button
             aria-label={`Add one more ${product.name}`}
             className="product-quantity-button"
+            disabled={!canAdd}
             onClick={() => onAddToCart(product.priceId)}
             type="button"
           >
@@ -39,7 +42,7 @@ function ProductCard({ onAddToCart, onRemoveFromCart, product, quantity }) {
       ) : (
         <button
           className="product-add-button"
-          disabled={!product.available}
+          disabled={!canAdd}
           onClick={() => onAddToCart(product.priceId)}
           type="button"
         >
