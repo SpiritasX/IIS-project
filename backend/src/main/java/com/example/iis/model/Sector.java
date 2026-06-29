@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Objects;
 
 @Entity
-public class LocationParcel {
+public class Sector {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -15,23 +15,19 @@ public class LocationParcel {
     @Column(nullable = false)
     private String name;
 
-    @Column(nullable = false)
-    private String type;
-
     private Long capacity;
 
-    @OneToMany(mappedBy = "parcel", cascade = CascadeType.ALL, fetch = FetchType.EAGER, orphanRemoval = true)
-    private List<LocationUnit> units = new ArrayList<>();
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    private StorageSpace storageSpace;
 
-    @OneToMany(mappedBy = "locationParcel")
+    @OneToMany(mappedBy = "sector")
     private List<RelocationHistory> relocationHistory = new ArrayList<>();
 
-    public LocationParcel() {
+    public Sector() {
     }
 
-    public LocationParcel(String name, String type, Long capacity) {
+    public Sector(String name, Long capacity) {
         this.name = name;
-        this.type = type;
         this.capacity = capacity;
     }
 
@@ -43,8 +39,8 @@ public class LocationParcel {
         return name;
     }
 
-    public String getType() {
-        return type;
+    public void setName(String name) {
+        this.name = name;
     }
 
     public Long getCapacity() {
@@ -55,18 +51,12 @@ public class LocationParcel {
         this.capacity = capacity;
     }
 
-    public List<LocationUnit> getUnits() {
-        return units;
+    public StorageSpace getStorageSpace() {
+        return storageSpace;
     }
 
-    public void addUnit(LocationUnit unit) {
-        units.add(unit);
-        unit.setParcel(this);
-    }
-
-    public void removeUnit(LocationUnit unit) {
-        units.remove(unit);
-        unit.setParcel(null);
+    public void setStorageSpace(StorageSpace storageSpace) {
+        this.storageSpace = storageSpace;
     }
 
     public List<RelocationHistory> getRelocationHistory() {
@@ -77,7 +67,7 @@ public class LocationParcel {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        LocationParcel that = (LocationParcel) o;
+        Sector that = (Sector) o;
         if (id == null || that.id == null) return false;
         return Objects.equals(id, that.id);
     }

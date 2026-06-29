@@ -3,14 +3,25 @@ import ProtectedRoute from './components/routing/ProtectedRoute'
 import AuthProvider from './contexts/AuthProvider'
 import CartProvider from './contexts/CartProvider'
 import AdminOrderAnalysisPage from './pages/AdminOrderAnalysisPage'
+import AdminDashboardPage from './pages/AdminDashboardPage'
+import AddAdminPlantsPage from './pages/AddAdminPlantsPage'
+import AddNurserySitePage from './pages/AddNurserySitePage'
+import BotanistDashboardPage from './pages/BotanistDashboardPage'
+import VarietiesPage from './pages/VarietiesPage'
+import WorkerDashboardPage from './pages/WorkerDashboardPage'
+import AddPlantsPage from './pages/AddPlantsPage'
+import StorageSpacesPage from './pages/StorageSpacesPage'
+import AddStorageSpacePage from './pages/AddStorageSpacePage'
+import EditStorageSpacePage from './pages/EditStorageSpacePage'
 import CartPage from './pages/CartPage'
 import HomePage from './pages/HomePage'
 import LoginPage from './pages/LoginPage'
 import ProfilePage from './pages/ProfilePage'
 import RequestsPage from './pages/RequestsPage'
-import RoleDashboardPage from './pages/RoleDashboardPage'
 import SignUpPage from './pages/SignUpPage'
 import StaffRequestsPage from './pages/StaffRequestsPage'
+import * as adminLocationsApi from './api/adminLocations'
+import * as locationsApi from './api/locations'
 
 function App() {
   return (
@@ -56,14 +67,47 @@ function App() {
             path="/admin"
             element={
               <ProtectedRoute allowedRoles={['ADMIN']}>
-                <RoleDashboardPage
-                  actions={[
-                    { label: 'Requests', path: '/admin/requests' },
-                    { label: 'Order analysis', path: '/admin/order-analysis' },
-                  ]}
-                  subtitle="Review all customer requests and cancel active sales processes when needed."
-                  title="Admin dashboard"
-                />
+                <AdminDashboardPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/plants"
+            element={
+              <ProtectedRoute allowedRoles={['ADMIN']}>
+                <AddAdminPlantsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/nursery-sites/new"
+            element={
+              <ProtectedRoute allowedRoles={['ADMIN']}>
+                <AddNurserySitePage api={adminLocationsApi} />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/locations"
+            element={
+              <ProtectedRoute allowedRoles={['ADMIN']}>
+                <StorageSpacesPage api={adminLocationsApi} basePath="/admin" />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/locations/new"
+            element={
+              <ProtectedRoute allowedRoles={['ADMIN']}>
+                <AddStorageSpacePage api={adminLocationsApi} basePath="/admin" />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/locations/:id"
+            element={
+              <ProtectedRoute allowedRoles={['ADMIN']}>
+                <EditStorageSpacePage api={adminLocationsApi} basePath="/admin" />
               </ProtectedRoute>
             }
           />
@@ -71,10 +115,15 @@ function App() {
             path="/botanist"
             element={
               <ProtectedRoute allowedRoles={['BOTANIST']}>
-                <RoleDashboardPage
-                  subtitle="Botanist workspace foundations are ready for future plant-care features."
-                  title="Botanist dashboard"
-                />
+                <BotanistDashboardPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/botanist/varieties"
+            element={
+              <ProtectedRoute allowedRoles={['BOTANIST']}>
+                <VarietiesPage />
               </ProtectedRoute>
             }
           />
@@ -82,11 +131,39 @@ function App() {
             path="/worker"
             element={
               <ProtectedRoute allowedRoles={['WORKER']}>
-                <RoleDashboardPage
-                  actions={[{ label: 'Requests', path: '/worker/requests' }]}
-                  subtitle="Prepare reserved requests, mark them ready, and start delivery handoff."
-                  title="Worker dashboard"
-                />
+                <WorkerDashboardPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/worker/plants"
+            element={
+              <ProtectedRoute allowedRoles={['WORKER']}>
+                <AddPlantsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/worker/locations"
+            element={
+              <ProtectedRoute allowedRoles={['WORKER']}>
+                <StorageSpacesPage api={locationsApi} basePath="/worker" />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/worker/locations/new"
+            element={
+              <ProtectedRoute allowedRoles={['WORKER']}>
+                <AddStorageSpacePage api={locationsApi} basePath="/worker" />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/worker/locations/:id"
+            element={
+              <ProtectedRoute allowedRoles={['WORKER']}>
+                <EditStorageSpacePage api={locationsApi} basePath="/worker" />
               </ProtectedRoute>
             }
           />

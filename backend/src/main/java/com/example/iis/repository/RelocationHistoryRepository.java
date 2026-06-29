@@ -29,4 +29,26 @@ public interface RelocationHistoryRepository extends JpaRepository<RelocationHis
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     List<RelocationHistory> findByPlant_IdAndEndTimeIsNullOrderByStartTimeAsc(Long plantId);
+
+    List<RelocationHistory> findByNurserySiteIsNull();
+
+    List<RelocationHistory> findByNurserySite_IdAndEndTimeIsNull(Long siteId);
+
+    List<RelocationHistory> findByEndTimeIsNull();
+
+    List<RelocationHistory> findByNurserySite_Id(Long siteId);
+
+    @Query("SELECT rh.plant.id FROM RelocationHistory rh WHERE rh.nurserySite.id = :siteId AND rh.endTime IS NULL")
+    List<Long> findActivePlantIdsBySite(@Param("siteId") Long siteId);
+
+    @Query("SELECT rh.plant.id FROM RelocationHistory rh WHERE rh.endTime IS NULL")
+    List<Long> findAllActivePlantIds();
+
+    long countByEndTimeIsNull();
+
+    List<RelocationHistory> findTop20ByNurserySite_IdOrderByStartTimeDesc(Long siteId);
+
+    List<RelocationHistory> findTop20ByOrderByStartTimeDesc();
+
+    boolean existsBySector_Id(Long sectorId);
 }

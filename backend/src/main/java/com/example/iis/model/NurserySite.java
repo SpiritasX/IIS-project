@@ -13,14 +13,13 @@ public class NurserySite {
     @Column(nullable = false)
     private String name;
 
+    private String address;
+
     @Column(nullable = false)
     private Double latitude;
 
     @Column(nullable = false)
     private Double longitude;
-
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    private LocationUnit unit;
 
     public NurserySite() {
     }
@@ -43,20 +42,20 @@ public class NurserySite {
         this.name = name;
     }
 
+    public String getAddress() {
+        return address;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
+    }
+
     public Double getLatitude() {
         return latitude;
     }
 
     public Double getLongitude() {
         return longitude;
-    }
-
-    public LocationUnit getUnit() {
-        return unit;
-    }
-
-    public void setUnit(LocationUnit unit) {
-        this.unit = unit;
     }
 
     @Override
