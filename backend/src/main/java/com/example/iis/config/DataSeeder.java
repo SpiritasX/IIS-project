@@ -82,26 +82,50 @@ public class DataSeeder {
                 );
             }
 
+            assignDefaultStorageSpaceToExistingVarieties(plantVarietyRepository, defaultStorageSpace);
             seedInitialStock(plantRepository, defaultSector, defaultSite, relocationHistoryRepository);
         };
     }
 
     private StorageSpace ensureDefaultStorageSpace(StorageSpaceRepository storageSpaceRepository,
                                                     NurserySiteRepository nurserySiteRepository) {
+        NurserySite site = defaultNurserySite(nurserySiteRepository);
+
         return storageSpaceRepository.findAll().stream()
                 .filter(u -> u.getName().equals("Main Storage Space"))
+                .map(storageSpace -> {
+                    if (storageSpace.getNurserySite() == null) {
+                        storageSpace.setNurserySite(site);
+                    }
+                    if (storageSpace.getSectors().isEmpty()) {
+                        storageSpace.addSector(new Sector("Default sector", 1000L));
+                    }
+                    return storageSpaceRepository.save(storageSpace);
+                })
                 .findFirst()
                 .orElseGet(() -> {
-                    NurserySite site = nurserySiteRepository.findAll().stream()
-                            .filter(s -> "Novi Sad".equals(s.getName()))
-                            .findFirst()
-                            .orElseGet(() -> nurserySiteRepository.save(new NurserySite("Novi Sad", 45.2671, 19.8335)));
                     StorageSpace storageSpace = new StorageSpace("Main Storage Space", "Staklenik");
                     storageSpace.setNurserySite(site);
                     Sector sector = new Sector("Default sector", 1000L);
                     storageSpace.addSector(sector);
                     return storageSpaceRepository.save(storageSpace);
                 });
+    }
+
+    private NurserySite defaultNurserySite(NurserySiteRepository nurserySiteRepository) {
+        List<NurserySite> sites = nurserySiteRepository.findAll();
+
+        for (NurserySite site : sites) {
+            if ("Novi Sad".equals(site.getName())) {
+                return site;
+            }
+        }
+
+        if (!sites.isEmpty()) {
+            return sites.get(0);
+        }
+
+        return null;
     }
 
     private void seedCatalog(
@@ -208,6 +232,25 @@ public class DataSeeder {
         }
     }
 
+    private void assignDefaultStorageSpaceToExistingVarieties(
+            PlantVarietyRepository plantVarietyRepository,
+            StorageSpace defaultStorageSpace
+    ) {
+        List<PlantVariety> varieties = plantVarietyRepository.findAll();
+        boolean changed = false;
+
+        for (PlantVariety variety : varieties) {
+            if (variety.getStorageSpaceType() == null) {
+                variety.setStorageSpaceType(defaultStorageSpace);
+                changed = true;
+            }
+        }
+
+        if (changed) {
+            plantVarietyRepository.saveAll(varieties);
+        }
+    }
+
     private void seedStaffAccounts(AccountRepository accountRepository, PasswordEncoder passwordEncoder) {
         if (!accountRepository.existsByEmail("admin@example.com")) {
             accountRepository.save(new Admin(uniqueUsername(accountRepository, "admin"),
@@ -238,12 +281,23 @@ public class DataSeeder {
             NurserySite defaultSite,
             RelocationHistoryRepository relocationHistoryRepository
     ) {
-        List<RelocationHistory> unassigned = relocationHistoryRepository.findByNurserySiteIsNull();
-        if (!unassigned.isEmpty()) {
-            for (RelocationHistory rh : unassigned) {
+        List<RelocationHistory> histories = relocationHistoryRepository.findAll();
+        boolean changed = false;
+
+        for (RelocationHistory rh : histories) {
+            if (rh.getNurserySite() == null) {
                 rh.setNurserySite(defaultSite);
+                changed = true;
             }
-            relocationHistoryRepository.saveAll(unassigned);
+
+            if (rh.getSector() == null) {
+                rh.setSector(sector);
+                changed = true;
+            }
+        }
+
+        if (changed) {
+            relocationHistoryRepository.saveAll(histories);
         }
 
         for (Plant plant : plantRepository.findAll()) {
