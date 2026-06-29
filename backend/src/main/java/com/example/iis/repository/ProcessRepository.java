@@ -68,89 +68,96 @@ public interface ProcessRepository extends JpaRepository<Process, Long> {
     );
 
     @Query(value = """
-            with ordered_phases(phase_name, sort_order) as (
+            with phase_names(phase_name) as (
                 values
-                    ('Ponuda', 1),
-                    ('Rezervacija', 2),
-                    ('Spremno', 3),
-                    ('Isporuka', 4)
+                    ('Ponuda'),
+                    ('Rezervacija'),
+                    ('Spremno'),
+                    ('Isporuka')
             )
-            select ordered_phases.phase_name as "phaseName",
+            select phase_names.phase_name as "phaseName",
                    count(distinct proc.id) as "orderCount"
-            from ordered_phases
-            left join phase_type phase_type on phase_type.name = ordered_phases.phase_name
+            from phase_names
+            left join phase_type phase_type on phase_type.name = phase_names.phase_name
             left join phase phase on phase.type_id = phase_type.id
                 and phase.end_time is null
             left join processes proc on proc.id = phase.process_id
                 and proc.end_time is null
-            group by ordered_phases.phase_name, ordered_phases.sort_order
-            order by ordered_phases.sort_order
+            group by phase_names.phase_name
             """, nativeQuery = true)
     List<PhaseCountView> findActivePhaseCounts();
 
     @Query(value = """
-            with phase_pairs(from_phase, to_phase, sort_order) as (
-                values
-                    ('Ponuda', 'Rezervacija', 1),
-                    ('Rezervacija', 'Spremno', 2),
-                    ('Spremno', 'Isporuka', 3)
-            ),
-            reached as (
-                select phase_pairs.from_phase,
-                       count(distinct phase.process_id) as reached_count
-                from phase_pairs
-                left join phase_type phase_type on phase_type.name = phase_pairs.from_phase
-                left join phase phase on phase.type_id = phase_type.id
-                group by phase_pairs.from_phase
-            ),
-            transitioned as (
-                select phase_pairs.from_phase,
-                       phase_pairs.to_phase,
-                       count(distinct from_phase.process_id) as transitioned_count
-                from phase_pairs
-                join phase_type from_type on from_type.name = phase_pairs.from_phase
-                join phase from_phase on from_phase.type_id = from_type.id
-                join phase_type to_type on to_type.name = phase_pairs.to_phase
-                join phase to_phase on to_phase.process_id = from_phase.process_id
-                    and to_phase.type_id = to_type.id
-                    and to_phase.start_time >= from_phase.start_time
-                group by phase_pairs.from_phase, phase_pairs.to_phase
-            )
-            select phase_pairs.from_phase as "fromPhase",
-                   phase_pairs.to_phase as "toPhase",
-                   coalesce(reached.reached_count, 0) as "reachedCount",
-                   coalesce(transitioned.transitioned_count, 0) as "transitionedCount",
-                   case
-                       when coalesce(reached.reached_count, 0) = 0 then 0
-                       else coalesce(transitioned.transitioned_count, 0)::double precision * 100 / reached.reached_count
-                   end as "ratePercent"
-            from phase_pairs
-            left join reached on reached.from_phase = phase_pairs.from_phase
-            left join transitioned on transitioned.from_phase = phase_pairs.from_phase
-                and transitioned.to_phase = phase_pairs.to_phase
-            order by phase_pairs.sort_order
-            """, nativeQuery = true)
+        with phase_counts as (
+            select phase_type.name as phase_name,
+                   count(distinct phase.process_id) as phase_count
+            from phase
+            join phase_type on phase.type_id = phase_type.id
+            where phase_type.name in ('Ponuda', 'Rezervacija', 'Spremno', 'Isporuka')
+            group by phase_type.name
+        ),
+        counts as (
+            select
+                sum(case when phase_name = 'Ponuda' then phase_count else 0 end) as ponuda_count,
+                sum(case when phase_name = 'Rezervacija' then phase_count else 0 end) as rezervacija_count,
+                sum(case when phase_name = 'Spremno' then phase_count else 0 end) as spremno_count,
+                sum(case when phase_name = 'Isporuka' then phase_count else 0 end) as isporuka_count
+            from phase_counts
+        )
+        select 'Ponuda' as "fromPhase",
+               'Rezervacija' as "toPhase",
+               ponuda_count as "reachedCount",
+               rezervacija_count as "transitionedCount",
+               case
+                   when ponuda_count = 0 then 0
+                   else rezervacija_count::double precision * 100 / ponuda_count
+               end as "ratePercent"
+        from counts
+
+        union all
+
+        select 'Rezervacija' as "fromPhase",
+               'Spremno' as "toPhase",
+               rezervacija_count as "reachedCount",
+               spremno_count as "transitionedCount",
+               case
+                   when rezervacija_count = 0 then 0
+                   else spremno_count::double precision * 100 / rezervacija_count
+               end as "ratePercent"
+        from counts
+
+        union all
+
+        select 'Spremno' as "fromPhase",
+               'Isporuka' as "toPhase",
+               spremno_count as "reachedCount",
+               isporuka_count as "transitionedCount",
+               case
+                   when spremno_count = 0 then 0
+                   else isporuka_count::double precision * 100 / spremno_count
+               end as "ratePercent"
+        from counts
+        """, nativeQuery = true)
     List<TransitionRateView> findTransitionRates();
 
     @Query(value = """
-            with ordered_phases(phase_name, sort_order) as (
-                values
-                    ('Ponuda', 1),
-                    ('Rezervacija', 2),
-                    ('Spremno', 3),
-                    ('Isporuka', 4)
-            )
-            select ordered_phases.phase_name as "phaseName",
-                   coalesce(avg(extract(epoch from (phase.end_time - phase.start_time)))::bigint, 0) as "averageDurationSeconds",
-                   count(phase.id) as "sampleCount"
-            from ordered_phases
-            left join phase_type phase_type on phase_type.name = ordered_phases.phase_name
-            left join phase phase on phase.type_id = phase_type.id
-                and phase.start_time is not null
-                and phase.end_time is not null
-            group by ordered_phases.phase_name, ordered_phases.sort_order
-            order by ordered_phases.sort_order
-            """, nativeQuery = true)
+        with phase_names(phase_name) as (
+            values
+                ('Ponuda'),
+                ('Rezervacija'),
+                ('Spremno'),
+                ('Isporuka')
+        )
+        select phase_names.phase_name as "phaseName",
+               coalesce(avg(extract(epoch from (phase.end_time - phase.start_time)))::bigint, 0) as "averageDurationSeconds", -- extract epoch vraca broj sekundi
+               count(phase.id) as "sampleCount"
+        from phase_names
+        left join phase_type phase_type on phase_type.name = phase_names.phase_name
+        left join phase phase on phase.type_id = phase_type.id
+            and phase.start_time is not null
+            and phase.end_time is not null
+        group by phase_names.phase_name
+        """, nativeQuery = true)
     List<AverageDurationView> findAveragePhaseDurations();
 
     @Query(value = """
