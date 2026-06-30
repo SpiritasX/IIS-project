@@ -23,6 +23,9 @@ public class PlantPrice {
     @ManyToOne(fetch = FetchType.EAGER, optional = false)
     private Plant plant;
 
+    @ManyToOne(fetch = FetchType.LAZY, optional = true)
+    private Account changedBy;
+
     public PlantPrice() {
     }
 
@@ -48,6 +51,8 @@ public class PlantPrice {
         return startTime;
     }
 
+    public void setStartTime(Date startTime) { this.startTime = startTime; }
+
     public Date getEndTime() {
         return endTime;
     }
@@ -63,6 +68,10 @@ public class PlantPrice {
     public void setPlant(Plant plant) {
         this.plant = plant;
     }
+
+    public Account getChangedBy() {return changedBy;}
+
+    public void setChangedBy(Account changedBy) {this.changedBy = changedBy;}
 
     @PrePersist
     void prePersist() {
