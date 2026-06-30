@@ -1,10 +1,13 @@
 package com.example.iis.service;
 
+import com.example.iis.dto.PlantDemandResponse;
 import com.example.iis.dto.PlantPriceResponse;
 import com.example.iis.model.Account;
+import com.example.iis.model.OrderHistoryItem;
 import com.example.iis.model.Plant;
 import com.example.iis.model.PlantPrice;
 import com.example.iis.repository.AccountRepository;
+import com.example.iis.repository.OrderHistoryItemRepository;
 import com.example.iis.repository.PlantPriceRepository;
 import com.example.iis.repository.PlantRepository;
 import jakarta.transaction.Transactional;
@@ -13,21 +16,22 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Optional;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.util.*;
 
 @Service
 public class PlantPriceService {
     private PlantRepository plantRepository;
     private PlantPriceRepository plantPriceRepository;
     private AccountRepository accountRepository;
+    private OrderHistoryItemRepository orderHistoryItemRepository;
 
-    public PlantPriceService(PlantRepository plantRepository, PlantPriceRepository plantPriceRepository, AccountRepository accountRepository) {
+    public PlantPriceService(PlantRepository plantRepository, PlantPriceRepository plantPriceRepository, AccountRepository accountRepository, OrderHistoryItemRepository orderHistoryItemRepository) {
         this.plantRepository = plantRepository;
         this.plantPriceRepository = plantPriceRepository;
         this.accountRepository = accountRepository;
+        this.orderHistoryItemRepository = orderHistoryItemRepository;
     }
 
     //public Optional<PlantPrice> getPlantPrice(int id) {}
@@ -79,5 +83,39 @@ public class PlantPriceService {
             listDto.add(temp);
         }
         return listDto;
+    }
+
+    public List<PlantDemandResponse> plantDemandView(Long plantId) {
+        List<OrderHistoryItem> items = orderHistoryItemRepository.findByPlantPrice_Plant_IdAndOrderHistory_Offer_Status_Name(plantId, "Rezervacija");
+
+        Map<String, Long> sumaPoMesecu = new TreeMap<>();
+
+        for (OrderHistoryItem item : items) {
+            Date changedAt = item.getOrderHistory().getChangedAt();
+
+            Calendar calendar = Calendar.getInstance();
+            calendar.setTime(changedAt);
+
+            int year = calendar.get(Calendar.YEAR);
+            int monthNumber = calendar.get(Calendar.MONTH) + 1;
+
+            String month = year + "-" + String.format("%02d", monthNumber);
+
+            Long currentSum = sumaPoMesecu.get(month);
+            if (currentSum == null) {
+                currentSum = 0L;
+            }
+
+            sumaPoMesecu.put(month, currentSum + item.getQuantity());
+        }
+
+        List<PlantDemandResponse> agregirani = new ArrayList<>();
+
+        for (String month : sumaPoMesecu.keySet()) {
+            PlantDemandResponse response = new PlantDemandResponse(month, sumaPoMesecu.get(month));
+            agregirani.add(response);
+        }
+
+        return agregirani;
     }
 }

@@ -1,11 +1,13 @@
 package com.example.iis.controller;
 
 import com.example.iis.dto.NewPlantPriceDto;
+import com.example.iis.dto.PlantDemandResponse;
 import com.example.iis.dto.PlantPriceResponse;
 import com.example.iis.dto.RollbackPriceDto;
 import com.example.iis.model.PlantPrice;
 import com.example.iis.service.PlantPriceService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.parameters.P;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -32,8 +34,13 @@ public class PlantPriceController {
     }
     //@AuthenticationPrincipal umesto id u body-ju?
 
-    @GetMapping("{plantId}/history")
+    @GetMapping("/{plantId}/history")
     public ResponseEntity<List<PlantPriceResponse>> priceHistoryView (@PathVariable Long plantId){
         return ResponseEntity.ok(plantPriceService.priceHistoryView(plantId));
+    }
+
+    @GetMapping("/{plantId}/demand")
+    public ResponseEntity<List<PlantDemandResponse>> plantDemandView (@PathVariable Long plantId){
+        return ResponseEntity.ok(plantPriceService.plantDemandView(plantId));
     }
 }
