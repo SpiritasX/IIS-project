@@ -39,6 +39,14 @@
   margin: 0 0 28px;
 }
 
+.role-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.role-primary-button,
 .role-logout-button {
   background: var(--color-primary);
   border: 0;
@@ -52,6 +60,17 @@
   padding: 0 28px;
 }
 
+.role-primary-button {
+  color: var(--color-secondary);
+}
+
+.role-logout-button {
+  background: transparent;
+  color: var(--color-primary);
+  padding-inline: 0;
+}
+
+.role-primary-button:focus-visible,
 .role-logout-button:focus-visible {
   outline: var(--focus-ring);
   outline-offset: 4px;
@@ -474,6 +493,17 @@
   justify-content: center;
   line-height: 1;
   padding: 0;
+}
+
+.product-quantity-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.product-add-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+  transform: none;
 }
 
 .product-quantity-button:focus-visible,

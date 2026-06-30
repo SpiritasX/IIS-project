@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import ProtectedRoute from './components/routing/ProtectedRoute'
 import AuthProvider from './contexts/AuthProvider'
 import CartProvider from './contexts/CartProvider'
+import AdminOrderAnalysisPage from './pages/AdminOrderAnalysisPage'
 import AdminDashboardPage from './pages/AdminDashboardPage'
 import AddAdminPlantsPage from './pages/AddAdminPlantsPage'
 import AddNurserySitePage from './pages/AddNurserySitePage'
@@ -18,8 +19,9 @@ import LoginPage from './pages/LoginPage'
 import ProfilePage from './pages/ProfilePage'
 import RequestsPage from './pages/RequestsPage'
 import SignUpPage from './pages/SignUpPage'
-import * as locationsApi from './api/locations'
+import StaffRequestsPage from './pages/StaffRequestsPage'
 import * as adminLocationsApi from './api/adminLocations'
+import * as locationsApi from './api/locations'
 
 function App() {
   return (
@@ -162,6 +164,40 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['WORKER']}>
                 <EditStorageSpacePage api={locationsApi} basePath="/worker" />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/requests"
+            element={
+              <ProtectedRoute allowedRoles={['ADMIN']}>
+                <StaffRequestsPage
+                  backPath="/admin"
+                  emptyMessage="No requests found."
+                  title="Admin Requests"
+                  variant="admin"
+                />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/order-analysis"
+            element={
+              <ProtectedRoute allowedRoles={['ADMIN']}>
+                <AdminOrderAnalysisPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/worker/requests"
+            element={
+              <ProtectedRoute allowedRoles={['WORKER']}>
+                <StaffRequestsPage
+                  backPath="/worker"
+                  emptyMessage="No reservations are ready for worker action."
+                  title="Worker Requests"
+                  variant="worker"
+                />
               </ProtectedRoute>
             }
           />

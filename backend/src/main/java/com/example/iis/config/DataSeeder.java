@@ -2,10 +2,11 @@ package com.example.iis.config;
 
 import com.example.iis.model.Admin;
 import com.example.iis.model.Botanist;
+import com.example.iis.model.CancellationReason;
+import com.example.iis.model.NurserySite;
 import com.example.iis.model.Sector;
 import com.example.iis.model.StorageSpace;
 import com.example.iis.model.StorageSpaceType;
-import com.example.iis.model.NurserySite;
 import com.example.iis.model.OfferStatus;
 import com.example.iis.model.PhaseType;
 import com.example.iis.model.Plant;
@@ -17,6 +18,7 @@ import com.example.iis.model.PlantVariety;
 import com.example.iis.model.RelocationHistory;
 import com.example.iis.model.Worker;
 import com.example.iis.repository.AccountRepository;
+import com.example.iis.repository.CancellationReasonRepository;
 import com.example.iis.repository.NurserySiteRepository;
 import com.example.iis.repository.StorageSpaceRepository;
 import com.example.iis.repository.StorageSpaceTypeRepository;
@@ -42,6 +44,7 @@ public class DataSeeder {
     @Bean
     CommandLineRunner seedData(
             AccountRepository accountRepository,
+            CancellationReasonRepository cancellationReasonRepository,
             OfferStatusRepository offerStatusRepository,
             PhaseTypeRepository phaseTypeRepository,
             PlantCategoryRepository plantCategoryRepository,
@@ -60,6 +63,7 @@ public class DataSeeder {
             seedStaffAccounts(accountRepository, passwordEncoder);
             seedOrderStatuses(offerStatusRepository);
             seedPhaseTypes(phaseTypeRepository);
+            seedCancellationReasons(cancellationReasonRepository);
             seedStorageSpaceTypes(storageSpaceTypeRepository);
 
             StorageSpace defaultStorageSpace = ensureDefaultStorageSpace(storageSpaceRepository, nurserySiteRepository);
@@ -78,26 +82,50 @@ public class DataSeeder {
                 );
             }
 
+            assignDefaultStorageSpaceToExistingVarieties(plantVarietyRepository, defaultStorageSpace);
             seedInitialStock(plantRepository, defaultSector, defaultSite, relocationHistoryRepository);
         };
     }
 
     private StorageSpace ensureDefaultStorageSpace(StorageSpaceRepository storageSpaceRepository,
                                                     NurserySiteRepository nurserySiteRepository) {
+        NurserySite site = defaultNurserySite(nurserySiteRepository);
+
         return storageSpaceRepository.findAll().stream()
                 .filter(u -> u.getName().equals("Main Storage Space"))
+                .map(storageSpace -> {
+                    if (storageSpace.getNurserySite() == null) {
+                        storageSpace.setNurserySite(site);
+                    }
+                    if (storageSpace.getSectors().isEmpty()) {
+                        storageSpace.addSector(new Sector("Default sector", 1000L));
+                    }
+                    return storageSpaceRepository.save(storageSpace);
+                })
                 .findFirst()
                 .orElseGet(() -> {
-                    NurserySite site = nurserySiteRepository.findAll().stream()
-                            .filter(s -> "Novi Sad".equals(s.getName()))
-                            .findFirst()
-                            .orElseGet(() -> nurserySiteRepository.save(new NurserySite("Novi Sad", 45.2671, 19.8335)));
                     StorageSpace storageSpace = new StorageSpace("Main Storage Space", "Staklenik");
                     storageSpace.setNurserySite(site);
                     Sector sector = new Sector("Default sector", 1000L);
                     storageSpace.addSector(sector);
                     return storageSpaceRepository.save(storageSpace);
                 });
+    }
+
+    private NurserySite defaultNurserySite(NurserySiteRepository nurserySiteRepository) {
+        List<NurserySite> sites = nurserySiteRepository.findAll();
+
+        for (NurserySite site : sites) {
+            if ("Novi Sad".equals(site.getName())) {
+                return site;
+            }
+        }
+
+        if (!sites.isEmpty()) {
+            return sites.get(0);
+        }
+
+        return null;
     }
 
     private void seedCatalog(
@@ -188,6 +216,41 @@ public class DataSeeder {
         }
     }
 
+    private void seedCancellationReasons(CancellationReasonRepository cancellationReasonRepository) {
+        List.of(
+                "Customer cancellation",
+                "Staff cancellation"
+        ).forEach(name -> saveCancellationReasonIfMissing(cancellationReasonRepository, name));
+    }
+
+    private void saveCancellationReasonIfMissing(
+            CancellationReasonRepository cancellationReasonRepository,
+            String name
+    ) {
+        if (cancellationReasonRepository.findByName(name).isEmpty()) {
+            cancellationReasonRepository.save(new CancellationReason(name));
+        }
+    }
+
+    private void assignDefaultStorageSpaceToExistingVarieties(
+            PlantVarietyRepository plantVarietyRepository,
+            StorageSpace defaultStorageSpace
+    ) {
+        List<PlantVariety> varieties = plantVarietyRepository.findAll();
+        boolean changed = false;
+
+        for (PlantVariety variety : varieties) {
+            if (variety.getStorageSpaceType() == null) {
+                variety.setStorageSpaceType(defaultStorageSpace);
+                changed = true;
+            }
+        }
+
+        if (changed) {
+            plantVarietyRepository.saveAll(varieties);
+        }
+    }
+
     private void seedStaffAccounts(AccountRepository accountRepository, PasswordEncoder passwordEncoder) {
         if (!accountRepository.existsByEmail("admin@example.com")) {
             accountRepository.save(new Admin(uniqueUsername(accountRepository, "admin"),
@@ -218,12 +281,23 @@ public class DataSeeder {
             NurserySite defaultSite,
             RelocationHistoryRepository relocationHistoryRepository
     ) {
-        List<RelocationHistory> unassigned = relocationHistoryRepository.findByNurserySiteIsNull();
-        if (!unassigned.isEmpty()) {
-            for (RelocationHistory rh : unassigned) {
+        List<RelocationHistory> histories = relocationHistoryRepository.findAll();
+        boolean changed = false;
+
+        for (RelocationHistory rh : histories) {
+            if (rh.getNurserySite() == null) {
                 rh.setNurserySite(defaultSite);
+                changed = true;
             }
-            relocationHistoryRepository.saveAll(unassigned);
+
+            if (rh.getSector() == null) {
+                rh.setSector(sector);
+                changed = true;
+            }
+        }
+
+        if (changed) {
+            relocationHistoryRepository.saveAll(histories);
         }
 
         for (Plant plant : plantRepository.findAll()) {

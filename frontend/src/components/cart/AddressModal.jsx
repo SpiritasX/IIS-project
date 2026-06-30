@@ -1,6 +1,12 @@
 function AddressModal({ form, message, onChange, onClose, onSubmit, saving }) {
+  function handleBackdropMouseDown(event) {
+    if (event.target === event.currentTarget) {
+      onClose()
+    }
+  }
+
   return (
-    <div className="address-modal-backdrop" role="presentation">
+    <div className="address-modal-backdrop" onMouseDown={handleBackdropMouseDown} role="presentation">
       <section aria-labelledby="address-modal-title" aria-modal="true" className="address-modal" role="dialog">
         <h2 id="address-modal-title">Address</h2>
         <form noValidate onSubmit={onSubmit}>

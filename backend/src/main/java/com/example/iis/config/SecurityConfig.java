@@ -60,6 +60,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/", "/api/plants", "/api/auth/csrf").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/signup").permitAll()
                         .requestMatchers("/api/auth/profile/**", "/api/orders", "/api/orders/**").hasRole("CUSTOMER")
+                        .requestMatchers(HttpMethod.GET, "/api/admin/order-analysis").hasRole("ADMIN")
+                        .requestMatchers("/api/staff/processes", "/api/staff/processes/**").hasAnyRole("ADMIN", "WORKER")
                         .requestMatchers("/api/botanist/**").hasRole("BOTANIST")
                         .requestMatchers("/api/worker/**").hasRole("WORKER")
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")

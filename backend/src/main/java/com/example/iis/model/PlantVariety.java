@@ -20,7 +20,7 @@ public class PlantVariety {
     @ManyToOne(fetch = FetchType.EAGER, optional = false)
     private PlantSpecies species;
 
-    @ManyToOne(fetch = FetchType.EAGER, optional = false)
+    @ManyToOne(fetch = FetchType.EAGER)
     private StorageSpace storageSpaceType;
 
     @OneToMany(mappedBy = "variety")
