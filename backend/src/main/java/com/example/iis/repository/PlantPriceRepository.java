@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface PlantPriceRepository extends JpaRepository<PlantPrice, Long> {
     @Query("""
@@ -18,4 +19,5 @@ public interface PlantPriceRepository extends JpaRepository<PlantPrice, Long> {
             order by plant.name asc
             """)
     List<PlantPrice> findActiveCatalogPrices();
+    Optional<PlantPrice> findByPlant_IdAndEndTimeIsNull(Long plantId);
 }
