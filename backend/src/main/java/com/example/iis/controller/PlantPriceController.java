@@ -8,6 +8,8 @@ import com.example.iis.service.PlantPriceService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/price")
 public class PlantPriceController {
@@ -28,5 +30,10 @@ public class PlantPriceController {
         PlantPrice newPrice = plantPriceService.rollbackPlantPrice(plantId, request.changedById());
         return ResponseEntity.ok(PlantPriceResponse.from(newPrice));
     }
+    //@AuthenticationPrincipal umesto id u body-ju?
 
+    @GetMapping("{plantId}/history")
+    public ResponseEntity<List<PlantPriceResponse>> priceHistoryView (@PathVariable Long plantId){
+        return ResponseEntity.ok(plantPriceService.priceHistoryView(plantId));
+    }
 }

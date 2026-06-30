@@ -1,5 +1,6 @@
 package com.example.iis.service;
 
+import com.example.iis.dto.PlantPriceResponse;
 import com.example.iis.model.Account;
 import com.example.iis.model.Plant;
 import com.example.iis.model.PlantPrice;
@@ -12,7 +13,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -66,5 +69,15 @@ public class PlantPriceService {
         }
 
         return setNewPlantPrice(plantId, pp.get().getPrice(), changedById);
+    }
+
+    public List<PlantPriceResponse> priceHistoryView(Long plantId){
+        List<PlantPrice> lista = plantPriceRepository.findByPlant_IdOrderByStartTimeAsc(plantId);
+        List<PlantPriceResponse> listDto = new ArrayList<>();
+        for(PlantPrice p : lista){
+            PlantPriceResponse temp = PlantPriceResponse.from(p);
+            listDto.add(temp);
+        }
+        return listDto;
     }
 }

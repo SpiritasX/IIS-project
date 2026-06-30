@@ -21,4 +21,5 @@ public interface PlantPriceRepository extends JpaRepository<PlantPrice, Long> {
     List<PlantPrice> findActiveCatalogPrices();
     Optional<PlantPrice> findByPlant_IdAndEndTimeIsNull(Long plantId);
     Optional<PlantPrice> findTopByPlant_IdAndEndTimeIsNotNullOrderByEndTimeDesc(Long plantId);
+    List<PlantPrice> findByPlant_IdOrderByStartTimeAsc(Long Id);
 }
