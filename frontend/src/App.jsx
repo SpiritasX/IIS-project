@@ -17,6 +17,7 @@ import CartPage from './pages/CartPage'
 import HomePage from './pages/HomePage'
 import LoginPage from './pages/LoginPage'
 import ProfilePage from './pages/ProfilePage'
+import PlantPriceDetailsPage from './pages/PlantPriceDetailsPage'
 import RequestsPage from './pages/RequestsPage'
 import SignUpPage from './pages/SignUpPage'
 import StaffRequestsPage from './pages/StaffRequestsPage'
@@ -140,6 +141,14 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['WORKER']}>
                 <AddPlantsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/worker/plant-prices"
+            element={
+              <ProtectedRoute allowedRoles={['WORKER']}>
+                <PlantPriceDetailsPage />
               </ProtectedRoute>
             }
           />
