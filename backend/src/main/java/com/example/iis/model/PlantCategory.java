@@ -32,6 +32,10 @@ public class PlantCategory {
         return name;
     }
 
+    public void setName(String name) {
+        this.name = name;
+    }
+
     public Set<PlantType> getTypes() {
         return types;
     }

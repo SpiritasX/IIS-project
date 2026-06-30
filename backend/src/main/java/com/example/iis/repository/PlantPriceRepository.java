@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import java.util.List;
 
 public interface PlantPriceRepository extends JpaRepository<PlantPrice, Long> {
+    void deleteByPlant_Id(Long plantId);
     @Query("""
             select price from PlantPrice price
             join fetch price.plant plant

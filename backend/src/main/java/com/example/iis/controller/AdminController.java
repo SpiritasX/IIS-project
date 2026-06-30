@@ -1,6 +1,8 @@
 package com.example.iis.controller;
 
 import com.example.iis.dto.AddPlantLotRequest;
+import com.example.iis.dto.PlantDetailResponse;
+import com.example.iis.dto.UpdatePlantRequest;
 import com.example.iis.dto.CreateNurserySiteRequest;
 import com.example.iis.dto.CreateSectorRequest;
 import com.example.iis.dto.CreateStorageSpaceRequest;
@@ -79,6 +81,22 @@ public class AdminController {
             @RequestParam(required = false) Long siteId
     ) {
         return ResponseEntity.ok(dashboardService.getRelocationLogs(siteId));
+    }
+
+    @GetMapping("/plants/all")
+    public ResponseEntity<List<PlantDetailResponse>> getPlants() {
+        return ResponseEntity.ok(plantService.getPlants());
+    }
+
+    @PutMapping("/plants/{id}")
+    public ResponseEntity<PlantDetailResponse> updatePlant(@PathVariable Long id, @RequestBody UpdatePlantRequest request) {
+        return ResponseEntity.ok(plantService.updatePlant(id, request));
+    }
+
+    @DeleteMapping("/plants/{id}")
+    public ResponseEntity<Void> deletePlant(@PathVariable Long id) {
+        plantService.deletePlant(id);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/plants/varieties")

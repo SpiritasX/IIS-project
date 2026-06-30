@@ -15,3 +15,15 @@ export function getSectors(storageSpaceId) {
 export function addPlantLot(data) {
   return api.post('/admin/plants', data)
 }
+
+export function getPlants() {
+  return api.get('/admin/plants/all')
+}
+
+export function updatePlant(id, data) {
+  return api.put(`/admin/plants/${id}`, data)
+}
+
+export function deletePlant(id) {
+  return api.delete(`/admin/plants/${id}`)
+}

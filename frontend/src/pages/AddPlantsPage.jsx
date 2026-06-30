@@ -27,6 +27,7 @@ const EMPTY_FORM = {
   color: '',
   height: '',
   state: '',
+  conditionDescription: '',
 }
 
 function AddPlantsPage() {
@@ -121,7 +122,8 @@ function AddPlantsPage() {
         hatchingDate: form.hatchingDate || null,
         color: form.color.trim() || null,
         height: form.height ? Number(form.height) : null,
-        state: form.state.trim() || null,
+        state: form.state ? Number(form.state) : null,
+        conditionDescription: form.conditionDescription.trim() || null,
       })
       setLots((prev) => [res.data, ...prev])
       setForm(EMPTY_FORM)
@@ -359,16 +361,38 @@ function AddPlantsPage() {
 
                 <div className="variety-field">
                   <label className="variety-label" htmlFor="state">
-                    State / condition
+                    Condition (1–5)
                   </label>
-                  <input
-                    className="variety-input"
+                  <select
+                    className="variety-select"
                     id="state"
                     name="state"
                     onChange={handleField}
-                    placeholder="e.g. Seedling, Healthy"
-                    type="text"
                     value={form.state}
+                  >
+                    <option value="">Not rated</option>
+                    <option value="1">1 — Poor</option>
+                    <option value="2">2 — Fair</option>
+                    <option value="3">3 — Good</option>
+                    <option value="4">4 — Very good</option>
+                    <option value="5">5 — Excellent</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="variety-form-row">
+                <div className="variety-field">
+                  <label className="variety-label" htmlFor="conditionDescription">
+                    Condition description (optional)
+                  </label>
+                  <textarea
+                    className="variety-textarea"
+                    id="conditionDescription"
+                    name="conditionDescription"
+                    onChange={handleField}
+                    placeholder="Describe the plant's current condition…"
+                    rows={2}
+                    value={form.conditionDescription}
                   />
                 </div>
               </div>
@@ -422,7 +446,7 @@ function AddPlantsPage() {
                       </td>
                       <td>{lot.quantity}</td>
                       <td>{lot.propagationMethod ?? '—'}</td>
-                      <td>{lot.state ?? '—'}</td>
+                      <td>{lot.state != null ? `${lot.state}/5` : '—'}</td>
                     </tr>
                   ))}
                 </tbody>

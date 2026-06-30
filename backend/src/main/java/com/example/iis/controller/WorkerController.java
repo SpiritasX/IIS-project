@@ -1,6 +1,8 @@
 package com.example.iis.controller;
 
 import com.example.iis.dto.AddPlantLotRequest;
+import com.example.iis.dto.PlantDetailResponse;
+import com.example.iis.dto.UpdatePlantRequest;
 import com.example.iis.dto.CreateSectorRequest;
 import com.example.iis.dto.CreateStorageSpaceRequest;
 import com.example.iis.dto.UpdateSectorRequest;
@@ -80,6 +82,11 @@ public class WorkerController {
         return ResponseEntity.ok(service.getRelocationLogs(siteId));
     }
 
+    @GetMapping("/plants/all")
+    public ResponseEntity<List<PlantDetailResponse>> getPlants() {
+        return ResponseEntity.ok(plantService.getPlants());
+    }
+
     @GetMapping("/plants/varieties")
     public ResponseEntity<List<VarietyResponse>> getVarieties() {
         return ResponseEntity.ok(plantService.getVarieties());
@@ -98,6 +105,17 @@ public class WorkerController {
     @PostMapping("/plants")
     public ResponseEntity<PlantLotResponse> addPlantLot(@RequestBody AddPlantLotRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(plantService.addPlantLot(request));
+    }
+
+    @PutMapping("/plants/{id}")
+    public ResponseEntity<PlantDetailResponse> updatePlant(@PathVariable Long id, @RequestBody UpdatePlantRequest request) {
+        return ResponseEntity.ok(plantService.updatePlant(id, request));
+    }
+
+    @DeleteMapping("/plants/{id}")
+    public ResponseEntity<Void> deletePlant(@PathVariable Long id) {
+        plantService.deletePlant(id);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/storage-space-types")

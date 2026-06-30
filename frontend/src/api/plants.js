@@ -1,5 +1,9 @@
 import api from './client'
 
+export function getPlants() {
+  return api.get('/worker/plants/all')
+}
+
 export function getVarieties() {
   return api.get('/worker/plants/varieties')
 }
@@ -14,4 +18,12 @@ export function getSectors(storageSpaceId) {
 
 export function addPlantLot(data) {
   return api.post('/worker/plants', data)
+}
+
+export function updatePlant(id, data) {
+  return api.put(`/worker/plants/${id}`, data)
+}
+
+export function deletePlant(id) {
+  return api.delete(`/worker/plants/${id}`)
 }

@@ -13,6 +13,7 @@ public class PlantVariety {
     private Long id;
     @Column(unique = true, nullable = false)
     private String name;
+    private String latinName;
     private Double humidity;
     private String soil;
     private String instructions;
@@ -21,7 +22,7 @@ public class PlantVariety {
     private PlantSpecies species;
 
     @ManyToOne(fetch = FetchType.EAGER, optional = false)
-    private StorageSpace storageSpaceType;
+    private StorageSpaceType storageSpaceType;
 
     @OneToMany(mappedBy = "variety")
     private Set<Plant> plants = new LinkedHashSet<>();
@@ -33,7 +34,7 @@ public class PlantVariety {
         this(name, humidity, soil, instructions, species, null);
     }
 
-    public PlantVariety(String name, Double humidity, String soil, String instructions, PlantSpecies species, StorageSpace storageSpaceType) {
+    public PlantVariety(String name, Double humidity, String soil, String instructions, PlantSpecies species, StorageSpaceType storageSpaceType) {
         this.name = name;
         this.humidity = humidity;
         this.soil = soil;
@@ -48,6 +49,14 @@ public class PlantVariety {
 
     public String getName() {
         return name;
+    }
+
+    public String getLatinName() {
+        return latinName;
+    }
+
+    public void setLatinName(String latinName) {
+        this.latinName = latinName;
     }
 
     public Double getHumidity() {
@@ -82,11 +91,11 @@ public class PlantVariety {
         this.species = species;
     }
 
-    public StorageSpace getStorageSpaceType() {
+    public StorageSpaceType getStorageSpaceType() {
         return storageSpaceType;
     }
 
-    public void setStorageSpaceType(StorageSpace storageSpaceType) {
+    public void setStorageSpaceType(StorageSpaceType storageSpaceType) {
         this.storageSpaceType = storageSpaceType;
     }
 

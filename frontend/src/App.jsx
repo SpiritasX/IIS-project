@@ -3,11 +3,14 @@ import ProtectedRoute from './components/routing/ProtectedRoute'
 import AuthProvider from './contexts/AuthProvider'
 import CartProvider from './contexts/CartProvider'
 import AdminDashboardPage from './pages/AdminDashboardPage'
+import AdminPlantsPage from './pages/AdminPlantsPage'
 import AddAdminPlantsPage from './pages/AddAdminPlantsPage'
 import AddNurserySitePage from './pages/AddNurserySitePage'
 import BotanistDashboardPage from './pages/BotanistDashboardPage'
+import BotanistPlantsPage from './pages/BotanistPlantsPage'
 import VarietiesPage from './pages/VarietiesPage'
 import WorkerDashboardPage from './pages/WorkerDashboardPage'
+import WorkerPlantsPage from './pages/WorkerPlantsPage'
 import AddPlantsPage from './pages/AddPlantsPage'
 import StorageSpacesPage from './pages/StorageSpacesPage'
 import AddStorageSpacePage from './pages/AddStorageSpacePage'
@@ -73,6 +76,14 @@ function App() {
             path="/admin/plants"
             element={
               <ProtectedRoute allowedRoles={['ADMIN']}>
+                <AdminPlantsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/plants/add"
+            element={
+              <ProtectedRoute allowedRoles={['ADMIN']}>
                 <AddAdminPlantsPage />
               </ProtectedRoute>
             }
@@ -126,6 +137,14 @@ function App() {
             }
           />
           <Route
+            path="/botanist/plants"
+            element={
+              <ProtectedRoute allowedRoles={['BOTANIST']}>
+                <BotanistPlantsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/worker"
             element={
               <ProtectedRoute allowedRoles={['WORKER']}>
@@ -135,6 +154,14 @@ function App() {
           />
           <Route
             path="/worker/plants"
+            element={
+              <ProtectedRoute allowedRoles={['WORKER']}>
+                <WorkerPlantsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/worker/plants/add"
             element={
               <ProtectedRoute allowedRoles={['WORKER']}>
                 <AddPlantsPage />

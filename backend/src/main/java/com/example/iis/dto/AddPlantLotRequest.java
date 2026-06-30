@@ -12,6 +12,7 @@ public record AddPlantLotRequest(
         LocalDate hatchingDate,
         String color,
         Double height,
-        String state
+        Integer state,
+        String conditionDescription
 ) {
 }

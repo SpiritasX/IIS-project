@@ -19,7 +19,8 @@ public class Plant {
     private LocalDate hatchingDate;
     private String color;
     private Double height;
-    private String state;
+    private Integer state;
+    private String conditionDescription;
 
     @OneToMany(mappedBy = "plant", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<RelocationHistory> relocationHistory = new ArrayList<>();
@@ -60,6 +61,10 @@ public class Plant {
 
     public String getName() {
         return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
     }
 
     public String getDescription() {
@@ -110,12 +115,20 @@ public class Plant {
         this.height = height;
     }
 
-    public String getState() {
+    public Integer getState() {
         return state;
     }
 
-    public void setState(String state) {
+    public void setState(Integer state) {
         this.state = state;
+    }
+
+    public String getConditionDescription() {
+        return conditionDescription;
+    }
+
+    public void setConditionDescription(String conditionDescription) {
+        this.conditionDescription = conditionDescription;
     }
 
     public List<RelocationHistory> getRelocationHistory() {

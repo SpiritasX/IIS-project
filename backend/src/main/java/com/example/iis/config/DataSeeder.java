@@ -67,6 +67,10 @@ public class DataSeeder {
             NurserySite defaultSite = defaultStorageSpace.getNurserySite();
 
             if (plantPriceRepository.count() == 0) {
+                StorageSpaceType defaultSpaceType = storageSpaceTypeRepository.findAll().stream()
+                        .filter(t -> "Staklenik".equals(t.getName()))
+                        .findFirst()
+                        .orElseGet(() -> storageSpaceTypeRepository.save(new StorageSpaceType("Staklenik")));
                 seedCatalog(
                         plantCategoryRepository,
                         plantTypeRepository,
@@ -74,7 +78,7 @@ public class DataSeeder {
                         plantVarietyRepository,
                         plantRepository,
                         plantPriceRepository,
-                        defaultStorageSpace
+                        defaultSpaceType
                 );
             }
 
@@ -107,7 +111,7 @@ public class DataSeeder {
             PlantVarietyRepository plantVarietyRepository,
             PlantRepository plantRepository,
             PlantPriceRepository plantPriceRepository,
-            StorageSpace defaultStorageSpace
+            StorageSpaceType defaultStorageSpaceType
     ) {
         PlantCategory flowers = plantCategoryRepository.save(new PlantCategory("Flowers"));
         PlantCategory herbs = plantCategoryRepository.save(new PlantCategory("Herbs"));
@@ -125,19 +129,19 @@ public class DataSeeder {
 
         PlantVariety lavender = plantVarietyRepository.save(new PlantVariety(
                 "English lavender", 45.0, "Well-drained alkaline soil",
-                "Keep in full sun and water sparingly.", lavenderSpecies, defaultStorageSpace));
+                "Keep in full sun and water sparingly.", lavenderSpecies, defaultStorageSpaceType));
         PlantVariety basil = plantVarietyRepository.save(new PlantVariety(
                 "Genovese basil", 60.0, "Rich, moist soil",
-                "Pinch top leaves often to encourage growth.", basilSpecies, defaultStorageSpace));
+                "Pinch top leaves often to encourage growth.", basilSpecies, defaultStorageSpaceType));
         PlantVariety olive = plantVarietyRepository.save(new PlantVariety(
                 "Arbequina olive", 40.0, "Sandy loam",
-                "Place in a warm bright spot and avoid overwatering.", oliveSpecies, defaultStorageSpace));
+                "Place in a warm bright spot and avoid overwatering.", oliveSpecies, defaultStorageSpaceType));
         PlantVariety mint = plantVarietyRepository.save(new PlantVariety(
                 "Spearmint", 65.0, "Moist garden soil",
-                "Trim runners and keep soil evenly moist.", mintSpecies, defaultStorageSpace));
+                "Trim runners and keep soil evenly moist.", mintSpecies, defaultStorageSpaceType));
         PlantVariety rose = plantVarietyRepository.save(new PlantVariety(
                 "Garden rose", 55.0, "Loamy soil",
-                "Prune spent blooms and water at the base.", roseSpecies, defaultStorageSpace));
+                "Prune spent blooms and water at the base.", roseSpecies, defaultStorageSpaceType));
 
         savePlantWithPrice(plantRepository, plantPriceRepository,
                 new Plant("Lavender starter", "Hardy young lavender plant with rich fragrance and strong roots.",
