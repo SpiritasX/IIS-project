@@ -7,13 +7,16 @@ import com.example.iis.dto.UpdatePlantRequest;
 import com.example.iis.dto.StorageSpaceResponse;
 import com.example.iis.dto.PlantLotResponse;
 import com.example.iis.dto.VarietyResponse;
+import com.example.iis.model.DeletionReason;
 import com.example.iis.model.NurserySite;
+import com.example.iis.model.PlantDeletionLog;
 import com.example.iis.model.Sector;
 import com.example.iis.model.StorageSpace;
 import com.example.iis.model.Plant;
 import com.example.iis.model.PlantSpecies;
 import com.example.iis.model.PlantVariety;
 import com.example.iis.model.RelocationHistory;
+import com.example.iis.repository.PlantDeletionLogRepository;
 import com.example.iis.repository.PlantPriceRepository;
 import com.example.iis.repository.RemovalLogRepository;
 import com.example.iis.repository.SectorRepository;
@@ -22,6 +25,7 @@ import com.example.iis.repository.PlantRepository;
 import com.example.iis.repository.PlantVarietyRepository;
 import com.example.iis.repository.RelocationHistoryRepository;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -42,6 +46,7 @@ public class WorkerPlantService {
     private final RelocationHistoryRepository relocationHistoryRepository;
     private final PlantPriceRepository plantPriceRepository;
     private final RemovalLogRepository removalLogRepository;
+    private final PlantDeletionLogRepository plantDeletionLogRepository;
 
     public WorkerPlantService(
             PlantVarietyRepository varietyRepository,
@@ -50,7 +55,8 @@ public class WorkerPlantService {
             PlantRepository plantRepository,
             RelocationHistoryRepository relocationHistoryRepository,
             PlantPriceRepository plantPriceRepository,
-            RemovalLogRepository removalLogRepository
+            RemovalLogRepository removalLogRepository,
+            PlantDeletionLogRepository plantDeletionLogRepository
     ) {
         this.varietyRepository = varietyRepository;
         this.storageSpaceRepository = storageSpaceRepository;
@@ -59,6 +65,7 @@ public class WorkerPlantService {
         this.relocationHistoryRepository = relocationHistoryRepository;
         this.plantPriceRepository = plantPriceRepository;
         this.removalLogRepository = removalLogRepository;
+        this.plantDeletionLogRepository = plantDeletionLogRepository;
     }
 
     public List<PlantDetailResponse> getPlants() {
@@ -212,9 +219,22 @@ public class WorkerPlantService {
     }
 
     @Transactional
-    public void deletePlant(Long id) {
+    public void deletePlant(Long id, String reason) {
         Plant plant = plantRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Plant not found"));
+
+        DeletionReason deletionReason;
+        try {
+            deletionReason = DeletionReason.valueOf(reason);
+        } catch (IllegalArgumentException | NullPointerException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid deletion reason");
+        }
+
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        plantDeletionLogRepository.save(
+                new PlantDeletionLog(plant.getName(), plant.getVariety().getName(), deletionReason, username)
+        );
+
         removalLogRepository.findByPlant_IdIn(List.of(id)).forEach(removalLogRepository::delete);
         plantPriceRepository.deleteByPlant_Id(id);
         plantRepository.delete(plant);

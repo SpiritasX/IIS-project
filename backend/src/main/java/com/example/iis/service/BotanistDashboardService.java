@@ -2,14 +2,17 @@ package com.example.iis.service;
 
 import com.example.iis.dto.DashboardLogEntry;
 import com.example.iis.dto.DashboardStatsResponse;
+import com.example.iis.dto.DeletionReasonStatsPoint;
 import com.example.iis.dto.NurserySiteResponse;
 import com.example.iis.dto.RelocationDataPoint;
 import com.example.iis.dto.StockDataPoint;
+import com.example.iis.model.DeletionReason;
 import com.example.iis.model.HealthLog;
 import com.example.iis.model.RelocationHistory;
 import com.example.iis.model.RemovalLog;
 import com.example.iis.repository.HealthLogRepository;
 import com.example.iis.repository.NurserySiteRepository;
+import com.example.iis.repository.PlantDeletionLogRepository;
 import com.example.iis.repository.RelocationHistoryRepository;
 import com.example.iis.repository.RemovalLogRepository;
 import org.springframework.stereotype.Service;
@@ -17,7 +20,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -30,17 +35,30 @@ public class BotanistDashboardService {
     private final RelocationHistoryRepository relocationHistoryRepository;
     private final HealthLogRepository healthLogRepository;
     private final RemovalLogRepository removalLogRepository;
+    private final PlantDeletionLogRepository plantDeletionLogRepository;
 
     public BotanistDashboardService(
             NurserySiteRepository nurserySiteRepository,
             RelocationHistoryRepository relocationHistoryRepository,
             HealthLogRepository healthLogRepository,
-            RemovalLogRepository removalLogRepository
+            RemovalLogRepository removalLogRepository,
+            PlantDeletionLogRepository plantDeletionLogRepository
     ) {
         this.nurserySiteRepository = nurserySiteRepository;
         this.relocationHistoryRepository = relocationHistoryRepository;
         this.healthLogRepository = healthLogRepository;
         this.removalLogRepository = removalLogRepository;
+        this.plantDeletionLogRepository = plantDeletionLogRepository;
+    }
+
+    public List<DeletionReasonStatsPoint> getDeletionReasonStats() {
+        Map<DeletionReason, Long> counts = new EnumMap<>(DeletionReason.class);
+        for (Object[] row : plantDeletionLogRepository.countGroupedByReason()) {
+            counts.put((DeletionReason) row[0], (Long) row[1]);
+        }
+        return Arrays.stream(DeletionReason.values())
+                .map(r -> new DeletionReasonStatsPoint(r.getLabel(), counts.getOrDefault(r, 0L)))
+                .toList();
     }
 
     public List<NurserySiteResponse> getSites() {

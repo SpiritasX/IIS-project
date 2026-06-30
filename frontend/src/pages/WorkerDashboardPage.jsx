@@ -2,11 +2,13 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   getDashboardStats,
+  getDeletionReasonStats,
   getPlantCountByUnit,
   getRelocationLogs,
   getSites,
   getStockByVariety,
 } from '../api/worker'
+import DeletionReasonChart from '../components/worker/DeletionReasonChart'
 import PlantCountChart from '../components/worker/PlantCountChart'
 import RelocationLogsTable from '../components/worker/RelocationLogsTable'
 import StockByVarietyChart from '../components/worker/StockByVarietyChart'
@@ -30,6 +32,7 @@ function WorkerDashboardPage() {
   const [stockByVariety, setStockByVariety] = useState([])
   const [plantCount, setPlantCount] = useState([])
   const [logs, setLogs] = useState([])
+  const [deletionStats, setDeletionStats] = useState([])
 
   const [loadingData, setLoadingData] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
@@ -56,17 +59,19 @@ function WorkerDashboardPage() {
     async function loadDashboard() {
       setLoadingData(true)
       try {
-        const [statsRes, stockRes, plantRes, logsRes] = await Promise.all([
+        const [statsRes, stockRes, plantRes, logsRes, delRes] = await Promise.all([
           getDashboardStats(selectedSiteId),
           getStockByVariety(selectedSiteId),
           getPlantCountByUnit(selectedSiteId),
           getRelocationLogs(selectedSiteId),
+          getDeletionReasonStats(),
         ])
         if (!ignore) {
           setStats(statsRes.data)
           setStockByVariety(stockRes.data)
           setPlantCount(plantRes.data)
           setLogs(logsRes.data)
+          setDeletionStats(delRes.data)
         }
       } catch {
         // leave previous data visible on error
@@ -123,6 +128,7 @@ function WorkerDashboardPage() {
           <StatCard label="Plants" loading={loadingData} onClick={() => navigate('/worker/plants')} value={stats?.plantsCount} />
           <StatCard label="Active relocations" loading={loadingData} value={stats?.activeRelocations} />
 
+          <DeletionReasonChart data={deletionStats} loading={loadingData} />
           <RelocationLogsTable loading={loadingData} logs={logs} searchTerm={searchTerm} />
         </div>
       </section>

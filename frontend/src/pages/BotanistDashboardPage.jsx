@@ -5,6 +5,7 @@ import {
   getDashboardRelocations,
   getDashboardStats,
   getDashboardStock,
+  getDeletionReasonStats,
   getSites,
 } from '../api/botanist'
 import BotanistSidebar from '../components/botanist/BotanistSidebar'
@@ -12,6 +13,7 @@ import LogsTable from '../components/botanist/LogsTable'
 import RelocationChart from '../components/botanist/RelocationChart'
 import StatCard from '../components/botanist/StatCard'
 import StockBarChart from '../components/botanist/StockBarChart'
+import DeletionReasonChart from '../components/worker/DeletionReasonChart'
 import SearchBar from '../components/home/SearchBar'
 import PageTitle from '../components/home/PageTitle'
 import { useAuth } from '../hooks/useAuth'
@@ -29,6 +31,7 @@ function BotanistDashboardPage() {
   const [stockData, setStockData] = useState([])
   const [relocationData, setRelocationData] = useState([])
   const [logs, setLogs] = useState([])
+  const [deletionStats, setDeletionStats] = useState([])
 
   const [loadingData, setLoadingData] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
@@ -55,17 +58,19 @@ function BotanistDashboardPage() {
     async function loadDashboard() {
       setLoadingData(true)
       try {
-        const [statsRes, stockRes, relocRes, logsRes] = await Promise.all([
+        const [statsRes, stockRes, relocRes, logsRes, delRes] = await Promise.all([
           getDashboardStats(selectedSiteId),
           getDashboardStock(selectedSiteId),
           getDashboardRelocations(selectedSiteId),
           getDashboardLogs(selectedSiteId),
+          getDeletionReasonStats(),
         ])
         if (!ignore) {
           setStats(statsRes.data)
           setStockData(stockRes.data)
           setRelocationData(relocRes.data)
           setLogs(logsRes.data)
+          setDeletionStats(delRes.data)
         }
       } catch {
         // leave previous data visible on error
@@ -124,6 +129,7 @@ function BotanistDashboardPage() {
 
           <StatCard label="Active relocations" loading={loadingData} value={stats?.activeRelocations} />
           <RelocationChart data={relocationData} loading={loadingData} />
+          <DeletionReasonChart data={deletionStats} loading={loadingData} />
         </div>
       </section>
     </main>

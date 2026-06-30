@@ -12,6 +12,14 @@ import '../styles/varieties.css'
 
 const PROPAGATION_OPTIONS = ['Seed', 'Slip', 'Sapling', 'Cuttings', 'Grafting', 'Division']
 
+const DELETION_REASONS = [
+  { value: 'PLAMENJACA', label: 'Plamenjača' },
+  { value: 'PARAZITI', label: 'Paraziti' },
+  { value: 'DEHIDRATACIJA', label: 'Dehidratacija' },
+  { value: 'BOLEST', label: 'Bolest' },
+  { value: 'DRUGO', label: 'Drugo' },
+]
+
 const btnSm = { minWidth: 'unset', padding: '0 12px', height: 30, fontSize: 13 }
 const inputSm = { height: 30, fontSize: 13, padding: '0 8px' }
 
@@ -42,6 +50,9 @@ function AdminPlantsPage() {
   const [editSubmitting, setEditSubmitting] = useState(false)
   const [editError, setEditError] = useState('')
   const [deleteError, setDeleteError] = useState('')
+  const [deletingId, setDeletingId] = useState(null)
+  const [deleteReason, setDeleteReason] = useState('')
+  const [deleteSubmitting, setDeleteSubmitting] = useState(false)
 
   useEffect(() => {
     let ignore = false
@@ -69,6 +80,8 @@ function AdminPlantsPage() {
     setExpandedId(p.id)
     setEditError('')
     setDeleteError('')
+    setDeletingId(null)
+    setDeleteReason('')
   }
 
   function cancelEdit(e) {
@@ -109,16 +122,37 @@ function AdminPlantsPage() {
     }
   }
 
-  async function handleDelete(id, e) {
+  function requestDelete(p, e) {
     e.stopPropagation()
+    setDeletingId(p.id)
+    setDeleteReason('')
+    setDeleteError('')
+    setExpandedId(null)
+    setEditingId(null)
+    setEditForm({})
+  }
+
+  function cancelDelete(e) {
+    e?.stopPropagation()
+    setDeletingId(null)
+    setDeleteReason('')
+    setDeleteError('')
+  }
+
+  async function confirmDelete(id, e) {
+    e.stopPropagation()
+    if (!deleteReason) { setDeleteError('Please select a reason for deletion.'); return }
+    setDeleteSubmitting(true)
     setDeleteError('')
     try {
-      await deletePlant(id)
+      await deletePlant(id, deleteReason)
       setPlants((prev) => prev.filter((p) => p.id !== id))
-      if (expandedId === id) setExpandedId(null)
-      if (editingId === id) setEditingId(null)
+      setDeletingId(null)
+      setDeleteReason('')
     } catch (err) {
       setDeleteError(err.response?.data?.message ?? 'Failed to delete plant.')
+    } finally {
+      setDeleteSubmitting(false)
     }
   }
 
@@ -201,12 +235,13 @@ function AdminPlantsPage() {
                   {filtered.map((p) => {
                     const isOpen = expandedId === p.id
                     const isEditing = editingId === p.id
+                    const isDeleting = deletingId === p.id
                     return (
                       <>
                         <tr
                           key={p.id}
                           onClick={() => toggleExpand(p.id)}
-                          style={{ cursor: 'pointer', background: isOpen ? 'var(--color-bg-soft, #f9fafb)' : undefined }}
+                          style={{ cursor: 'pointer', background: (isOpen || isDeleting) ? 'var(--color-bg-soft, #f9fafb)' : undefined }}
                         >
                           <td style={{ color: 'var(--color-text-secondary)', fontSize: 11 }}>
                             {isOpen ? '▼' : '▶'}
@@ -246,7 +281,7 @@ function AdminPlantsPage() {
                               </button>
                               <button
                                 className="variety-submit-button btn-danger"
-                                onClick={(e) => handleDelete(p.id, e)}
+                                onClick={(e) => requestDelete(p, e)}
                                 type="button"
                                 style={btnSm}
                               >
@@ -294,6 +329,51 @@ function AdminPlantsPage() {
                                   )}
                                 </div>
                               )}
+                            </td>
+                          </tr>
+                        )}
+
+                        {isDeleting && (
+                          <tr key={`${p.id}-delete`} style={{ background: 'var(--color-bg-soft, #f9fafb)' }}>
+                            <td />
+                            <td colSpan={8} style={{ paddingBottom: 16, paddingTop: 12 }} onClick={(e) => e.stopPropagation()}>
+                              <p style={{ margin: '0 0 10px', fontWeight: 600, fontSize: 13 }}>
+                                Select reason for deleting <em>{p.name}</em>:
+                              </p>
+                              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
+                                {DELETION_REASONS.map((r) => (
+                                  <label key={r.value} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, cursor: 'pointer' }}>
+                                    <input
+                                      checked={deleteReason === r.value}
+                                      name="deleteReason"
+                                      onChange={() => setDeleteReason(r.value)}
+                                      type="radio"
+                                      value={r.value}
+                                    />
+                                    {r.label}
+                                  </label>
+                                ))}
+                              </div>
+                              {deleteError && <p className="variety-form-error" role="alert" style={{ marginBottom: 8 }}>{deleteError}</p>}
+                              <div style={{ display: 'flex', gap: 8 }}>
+                                <button
+                                  className="variety-submit-button btn-danger"
+                                  disabled={!deleteReason || deleteSubmitting}
+                                  onClick={(e) => confirmDelete(p.id, e)}
+                                  type="button"
+                                  style={btnSm}
+                                >
+                                  {deleteSubmitting ? 'Deleting…' : 'Confirm deletion'}
+                                </button>
+                                <button
+                                  className="variety-submit-button"
+                                  onClick={cancelDelete}
+                                  type="button"
+                                  style={{ ...btnSm, background: 'var(--color-text-secondary)' }}
+                                >
+                                  Cancel
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         )}

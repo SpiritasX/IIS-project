@@ -19,3 +19,7 @@ export function getDashboardRelocations(siteId) {
 export function getDashboardLogs(siteId) {
   return api.get('/botanist/dashboard/logs', { params: siteId != null ? { siteId } : {} })
 }
+
+export function getDeletionReasonStats() {
+  return api.get('/botanist/dashboard/deletion-reasons')
+}

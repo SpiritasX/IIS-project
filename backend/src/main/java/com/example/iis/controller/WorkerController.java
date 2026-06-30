@@ -1,6 +1,8 @@
 package com.example.iis.controller;
 
 import com.example.iis.dto.AddPlantLotRequest;
+import com.example.iis.dto.DeletePlantRequest;
+import com.example.iis.dto.DeletionReasonStatsPoint;
 import com.example.iis.dto.PlantDetailResponse;
 import com.example.iis.dto.UpdatePlantRequest;
 import com.example.iis.dto.CreateSectorRequest;
@@ -113,9 +115,14 @@ public class WorkerController {
     }
 
     @DeleteMapping("/plants/{id}")
-    public ResponseEntity<Void> deletePlant(@PathVariable Long id) {
-        plantService.deletePlant(id);
+    public ResponseEntity<Void> deletePlant(@PathVariable Long id, @RequestBody DeletePlantRequest request) {
+        plantService.deletePlant(id, request.reason());
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/dashboard/deletion-reasons")
+    public ResponseEntity<List<DeletionReasonStatsPoint>> getDeletionReasonStats() {
+        return ResponseEntity.ok(service.getDeletionReasonStats());
     }
 
     @GetMapping("/storage-space-types")

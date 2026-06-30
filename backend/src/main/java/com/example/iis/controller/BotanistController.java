@@ -2,6 +2,7 @@ package com.example.iis.controller;
 
 import com.example.iis.dto.AddVarietyRequest;
 import com.example.iis.dto.CategoryResponse;
+import com.example.iis.dto.DeletionReasonStatsPoint;
 import com.example.iis.dto.PlantDetailResponse;
 import com.example.iis.dto.CategoryTreeItem;
 import com.example.iis.dto.DashboardLogEntry;
@@ -81,6 +82,11 @@ public class BotanistController {
     @GetMapping("/plants/all")
     public ResponseEntity<List<PlantDetailResponse>> getPlants() {
         return ResponseEntity.ok(plantService.getPlants());
+    }
+
+    @GetMapping("/dashboard/deletion-reasons")
+    public ResponseEntity<List<DeletionReasonStatsPoint>> getDeletionReasonStats() {
+        return ResponseEntity.ok(service.getDeletionReasonStats());
     }
 
     @GetMapping("/varieties")

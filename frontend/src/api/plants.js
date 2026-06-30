@@ -24,6 +24,10 @@ export function updatePlant(id, data) {
   return api.put(`/worker/plants/${id}`, data)
 }
 
-export function deletePlant(id) {
-  return api.delete(`/worker/plants/${id}`)
+export function deletePlant(id, reason) {
+  return api.delete(`/worker/plants/${id}`, { data: { reason } })
+}
+
+export function getDeletionReasonStats() {
+  return api.get('/worker/dashboard/deletion-reasons')
 }
