@@ -2,9 +2,11 @@ package com.example.iis.model;
 
 import jakarta.persistence.*;
 
-import java.util.Date;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Date;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
@@ -16,6 +18,8 @@ public class Offer {
 
     @Column(nullable = false)
     private Date createdAt;
+
+    private Date expiresAt;
 
     @ManyToOne(fetch = FetchType.EAGER, optional = false)
     private OfferStatus status;
@@ -37,6 +41,10 @@ public class Offer {
     @OneToMany(mappedBy = "offer", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<OrderItem> items = new LinkedHashSet<>();
 
+    @OneToMany(mappedBy = "offer", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("changedAt ASC, id ASC")
+    private List<OrderHistory> orderHistory = new ArrayList<>();
+
     public Offer() {
     }
 
@@ -52,6 +60,14 @@ public class Offer {
 
     public Date getCreatedAt() {
         return createdAt;
+    }
+
+    public Date getExpiresAt() {
+        return expiresAt;
+    }
+
+    public void setExpiresAt(Date expiresAt) {
+        this.expiresAt = expiresAt;
     }
 
     public OfferStatus getStatus() {
@@ -98,6 +114,15 @@ public class Offer {
     public void removeItem(OrderItem item) {
         items.remove(item);
         item.setOffer(null);
+    }
+
+    public List<OrderHistory> getOrderHistory() {
+        return orderHistory;
+    }
+
+    public void addOrderHistory(OrderHistory history) {
+        orderHistory.add(history);
+        history.setOffer(this);
     }
 
     @PrePersist

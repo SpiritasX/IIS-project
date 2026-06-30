@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import '../styles/home.css'
 
-function RoleDashboardPage({ title, subtitle }) {
+function RoleDashboardPage({ actions = [], title, subtitle }) {
   const navigate = useNavigate()
   const { logout, user } = useAuth()
 
@@ -17,9 +17,21 @@ function RoleDashboardPage({ title, subtitle }) {
         <p className="role-eyebrow">{user?.role}</p>
         <h1 id="role-page-title">{title}</h1>
         <p>{subtitle}</p>
-        <button className="role-logout-button" onClick={handleLogout} type="button">
-          Log out
-        </button>
+        <div className="role-actions">
+          {actions.map((action) => (
+            <button
+              className="role-primary-button"
+              key={action.label}
+              onClick={() => navigate(action.path)}
+              type="button"
+            >
+              {action.label}
+            </button>
+          ))}
+          <button className="role-logout-button" onClick={handleLogout} type="button">
+            Log out
+          </button>
+        </div>
       </section>
     </main>
   )

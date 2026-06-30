@@ -2,7 +2,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 
 const sidebarItems = [
   { label: 'Profile', path: '/worker' },
-  { label: 'Requests', path: '/worker' },
+  { label: 'Requests', path: '/worker/requests' },
   { label: 'Reports', path: '/worker' },
   { label: 'Locations', path: '/worker/locations' },
   { label: 'Plants', path: '/worker/plants' },
