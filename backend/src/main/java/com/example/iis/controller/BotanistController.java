@@ -2,8 +2,12 @@ package com.example.iis.controller;
 
 import com.example.iis.dto.AddVarietyRequest;
 import com.example.iis.dto.CategoryResponse;
+import com.example.iis.dto.DeletePlantRequest;
+import com.example.iis.dto.DeletionLogEntry;
 import com.example.iis.dto.DeletionReasonStatsPoint;
+import com.example.iis.dto.PlantConditionLogEntry;
 import com.example.iis.dto.PlantDetailResponse;
+import com.example.iis.dto.UpdatePlantConditionRequest;
 import com.example.iis.dto.CategoryTreeItem;
 import com.example.iis.dto.DashboardLogEntry;
 import com.example.iis.dto.DashboardStatsResponse;
@@ -87,6 +91,27 @@ public class BotanistController {
     @GetMapping("/dashboard/deletion-reasons")
     public ResponseEntity<List<DeletionReasonStatsPoint>> getDeletionReasonStats() {
         return ResponseEntity.ok(service.getDeletionReasonStats());
+    }
+
+    @PutMapping("/plants/{id}/condition")
+    public ResponseEntity<PlantDetailResponse> updatePlantCondition(@PathVariable Long id, @RequestBody UpdatePlantConditionRequest request) {
+        return ResponseEntity.ok(plantService.updatePlantCondition(id, request));
+    }
+
+    @GetMapping("/plants/{id}/condition-logs")
+    public ResponseEntity<List<PlantConditionLogEntry>> getPlantConditionLogs(@PathVariable Long id) {
+        return ResponseEntity.ok(plantService.getPlantConditionLogs(id));
+    }
+
+    @GetMapping("/plants/deletion-log")
+    public ResponseEntity<List<DeletionLogEntry>> getDeletionLog() {
+        return ResponseEntity.ok(plantService.getAllDeletionLogs());
+    }
+
+    @DeleteMapping("/plants/{id}")
+    public ResponseEntity<Void> deletePlant(@PathVariable Long id, @RequestBody DeletePlantRequest request) {
+        plantService.deletePlant(id, request.reason());
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/varieties")

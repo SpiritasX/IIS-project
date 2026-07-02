@@ -70,11 +70,12 @@ public class DataSeeder {
             Sector defaultSector = defaultStorageSpace.getSectors().get(0);
             NurserySite defaultSite = defaultStorageSpace.getNurserySite();
 
+            StorageSpaceType defaultSpaceType = storageSpaceTypeRepository.findAll().stream()
+                    .filter(t -> "Staklenik".equals(t.getName()))
+                    .findFirst()
+                    .orElseGet(() -> storageSpaceTypeRepository.save(new StorageSpaceType("Staklenik")));
+
             if (plantPriceRepository.count() == 0) {
-                StorageSpaceType defaultSpaceType = storageSpaceTypeRepository.findAll().stream()
-                        .filter(t -> "Staklenik".equals(t.getName()))
-                        .findFirst()
-                        .orElseGet(() -> storageSpaceTypeRepository.save(new StorageSpaceType("Staklenik")));
                 seedCatalog(
                         plantCategoryRepository,
                         plantTypeRepository,
@@ -86,7 +87,7 @@ public class DataSeeder {
                 );
             }
 
-            assignDefaultStorageSpaceToExistingVarieties(plantVarietyRepository, defaultStorageSpace);
+            assignDefaultStorageSpaceToExistingVarieties(plantVarietyRepository, defaultSpaceType);
             seedInitialStock(plantRepository, defaultSector, defaultSite, relocationHistoryRepository);
         };
     }
@@ -238,14 +239,14 @@ public class DataSeeder {
 
     private void assignDefaultStorageSpaceToExistingVarieties(
             PlantVarietyRepository plantVarietyRepository,
-            StorageSpace defaultStorageSpace
+            StorageSpaceType defaultSpaceType
     ) {
         List<PlantVariety> varieties = plantVarietyRepository.findAll();
         boolean changed = false;
 
         for (PlantVariety variety : varieties) {
             if (variety.getStorageSpaceType() == null) {
-                variety.setStorageSpaceType(defaultStorageSpace);
+                variety.setStorageSpaceType(defaultSpaceType);
                 changed = true;
             }
         }

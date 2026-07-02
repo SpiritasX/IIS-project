@@ -31,3 +31,35 @@ export function deletePlant(id, reason) {
 export function getDeletionReasonStats() {
   return api.get('/worker/dashboard/deletion-reasons')
 }
+
+export function getPlantHealthLogs(id) {
+  return api.get(`/worker/plants/${id}/health-logs`)
+}
+
+export function getPlantRelocationHistory(id) {
+  return api.get(`/worker/plants/${id}/relocation-history`)
+}
+
+export function getPlantConditionLogs(id) {
+  return api.get(`/worker/plants/${id}/condition-logs`)
+}
+
+export function getDeletionLog() {
+  return api.get('/worker/plants/deletion-log')
+}
+
+export function startRelocation(plantId, sectorId) {
+  return api.post(`/worker/plants/${plantId}/relocate`, { sectorId })
+}
+
+export function updateRelocationState(relocationId, state) {
+  return api.put(`/worker/relocations/${relocationId}/state`, { state })
+}
+
+export function getPlantRelocationLogs(plantId) {
+  return api.get(`/worker/plants/${plantId}/relocation-logs`)
+}
+
+export function getActiveRelocations() {
+  return api.get('/worker/relocations/active')
+}

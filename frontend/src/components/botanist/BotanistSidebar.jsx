@@ -6,7 +6,7 @@ const sidebarItems = [
   { label: 'Reports', path: '/botanist' },
   { label: 'Varieties', path: '/botanist/varieties' },
   { label: 'Plants', path: '/botanist/plants' },
-  { label: 'Health logs', path: '/botanist' },
+  { label: 'Health logs', path: '/botanist/health-logs' },
   { label: 'Relocation logs', path: '/botanist' },
 ]
 

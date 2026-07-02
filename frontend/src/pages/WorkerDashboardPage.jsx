@@ -8,6 +8,7 @@ import {
   getSites,
   getStockByVariety,
 } from '../api/worker'
+import { getActiveRelocations } from '../api/plants'
 import DeletionReasonChart from '../components/worker/DeletionReasonChart'
 import PlantCountChart from '../components/worker/PlantCountChart'
 import RelocationLogsTable from '../components/worker/RelocationLogsTable'
@@ -33,6 +34,7 @@ function WorkerDashboardPage() {
   const [plantCount, setPlantCount] = useState([])
   const [logs, setLogs] = useState([])
   const [deletionStats, setDeletionStats] = useState([])
+  const [activeRelocations, setActiveRelocations] = useState([])
 
   const [loadingData, setLoadingData] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
@@ -59,12 +61,13 @@ function WorkerDashboardPage() {
     async function loadDashboard() {
       setLoadingData(true)
       try {
-        const [statsRes, stockRes, plantRes, logsRes, delRes] = await Promise.all([
+        const [statsRes, stockRes, plantRes, logsRes, delRes, activeRelRes] = await Promise.all([
           getDashboardStats(selectedSiteId),
           getStockByVariety(selectedSiteId),
           getPlantCountByUnit(selectedSiteId),
           getRelocationLogs(selectedSiteId),
           getDeletionReasonStats(),
+          getActiveRelocations(),
         ])
         if (!ignore) {
           setStats(statsRes.data)
@@ -72,6 +75,7 @@ function WorkerDashboardPage() {
           setPlantCount(plantRes.data)
           setLogs(logsRes.data)
           setDeletionStats(delRes.data)
+          setActiveRelocations(activeRelRes.data)
         }
       } catch {
         // leave previous data visible on error
@@ -130,9 +134,64 @@ function WorkerDashboardPage() {
 
           <DeletionReasonChart data={deletionStats} loading={loadingData} />
           <RelocationLogsTable loading={loadingData} logs={logs} searchTerm={searchTerm} />
+
+          <ActiveRelocationsWidget loading={loadingData} relocations={activeRelocations} />
         </div>
       </section>
     </main>
+  )
+}
+
+function ActiveRelocationsWidget({ relocations, loading }) {
+  const STATE_BADGE = {
+    WAITING: { background: '#fef9c3', color: '#713f12' },
+    TRANSPORTING: { background: '#dbeafe', color: '#1e3a5f' },
+  }
+  return (
+    <div className="varieties-list-card" style={{ gridColumn: '1 / -1', marginTop: 8 }}>
+      <h3 style={{ margin: '0 0 12px', fontSize: 15, fontWeight: 700 }}>
+        Active relocations
+        {!loading && relocations.length > 0 && (
+          <span style={{ marginLeft: 8, fontSize: 13, fontWeight: 400, color: 'var(--color-text-secondary)' }}>
+            ({relocations.length})
+          </span>
+        )}
+      </h3>
+      {loading ? (
+        <p style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>Loading…</p>
+      ) : relocations.length === 0 ? (
+        <p style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>No active relocations.</p>
+      ) : (
+        <table className="varieties-table" style={{ fontSize: 13 }}>
+          <thead>
+            <tr>
+              <th>Plant</th>
+              <th>From</th>
+              <th>To</th>
+              <th>State</th>
+              <th>Started</th>
+              <th>By</th>
+            </tr>
+          </thead>
+          <tbody>
+            {relocations.map((r) => (
+              <tr key={r.id}>
+                <td className="varieties-name">{r.plantName}</td>
+                <td>{[r.fromSiteName, r.fromStorageSpaceName, r.fromSectorName].filter(Boolean).join(' / ') || '—'}</td>
+                <td>{[r.toSiteName, r.toStorageSpaceName, r.toSectorName].filter(Boolean).join(' / ')}</td>
+                <td>
+                  <span style={{ ...STATE_BADGE[r.state], padding: '2px 8px', borderRadius: 4, fontWeight: 600 }}>
+                    {r.state === 'WAITING' ? 'Waiting' : 'Transporting'}
+                  </span>
+                </td>
+                <td>{new Date(r.startedAt).toLocaleString('sr-RS', { dateStyle: 'short', timeStyle: 'short' })}</td>
+                <td>{r.initiatedBy}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
   )
 }
 

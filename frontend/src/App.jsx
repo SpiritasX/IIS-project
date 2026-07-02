@@ -5,13 +5,18 @@ import CartProvider from './contexts/CartProvider'
 import AdminOrderAnalysisPage from './pages/AdminOrderAnalysisPage'
 import AdminDashboardPage from './pages/AdminDashboardPage'
 import AdminPlantsPage from './pages/AdminPlantsPage'
+import AdminHealthLogsPage from './pages/AdminHealthLogsPage'
+import AdminRelocationLogsPage from './pages/AdminRelocationLogsPage'
 import AddAdminPlantsPage from './pages/AddAdminPlantsPage'
 import AddNurserySitePage from './pages/AddNurserySitePage'
 import BotanistDashboardPage from './pages/BotanistDashboardPage'
+import BotanistHealthLogsPage from './pages/BotanistHealthLogsPage'
 import BotanistPlantsPage from './pages/BotanistPlantsPage'
 import VarietiesPage from './pages/VarietiesPage'
 import WorkerDashboardPage from './pages/WorkerDashboardPage'
 import WorkerPlantsPage from './pages/WorkerPlantsPage'
+import WorkerHealthLogsPage from './pages/WorkerHealthLogsPage'
+import WorkerRelocationLogsPage from './pages/WorkerRelocationLogsPage'
 import AddPlantsPage from './pages/AddPlantsPage'
 import StorageSpacesPage from './pages/StorageSpacesPage'
 import AddStorageSpacePage from './pages/AddStorageSpacePage'
@@ -147,6 +152,14 @@ function App() {
             }
           />
           <Route
+            path="/botanist/health-logs"
+            element={
+              <ProtectedRoute allowedRoles={['BOTANIST']}>
+                <BotanistHealthLogsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/worker"
             element={
               <ProtectedRoute allowedRoles={['WORKER']}>
@@ -225,6 +238,38 @@ function App() {
                   title="Worker Requests"
                   variant="worker"
                 />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/worker/health-logs"
+            element={
+              <ProtectedRoute allowedRoles={['WORKER']}>
+                <WorkerHealthLogsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/worker/relocation-logs"
+            element={
+              <ProtectedRoute allowedRoles={['WORKER']}>
+                <WorkerRelocationLogsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/health-logs"
+            element={
+              <ProtectedRoute allowedRoles={['ADMIN']}>
+                <AdminHealthLogsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/relocation-logs"
+            element={
+              <ProtectedRoute allowedRoles={['ADMIN']}>
+                <AdminRelocationLogsPage />
               </ProtectedRoute>
             }
           />

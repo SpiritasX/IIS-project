@@ -1,7 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { deletePlant, getPlants, updatePlant } from '../api/plants'
-import WorkerSidebar from '../components/worker/WorkerSidebar'
+import {
+  deletePlant,
+  getDeletionLog,
+  getPlantConditionLogs,
+  getPlants,
+  updatePlantCondition,
+} from '../api/botanistPlants'
+import BotanistSidebar from '../components/botanist/BotanistSidebar'
 import PageTitle from '../components/home/PageTitle'
 import SearchBar from '../components/home/SearchBar'
 import { useAuth } from '../hooks/useAuth'
@@ -9,8 +15,6 @@ import '../styles/home.css'
 import '../styles/botanist.css'
 import '../styles/worker.css'
 import '../styles/varieties.css'
-
-const PROPAGATION_OPTIONS = ['Seed', 'Slip', 'Sapling', 'Cuttings', 'Grafting', 'Division']
 
 const DELETION_REASONS = [
   { value: 'PLAMENJACA', label: 'Plamenjača' },
@@ -23,14 +27,22 @@ const DELETION_REASONS = [
 const btnSm = { minWidth: 'unset', padding: '0 12px', height: 30, fontSize: 13 }
 const inputSm = { height: 30, fontSize: 13, padding: '0 8px' }
 
+function formatTs(iso) {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  return d.toLocaleString('sr-RS', { dateStyle: 'short', timeStyle: 'short' })
+}
+
 function emptyEditForm(p) {
   return {
-    name: p.name ?? '',
-    quantity: p.currentQuantity ?? '',
+    state: p.state ?? '',
+    conditionDescription: p.conditionDescription ?? '',
+    color: p.color ?? '',
+    height: p.height ?? '',
   }
 }
 
-function WorkerPlantsPage() {
+function BotanistHealthLogsPage() {
   const navigate = useNavigate()
   const { logout } = useAuth()
 
@@ -44,10 +56,17 @@ function WorkerPlantsPage() {
   const [editForm, setEditForm] = useState({})
   const [editSubmitting, setEditSubmitting] = useState(false)
   const [editError, setEditError] = useState('')
+
   const [deleteError, setDeleteError] = useState('')
   const [deletingId, setDeletingId] = useState(null)
   const [deleteReason, setDeleteReason] = useState('')
   const [deleteSubmitting, setDeleteSubmitting] = useState(false)
+
+  const [conditionLogs, setConditionLogs] = useState({})
+  const [conditionLogsLoading, setConditionLogsLoading] = useState(false)
+
+  const [deletionLog, setDeletionLog] = useState([])
+  const [deletionLogLoading, setDeletionLogLoading] = useState(true)
 
   useEffect(() => {
     let ignore = false
@@ -55,8 +74,24 @@ function WorkerPlantsPage() {
       .then((res) => { if (!ignore) setPlants(res.data) })
       .catch(() => { if (!ignore) setError('Failed to load plants.') })
       .finally(() => { if (!ignore) setLoading(false) })
+    getDeletionLog()
+      .then((res) => { if (!ignore) setDeletionLog(res.data) })
+      .catch(() => {})
+      .finally(() => { if (!ignore) setDeletionLogLoading(false) })
     return () => { ignore = true }
   }, [])
+
+  useEffect(() => {
+    if (expandedId == null || editingId === expandedId) return
+    if (conditionLogs[expandedId] !== undefined) return
+    let ignore = false
+    setConditionLogsLoading(true)
+    getPlantConditionLogs(expandedId)
+      .then((res) => { if (!ignore) setConditionLogs((prev) => ({ ...prev, [expandedId]: res.data })) })
+      .catch(() => { if (!ignore) setConditionLogs((prev) => ({ ...prev, [expandedId]: [] })) })
+      .finally(() => { if (!ignore) setConditionLogsLoading(false) })
+    return () => { ignore = true }
+  }, [expandedId, editingId])
 
   async function handleLogout() {
     await logout()
@@ -94,18 +129,20 @@ function WorkerPlantsPage() {
 
   async function saveEdit(id, e) {
     e.stopPropagation()
-    if (!editForm.name.trim()) { setEditError('Name is required.'); return }
-    if (editForm.quantity !== '' && (isNaN(Number(editForm.quantity)) || Number(editForm.quantity) < 0)) {
-      setEditError('Quantity must be a non-negative number.'); return
+    if (editForm.state !== '' && (Number(editForm.state) < 1 || Number(editForm.state) > 5)) {
+      setEditError('Condition must be between 1 and 5.'); return
     }
     setEditSubmitting(true)
     setEditError('')
     try {
-      const res = await updatePlant(id, {
-        name: editForm.name.trim(),
-        quantity: editForm.quantity !== '' ? Number(editForm.quantity) : null,
+      const res = await updatePlantCondition(id, {
+        state: editForm.state !== '' ? Number(editForm.state) : null,
+        conditionDescription: editForm.conditionDescription.trim() || null,
+        color: editForm.color.trim() || null,
+        height: editForm.height !== '' ? Number(editForm.height) : null,
       })
       setPlants((prev) => prev.map((p) => (p.id === id ? res.data : p)))
+      setConditionLogs((prev) => ({ ...prev, [id]: undefined }))
       setEditingId(null)
       setExpandedId(null)
     } catch (err) {
@@ -142,6 +179,7 @@ function WorkerPlantsPage() {
       setPlants((prev) => prev.filter((p) => p.id !== id))
       setDeletingId(null)
       setDeleteReason('')
+      getDeletionLog().then((res) => setDeletionLog(res.data)).catch(() => {})
     } catch (err) {
       setDeleteError(err.response?.data?.message ?? 'Failed to delete plant.')
     } finally {
@@ -165,7 +203,7 @@ function WorkerPlantsPage() {
         <button
           aria-label="Back to dashboard"
           className="home-logo-placeholder"
-          onClick={() => navigate('/worker')}
+          onClick={() => navigate('/botanist')}
           type="button"
         >
           <span aria-hidden="true" />
@@ -179,10 +217,10 @@ function WorkerPlantsPage() {
         </div>
       </header>
 
-      <PageTitle label="Plants" onBack={handleLogout} />
+      <PageTitle label="Health logs" onBack={handleLogout} />
 
       <section className="home-body">
-        <WorkerSidebar onSiteChange={() => {}} selectedSiteId={null} sites={[]} />
+        <BotanistSidebar onSiteChange={() => {}} selectedSiteId={null} sites={[]} />
 
         <div className="varieties-content">
           <section className="varieties-list-card" aria-labelledby="plants-heading">
@@ -190,14 +228,6 @@ function WorkerPlantsPage() {
               <h2 className="variety-form-heading" id="plants-heading" style={{ margin: 0 }}>
                 All plants <span className="varieties-count">({filtered.length})</span>
               </h2>
-              <button
-                className="variety-submit-button"
-                onClick={() => navigate('/worker/plants/add')}
-                type="button"
-                style={{ minWidth: 'unset', padding: '0 18px', height: 36, fontSize: 14 }}
-              >
-                + Add plant lot
-              </button>
             </div>
 
             {error && <p className="variety-form-error">{error}</p>}
@@ -229,6 +259,7 @@ function WorkerPlantsPage() {
                     const isOpen = expandedId === p.id
                     const isEditing = editingId === p.id
                     const isDeleting = deletingId === p.id
+                    const logs = conditionLogs[p.id]
                     return (
                       <>
                         <tr
@@ -264,22 +295,8 @@ function WorkerPlantsPage() {
                           </td>
                           <td onClick={(e) => e.stopPropagation()}>
                             <div style={{ display: 'flex', gap: 6 }}>
-                              <button
-                                className="variety-submit-button"
-                                onClick={(e) => startEdit(p, e)}
-                                type="button"
-                                style={btnSm}
-                              >
-                                Edit
-                              </button>
-                              <button
-                                className="variety-submit-button btn-danger"
-                                onClick={(e) => requestDelete(p, e)}
-                                type="button"
-                                style={btnSm}
-                              >
-                                Delete
-                              </button>
+                              <button className="variety-submit-button" onClick={(e) => startEdit(p, e)} type="button" style={btnSm}>Edit</button>
+                              <button className="variety-submit-button btn-danger" onClick={(e) => requestDelete(p, e)} type="button" style={btnSm}>Delete</button>
                             </div>
                           </td>
                         </tr>
@@ -289,40 +306,55 @@ function WorkerPlantsPage() {
                             <td />
                             <td colSpan={8} style={{ paddingBottom: 16, paddingTop: 4 }}>
                               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px 24px', fontSize: 13 }}>
-                                <DetailField label="Subcategory" value={p.typeName} />
-                                <DetailField label="Sector" value={p.sectorName} />
-                                <DetailField label="Storage type" value={p.storageSpaceTypeName} />
-                                <DetailField label="Quantity" value={p.currentQuantity} />
                                 <DetailField label="Condition" value={p.state != null ? `${p.state}/5` : null} />
-                                <DetailField label="Propagation" value={p.propagationMethod} />
-                                <DetailField label="Hatching date" value={p.hatchingDate} />
                                 <DetailField label="Color" value={p.color} />
                                 <DetailField label="Height (cm)" value={p.height} />
-                                <DetailField label="Humidity" value={p.humidity != null ? `${p.humidity}%` : null} />
-                                <DetailField label="Soil type" value={p.soil} />
+                                <DetailField label="Sector" value={p.sectorName} />
+                                <DetailField label="Storage space" value={p.storageSpaceName} />
+                                <DetailField label="Site" value={p.siteName} />
                               </div>
-                              {(p.conditionDescription || p.careInstructions || p.description) && (
+                              {p.conditionDescription && (
                                 <div style={{ marginTop: 10, fontSize: 13 }}>
-                                  {p.conditionDescription && (
-                                    <div>
-                                      <span style={{ fontWeight: 600, color: 'var(--color-text-secondary)' }}>Condition notes: </span>
-                                      {p.conditionDescription}
-                                    </div>
-                                  )}
-                                  {p.careInstructions && (
-                                    <div style={{ marginTop: 4 }}>
-                                      <span style={{ fontWeight: 600, color: 'var(--color-text-secondary)' }}>Care instructions: </span>
-                                      {p.careInstructions}
-                                    </div>
-                                  )}
-                                  {p.description && (
-                                    <div style={{ marginTop: 4 }}>
-                                      <span style={{ fontWeight: 600, color: 'var(--color-text-secondary)' }}>Description: </span>
-                                      {p.description}
-                                    </div>
-                                  )}
+                                  <span style={{ fontWeight: 600, color: 'var(--color-text-secondary)' }}>Condition notes: </span>
+                                  {p.conditionDescription}
                                 </div>
                               )}
+
+                              <div style={{ marginTop: 16 }}>
+                                <p style={{ fontWeight: 600, fontSize: 13, marginBottom: 8, color: 'var(--color-text-secondary)' }}>
+                                  Condition change history
+                                </p>
+                                {conditionLogsLoading && expandedId === p.id ? (
+                                  <p style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>Loading…</p>
+                                ) : logs && logs.length > 0 ? (
+                                  <table className="varieties-table" style={{ fontSize: 12 }}>
+                                    <thead>
+                                      <tr>
+                                        <th>Date &amp; time</th>
+                                        <th>Condition</th>
+                                        <th>Notes</th>
+                                        <th>Color</th>
+                                        <th>Height (cm)</th>
+                                        <th>Changed by</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {logs.map((log) => (
+                                        <tr key={log.id}>
+                                          <td>{formatTs(log.changedAt)}</td>
+                                          <td>{log.conditionState != null ? `${log.conditionState}/5` : '—'}</td>
+                                          <td>{log.conditionDescription ?? '—'}</td>
+                                          <td>{log.color ?? '—'}</td>
+                                          <td>{log.height ?? '—'}</td>
+                                          <td>{log.changedBy}</td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                ) : (
+                                  <p style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>No condition changes recorded.</p>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         )}
@@ -337,36 +369,17 @@ function WorkerPlantsPage() {
                               <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
                                 {DELETION_REASONS.map((r) => (
                                   <label key={r.value} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, cursor: 'pointer' }}>
-                                    <input
-                                      checked={deleteReason === r.value}
-                                      name="deleteReason"
-                                      onChange={() => setDeleteReason(r.value)}
-                                      type="radio"
-                                      value={r.value}
-                                    />
+                                    <input checked={deleteReason === r.value} name="deleteReason" onChange={() => setDeleteReason(r.value)} type="radio" value={r.value} />
                                     {r.label}
                                   </label>
                                 ))}
                               </div>
                               {deleteError && <p className="variety-form-error" role="alert" style={{ marginBottom: 8 }}>{deleteError}</p>}
                               <div style={{ display: 'flex', gap: 8 }}>
-                                <button
-                                  className="variety-submit-button btn-danger"
-                                  disabled={!deleteReason || deleteSubmitting}
-                                  onClick={(e) => confirmDelete(p.id, e)}
-                                  type="button"
-                                  style={btnSm}
-                                >
+                                <button className="variety-submit-button btn-danger" disabled={!deleteReason || deleteSubmitting} onClick={(e) => confirmDelete(p.id, e)} type="button" style={btnSm}>
                                   {deleteSubmitting ? 'Deleting…' : 'Confirm deletion'}
                                 </button>
-                                <button
-                                  className="variety-submit-button"
-                                  onClick={cancelDelete}
-                                  type="button"
-                                  style={{ ...btnSm, background: 'var(--color-text-secondary)' }}
-                                >
-                                  Cancel
-                                </button>
+                                <button className="variety-submit-button" onClick={cancelDelete} type="button" style={{ ...btnSm, background: 'var(--color-text-secondary)' }}>Cancel</button>
                               </div>
                             </td>
                           </tr>
@@ -376,50 +389,37 @@ function WorkerPlantsPage() {
                           <tr key={`${p.id}-edit`} style={{ background: 'var(--color-bg-soft, #f9fafb)' }}>
                             <td />
                             <td colSpan={8} style={{ paddingBottom: 16, paddingTop: 8 }}>
-                              <div style={{ display: 'flex', gap: 24, fontSize: 13, flexWrap: 'wrap' }}>
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px 24px', fontSize: 13 }}>
                                 <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                                  <span style={{ fontWeight: 600, color: 'var(--color-text-secondary)' }}>Name *</span>
-                                  <input
-                                    className="variety-input"
-                                    name="name"
-                                    onChange={handleEditField}
-                                    style={{ ...inputSm, width: 220 }}
-                                    type="text"
-                                    value={editForm.name}
-                                  />
+                                  <span style={{ fontWeight: 600, color: 'var(--color-text-secondary)' }}>Condition (1–5)</span>
+                                  <select className="variety-select" name="state" onChange={handleEditField} style={inputSm} value={editForm.state}>
+                                    <option value="">Not rated</option>
+                                    <option value="1">1 — Poor</option>
+                                    <option value="2">2 — Fair</option>
+                                    <option value="3">3 — Good</option>
+                                    <option value="4">4 — Very good</option>
+                                    <option value="5">5 — Excellent</option>
+                                  </select>
                                 </label>
                                 <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                                  <span style={{ fontWeight: 600, color: 'var(--color-text-secondary)' }}>Quantity</span>
-                                  <input
-                                    className="variety-input"
-                                    min="0"
-                                    name="quantity"
-                                    onChange={handleEditField}
-                                    style={{ ...inputSm, width: 100 }}
-                                    type="number"
-                                    value={editForm.quantity}
-                                  />
+                                  <span style={{ fontWeight: 600, color: 'var(--color-text-secondary)' }}>Color</span>
+                                  <input className="variety-input" name="color" onChange={handleEditField} placeholder="e.g. Green" style={inputSm} type="text" value={editForm.color} />
+                                </label>
+                                <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                  <span style={{ fontWeight: 600, color: 'var(--color-text-secondary)' }}>Height (cm)</span>
+                                  <input className="variety-input" min="0" name="height" onChange={handleEditField} placeholder="e.g. 30" step="0.1" style={inputSm} type="number" value={editForm.height} />
                                 </label>
                               </div>
+                              <label style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 10, fontSize: 13 }}>
+                                <span style={{ fontWeight: 600, color: 'var(--color-text-secondary)' }}>Condition notes</span>
+                                <textarea className="variety-textarea" name="conditionDescription" onChange={handleEditField} placeholder="Describe the plant's current condition…" rows={2} value={editForm.conditionDescription} />
+                              </label>
                               {editError && <p className="variety-form-error" role="alert" style={{ marginTop: 8 }}>{editError}</p>}
                               <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-                                <button
-                                  className="variety-submit-button"
-                                  disabled={editSubmitting}
-                                  onClick={(e) => saveEdit(p.id, e)}
-                                  type="button"
-                                  style={btnSm}
-                                >
+                                <button className="variety-submit-button" disabled={editSubmitting} onClick={(e) => saveEdit(p.id, e)} type="button" style={btnSm}>
                                   {editSubmitting ? 'Saving…' : 'Save'}
                                 </button>
-                                <button
-                                  className="variety-submit-button"
-                                  onClick={cancelEdit}
-                                  type="button"
-                                  style={{ ...btnSm, background: 'var(--color-text-secondary)' }}
-                                >
-                                  Cancel
-                                </button>
+                                <button className="variety-submit-button" onClick={cancelEdit} type="button" style={{ ...btnSm, background: 'var(--color-text-secondary)' }}>Cancel</button>
                               </div>
                             </td>
                           </tr>
@@ -427,6 +427,40 @@ function WorkerPlantsPage() {
                       </>
                     )
                   })}
+                </tbody>
+              </table>
+            )}
+          </section>
+
+          <section className="varieties-list-card" aria-labelledby="deletion-log-heading" style={{ marginTop: 24 }}>
+            <h2 className="variety-form-heading" id="deletion-log-heading" style={{ marginBottom: 16 }}>
+              Plant deletion log
+            </h2>
+            {deletionLogLoading ? (
+              <p className="varieties-empty">Loading…</p>
+            ) : deletionLog.length === 0 ? (
+              <p className="varieties-empty">No plants have been deleted yet.</p>
+            ) : (
+              <table className="varieties-table">
+                <thead>
+                  <tr>
+                    <th>Plant</th>
+                    <th>Variety</th>
+                    <th>Reason</th>
+                    <th>Date &amp; time</th>
+                    <th>Deleted by</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {deletionLog.map((entry) => (
+                    <tr key={entry.id}>
+                      <td>{entry.plantName}</td>
+                      <td>{entry.varietyName}</td>
+                      <td>{entry.reason}</td>
+                      <td>{formatTs(entry.deletedAt)}</td>
+                      <td>{entry.deletedBy}</td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             )}
@@ -447,4 +481,4 @@ function DetailField({ label, value }) {
   )
 }
 
-export default WorkerPlantsPage
+export default BotanistHealthLogsPage

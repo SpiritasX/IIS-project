@@ -9,4 +9,6 @@ import java.util.List;
 public interface PlantDeletionLogRepository extends JpaRepository<PlantDeletionLog, Long> {
     @Query("SELECT l.reason, COUNT(l) FROM PlantDeletionLog l GROUP BY l.reason")
     List<Object[]> countGroupedByReason();
+
+    List<PlantDeletionLog> findAllByOrderByDeletedAtDesc();
 }

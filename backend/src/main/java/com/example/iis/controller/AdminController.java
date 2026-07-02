@@ -2,9 +2,17 @@ package com.example.iis.controller;
 
 import com.example.iis.dto.AddPlantLotRequest;
 import com.example.iis.dto.DeletePlantRequest;
+import com.example.iis.dto.DeletionLogEntry;
 import com.example.iis.dto.DeletionReasonStatsPoint;
+import com.example.iis.dto.PlantConditionLogEntry;
 import com.example.iis.dto.PlantDetailResponse;
+import com.example.iis.dto.PlantHealthLogEntry;
+import com.example.iis.dto.PlantRelocationEntry;
+import com.example.iis.dto.PlantRelocationLogEntry;
+import com.example.iis.dto.StartRelocationRequest;
+import com.example.iis.dto.UpdatePlantConditionRequest;
 import com.example.iis.dto.UpdatePlantRequest;
+import com.example.iis.dto.UpdateRelocationStateRequest;
 import com.example.iis.dto.CreateNurserySiteRequest;
 import com.example.iis.dto.CreateSectorRequest;
 import com.example.iis.dto.CreateStorageSpaceRequest;
@@ -104,6 +112,51 @@ public class AdminController {
     @GetMapping("/dashboard/deletion-reasons")
     public ResponseEntity<List<DeletionReasonStatsPoint>> getDeletionReasonStats() {
         return ResponseEntity.ok(dashboardService.getDeletionReasonStats());
+    }
+
+    @GetMapping("/plants/{id}/health-logs")
+    public ResponseEntity<List<PlantHealthLogEntry>> getPlantHealthLogs(@PathVariable Long id) {
+        return ResponseEntity.ok(plantService.getPlantHealthLogs(id));
+    }
+
+    @GetMapping("/plants/{id}/relocation-history")
+    public ResponseEntity<List<PlantRelocationEntry>> getPlantRelocationHistory(@PathVariable Long id) {
+        return ResponseEntity.ok(plantService.getPlantRelocationHistory(id));
+    }
+
+    @PutMapping("/plants/{id}/condition")
+    public ResponseEntity<PlantDetailResponse> updatePlantCondition(@PathVariable Long id, @RequestBody UpdatePlantConditionRequest request) {
+        return ResponseEntity.ok(plantService.updatePlantCondition(id, request));
+    }
+
+    @GetMapping("/plants/{id}/condition-logs")
+    public ResponseEntity<List<PlantConditionLogEntry>> getPlantConditionLogs(@PathVariable Long id) {
+        return ResponseEntity.ok(plantService.getPlantConditionLogs(id));
+    }
+
+    @GetMapping("/plants/deletion-log")
+    public ResponseEntity<List<DeletionLogEntry>> getDeletionLog() {
+        return ResponseEntity.ok(plantService.getAllDeletionLogs());
+    }
+
+    @PostMapping("/plants/{id}/relocate")
+    public ResponseEntity<PlantRelocationLogEntry> startRelocation(@PathVariable Long id, @RequestBody StartRelocationRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(plantService.startRelocation(id, request));
+    }
+
+    @PutMapping("/relocations/{id}/state")
+    public ResponseEntity<PlantRelocationLogEntry> updateRelocationState(@PathVariable Long id, @RequestBody UpdateRelocationStateRequest request) {
+        return ResponseEntity.ok(plantService.updateRelocationState(id, request));
+    }
+
+    @GetMapping("/plants/{id}/relocation-logs")
+    public ResponseEntity<List<PlantRelocationLogEntry>> getPlantRelocationLogs(@PathVariable Long id) {
+        return ResponseEntity.ok(plantService.getPlantRelocationLogs(id));
+    }
+
+    @GetMapping("/relocations/active")
+    public ResponseEntity<List<PlantRelocationLogEntry>> getActiveRelocations() {
+        return ResponseEntity.ok(plantService.getActiveRelocations());
     }
 
     @GetMapping("/plants/varieties")

@@ -26,12 +26,7 @@ const inputSm = { height: 30, fontSize: 13, padding: '0 8px' }
 function emptyEditForm(p) {
   return {
     name: p.name ?? '',
-    propagationMethod: p.propagationMethod ?? '',
-    hatchingDate: p.hatchingDate ?? '',
-    color: p.color ?? '',
-    height: p.height ?? '',
-    state: p.state ?? '',
-    conditionDescription: p.conditionDescription ?? '',
+    quantity: p.currentQuantity ?? '',
   }
 }
 
@@ -100,21 +95,19 @@ function AdminPlantsPage() {
   async function saveEdit(id, e) {
     e.stopPropagation()
     if (!editForm.name.trim()) { setEditError('Name is required.'); return }
+    if (editForm.quantity !== '' && (isNaN(Number(editForm.quantity)) || Number(editForm.quantity) < 0)) {
+      setEditError('Quantity must be a non-negative number.'); return
+    }
     setEditSubmitting(true)
     setEditError('')
     try {
       const res = await updatePlant(id, {
         name: editForm.name.trim(),
-        propagationMethod: editForm.propagationMethod || null,
-        hatchingDate: editForm.hatchingDate || null,
-        color: editForm.color.trim() || null,
-        height: editForm.height !== '' ? Number(editForm.height) : null,
-        state: editForm.state !== '' ? Number(editForm.state) : null,
-        conditionDescription: editForm.conditionDescription.trim() || null,
+        quantity: editForm.quantity !== '' ? Number(editForm.quantity) : null,
       })
       setPlants((prev) => prev.map((p) => (p.id === id ? res.data : p)))
       setEditingId(null)
-      setExpandedId(id)
+      setExpandedId(null)
     } catch (err) {
       setEditError(err.response?.data?.message ?? 'Failed to save changes.')
     } finally {
@@ -299,6 +292,7 @@ function AdminPlantsPage() {
                                 <DetailField label="Subcategory" value={p.typeName} />
                                 <DetailField label="Sector" value={p.sectorName} />
                                 <DetailField label="Storage type" value={p.storageSpaceTypeName} />
+                                <DetailField label="Quantity" value={p.currentQuantity} />
                                 <DetailField label="Condition" value={p.state != null ? `${p.state}/5` : null} />
                                 <DetailField label="Propagation" value={p.propagationMethod} />
                                 <DetailField label="Hatching date" value={p.hatchingDate} />
@@ -382,97 +376,31 @@ function AdminPlantsPage() {
                           <tr key={`${p.id}-edit`} style={{ background: 'var(--color-bg-soft, #f9fafb)' }}>
                             <td />
                             <td colSpan={8} style={{ paddingBottom: 16, paddingTop: 8 }}>
-                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px 24px', fontSize: 13 }}>
+                              <div style={{ display: 'flex', gap: 24, fontSize: 13, flexWrap: 'wrap' }}>
                                 <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                                   <span style={{ fontWeight: 600, color: 'var(--color-text-secondary)' }}>Name *</span>
                                   <input
                                     className="variety-input"
                                     name="name"
                                     onChange={handleEditField}
-                                    style={inputSm}
+                                    style={{ ...inputSm, width: 220 }}
                                     type="text"
                                     value={editForm.name}
                                   />
                                 </label>
                                 <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                                  <span style={{ fontWeight: 600, color: 'var(--color-text-secondary)' }}>Condition (1–5)</span>
-                                  <select
-                                    className="variety-select"
-                                    name="state"
-                                    onChange={handleEditField}
-                                    style={inputSm}
-                                    value={editForm.state}
-                                  >
-                                    <option value="">Not rated</option>
-                                    <option value="1">1 — Poor</option>
-                                    <option value="2">2 — Fair</option>
-                                    <option value="3">3 — Good</option>
-                                    <option value="4">4 — Very good</option>
-                                    <option value="5">5 — Excellent</option>
-                                  </select>
-                                </label>
-                                <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                                  <span style={{ fontWeight: 600, color: 'var(--color-text-secondary)' }}>Propagation</span>
-                                  <select
-                                    className="variety-select"
-                                    name="propagationMethod"
-                                    onChange={handleEditField}
-                                    style={inputSm}
-                                    value={editForm.propagationMethod}
-                                  >
-                                    <option value="">Not specified</option>
-                                    {PROPAGATION_OPTIONS.map((m) => <option key={m} value={m}>{m}</option>)}
-                                  </select>
-                                </label>
-                                <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                                  <span style={{ fontWeight: 600, color: 'var(--color-text-secondary)' }}>Hatching date</span>
-                                  <input
-                                    className="variety-input"
-                                    name="hatchingDate"
-                                    onChange={handleEditField}
-                                    style={inputSm}
-                                    type="date"
-                                    value={editForm.hatchingDate}
-                                  />
-                                </label>
-                                <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                                  <span style={{ fontWeight: 600, color: 'var(--color-text-secondary)' }}>Color</span>
-                                  <input
-                                    className="variety-input"
-                                    name="color"
-                                    onChange={handleEditField}
-                                    placeholder="e.g. Green"
-                                    style={inputSm}
-                                    type="text"
-                                    value={editForm.color}
-                                  />
-                                </label>
-                                <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                                  <span style={{ fontWeight: 600, color: 'var(--color-text-secondary)' }}>Height (cm)</span>
+                                  <span style={{ fontWeight: 600, color: 'var(--color-text-secondary)' }}>Quantity</span>
                                   <input
                                     className="variety-input"
                                     min="0"
-                                    name="height"
+                                    name="quantity"
                                     onChange={handleEditField}
-                                    placeholder="e.g. 30"
-                                    step="0.1"
-                                    style={inputSm}
+                                    style={{ ...inputSm, width: 100 }}
                                     type="number"
-                                    value={editForm.height}
+                                    value={editForm.quantity}
                                   />
                                 </label>
                               </div>
-                              <label style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 10, fontSize: 13 }}>
-                                <span style={{ fontWeight: 600, color: 'var(--color-text-secondary)' }}>Condition notes</span>
-                                <textarea
-                                  className="variety-textarea"
-                                  name="conditionDescription"
-                                  onChange={handleEditField}
-                                  placeholder="Describe the plant's current condition…"
-                                  rows={2}
-                                  value={editForm.conditionDescription}
-                                />
-                              </label>
                               {editError && <p className="variety-form-error" role="alert" style={{ marginTop: 8 }}>{editError}</p>}
                               <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
                                 <button
