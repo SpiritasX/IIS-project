@@ -6,5 +6,6 @@ public record DeletionLogEntry(
         String varietyName,
         String reason,
         String deletedAt,
-        String deletedBy
+        String deletedBy,
+        Long originalPlantId
 ) {}

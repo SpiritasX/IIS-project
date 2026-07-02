@@ -11,4 +11,6 @@ public interface StorageSpaceRepository extends JpaRepository<StorageSpace, Long
     List<StorageSpace> findByNurserySite_Id(Long nurserySiteId);
 
     boolean existsByNurserySite_Id(Long nurserySiteId);
+
+    long countByNurserySite_Id(Long nurserySiteId);
 }

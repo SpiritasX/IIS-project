@@ -16,6 +16,10 @@ export function getDeletionLog() {
   return api.get('/botanist/plants/deletion-log')
 }
 
+export function getDeletionLogConditionHistory(deletionLogId) {
+  return api.get(`/botanist/plants/deletion-log/${deletionLogId}/condition-history`)
+}
+
 export function deletePlant(id, reason) {
   return api.delete(`/botanist/plants/${id}`, { data: { reason } })
 }

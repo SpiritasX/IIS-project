@@ -9,4 +9,5 @@ import java.util.List;
 public interface PlantRelocationLogRepository extends JpaRepository<PlantRelocationLog, Long> {
     List<PlantRelocationLog> findByPlant_IdOrderByStartedAtDesc(Long plantId);
     List<PlantRelocationLog> findByStateInOrderByStartedAtDesc(List<RelocationState> states);
+    void deleteByPlant_Id(Long plantId);
 }

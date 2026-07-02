@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getDeletionLog, getPlantConditionLogs, getPlants } from '../api/plants'
+import { getDeletionLog, getDeletionLogConditionHistory, getPlantConditionLogs, getPlants } from '../api/plants'
 import WorkerSidebar from '../components/worker/WorkerSidebar'
 import PageTitle from '../components/home/PageTitle'
 import SearchBar from '../components/home/SearchBar'
@@ -31,6 +31,9 @@ function WorkerHealthLogsPage() {
 
   const [deletionLog, setDeletionLog] = useState([])
   const [deletionLogLoading, setDeletionLogLoading] = useState(true)
+  const [expandedDeletionId, setExpandedDeletionId] = useState(null)
+  const [deletionConditionLogs, setDeletionConditionLogs] = useState({})
+  const [deletionConditionLogsLoading, setDeletionConditionLogsLoading] = useState(false)
 
   useEffect(() => {
     let ignore = false
@@ -56,6 +59,18 @@ function WorkerHealthLogsPage() {
       .finally(() => { if (!ignore) setConditionLogsLoading(false) })
     return () => { ignore = true }
   }, [expandedId])
+
+  useEffect(() => {
+    if (expandedDeletionId == null) return
+    if (deletionConditionLogs[expandedDeletionId] !== undefined) return
+    let ignore = false
+    setDeletionConditionLogsLoading(true)
+    getDeletionLogConditionHistory(expandedDeletionId)
+      .then((res) => { if (!ignore) setDeletionConditionLogs((prev) => ({ ...prev, [expandedDeletionId]: res.data })) })
+      .catch(() => { if (!ignore) setDeletionConditionLogs((prev) => ({ ...prev, [expandedDeletionId]: [] })) })
+      .finally(() => { if (!ignore) setDeletionConditionLogsLoading(false) })
+    return () => { ignore = true }
+  }, [expandedDeletionId])
 
   async function handleLogout() {
     await logout()
@@ -247,6 +262,7 @@ function WorkerHealthLogsPage() {
               <table className="varieties-table">
                 <thead>
                   <tr>
+                    <th style={{ width: 28 }}></th>
                     <th>Plant</th>
                     <th>Variety</th>
                     <th>Reason</th>
@@ -255,15 +271,68 @@ function WorkerHealthLogsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {deletionLog.map((entry) => (
-                    <tr key={entry.id}>
-                      <td>{entry.plantName}</td>
-                      <td>{entry.varietyName}</td>
-                      <td>{entry.reason}</td>
-                      <td>{formatTs(entry.deletedAt)}</td>
-                      <td>{entry.deletedBy}</td>
-                    </tr>
-                  ))}
+                  {deletionLog.map((entry) => {
+                    const isDOpen = expandedDeletionId === entry.id
+                    const dLogs = deletionConditionLogs[entry.id]
+                    return (
+                      <>
+                        <tr
+                          key={entry.id}
+                          onClick={() => setExpandedDeletionId((prev) => (prev === entry.id ? null : entry.id))}
+                          style={{ cursor: 'pointer', background: isDOpen ? 'var(--color-bg-soft, #f9fafb)' : undefined }}
+                        >
+                          <td style={{ color: 'var(--color-text-secondary)', fontSize: 11 }}>
+                            {isDOpen ? '▼' : '▶'}
+                          </td>
+                          <td>{entry.plantName}</td>
+                          <td>{entry.varietyName}</td>
+                          <td>{entry.reason}</td>
+                          <td>{formatTs(entry.deletedAt)}</td>
+                          <td>{entry.deletedBy}</td>
+                        </tr>
+                        {isDOpen && (
+                          <tr key={`${entry.id}-history`} style={{ background: 'var(--color-bg-soft, #f9fafb)' }}>
+                            <td />
+                            <td colSpan={5} style={{ paddingBottom: 16, paddingTop: 4 }}>
+                              <p style={{ fontWeight: 600, fontSize: 13, marginBottom: 8, color: 'var(--color-text-secondary)' }}>
+                                Care history
+                              </p>
+                              {deletionConditionLogsLoading && expandedDeletionId === entry.id && dLogs === undefined ? (
+                                <p style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>Loading…</p>
+                              ) : dLogs && dLogs.length > 0 ? (
+                                <table className="varieties-table" style={{ fontSize: 12 }}>
+                                  <thead>
+                                    <tr>
+                                      <th>Date &amp; time</th>
+                                      <th>Condition</th>
+                                      <th>Notes</th>
+                                      <th>Color</th>
+                                      <th>Height (cm)</th>
+                                      <th>Changed by</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {dLogs.map((log) => (
+                                      <tr key={log.id}>
+                                        <td>{formatTs(log.changedAt)}</td>
+                                        <td>{log.conditionState != null ? `${log.conditionState}/5` : '—'}</td>
+                                        <td>{log.conditionDescription ?? '—'}</td>
+                                        <td>{log.color ?? '—'}</td>
+                                        <td>{log.height ?? '—'}</td>
+                                        <td>{log.changedBy}</td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              ) : (
+                                <p style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>No care history recorded for this plant.</p>
+                              )}
+                            </td>
+                          </tr>
+                        )}
+                      </>
+                    )
+                  })}
                 </tbody>
               </table>
             )}

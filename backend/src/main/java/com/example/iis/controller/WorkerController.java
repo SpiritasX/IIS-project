@@ -152,6 +152,11 @@ public class WorkerController {
         return ResponseEntity.ok(plantService.getAllDeletionLogs());
     }
 
+    @GetMapping("/plants/deletion-log/{id}/condition-history")
+    public ResponseEntity<List<PlantConditionLogEntry>> getDeletionLogConditionHistory(@PathVariable Long id) {
+        return ResponseEntity.ok(plantService.getConditionHistoryForDeletionLog(id));
+    }
+
     @PostMapping("/plants/{id}/relocate")
     public ResponseEntity<PlantRelocationLogEntry> startRelocation(@PathVariable Long id, @RequestBody StartRelocationRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(plantService.startRelocation(id, request));

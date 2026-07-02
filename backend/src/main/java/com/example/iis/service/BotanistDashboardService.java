@@ -63,7 +63,7 @@ public class BotanistDashboardService {
 
     public List<NurserySiteResponse> getSites() {
         return nurserySiteRepository.findAll().stream()
-                .map(s -> new NurserySiteResponse(s.getId(), s.getName(), s.getAddress()))
+                .map(s -> new NurserySiteResponse(s.getId(), s.getName(), s.getAddress(), null))
                 .toList();
     }
 

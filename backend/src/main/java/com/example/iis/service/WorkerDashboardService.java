@@ -55,7 +55,8 @@ public class WorkerDashboardService {
 
     public List<NurserySiteResponse> getSites() {
         return nurserySiteRepository.findAll().stream()
-                .map(s -> new NurserySiteResponse(s.getId(), s.getName(), s.getAddress()))
+                .map(s -> new NurserySiteResponse(s.getId(), s.getName(), s.getAddress(),
+                        storageSpaceRepository.countByNurserySite_Id(s.getId())))
                 .toList();
     }
 

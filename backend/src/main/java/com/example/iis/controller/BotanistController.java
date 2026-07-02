@@ -108,6 +108,11 @@ public class BotanistController {
         return ResponseEntity.ok(plantService.getAllDeletionLogs());
     }
 
+    @GetMapping("/plants/deletion-log/{id}/condition-history")
+    public ResponseEntity<List<PlantConditionLogEntry>> getDeletionLogConditionHistory(@PathVariable Long id) {
+        return ResponseEntity.ok(plantService.getConditionHistoryForDeletionLog(id));
+    }
+
     @DeleteMapping("/plants/{id}")
     public ResponseEntity<Void> deletePlant(@PathVariable Long id, @RequestBody DeletePlantRequest request) {
         plantService.deletePlant(id, request.reason());

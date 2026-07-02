@@ -28,14 +28,17 @@ public class PlantDeletionLog {
     @Column(nullable = false)
     private String deletedBy;
 
+    private Long originalPlantId;
+
     protected PlantDeletionLog() {}
 
-    public PlantDeletionLog(String plantName, String varietyName, DeletionReason reason, String deletedBy) {
+    public PlantDeletionLog(String plantName, String varietyName, DeletionReason reason, String deletedBy, Long originalPlantId) {
         this.plantName = plantName;
         this.varietyName = varietyName;
         this.reason = reason;
         this.deletedBy = deletedBy;
         this.deletedAt = new Date();
+        this.originalPlantId = originalPlantId;
     }
 
     public Long getId() { return id; }
@@ -44,4 +47,5 @@ public class PlantDeletionLog {
     public DeletionReason getReason() { return reason; }
     public Date getDeletedAt() { return deletedAt; }
     public String getDeletedBy() { return deletedBy; }
+    public Long getOriginalPlantId() { return originalPlantId; }
 }

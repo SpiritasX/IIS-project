@@ -48,6 +48,10 @@ export function getDeletionLog() {
   return api.get('/worker/plants/deletion-log')
 }
 
+export function getDeletionLogConditionHistory(deletionLogId) {
+  return api.get(`/worker/plants/deletion-log/${deletionLogId}/condition-history`)
+}
+
 export function startRelocation(plantId, sectorId) {
   return api.post(`/worker/plants/${plantId}/relocate`, { sectorId })
 }

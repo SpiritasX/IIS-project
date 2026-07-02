@@ -368,7 +368,23 @@ public class WorkerPlantService {
                         l.getId(), l.getPlantName(), l.getVarietyName(),
                         l.getReason().getLabel(),
                         l.getDeletedAt().toInstant().toString(),
-                        l.getDeletedBy()
+                        l.getDeletedBy(),
+                        l.getOriginalPlantId()
+                ))
+                .toList();
+    }
+
+    public List<PlantConditionLogEntry> getConditionHistoryForDeletionLog(Long deletionLogId) {
+        PlantDeletionLog deletionLog = plantDeletionLogRepository.findById(deletionLogId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Deletion log not found"));
+        if (deletionLog.getOriginalPlantId() == null) return List.of();
+        return plantConditionLogRepository
+                .findByOriginalPlantIdOrderByChangedAtDesc(deletionLog.getOriginalPlantId())
+                .stream()
+                .map(l -> new PlantConditionLogEntry(
+                        l.getId(), l.getConditionState(), l.getConditionDescription(),
+                        l.getColor(), l.getHeight(),
+                        l.getChangedAt().toString(), l.getChangedBy()
                 ))
                 .toList();
     }
@@ -387,9 +403,12 @@ public class WorkerPlantService {
 
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         plantDeletionLogRepository.save(
-                new PlantDeletionLog(plant.getName(), plant.getVariety().getName(), deletionReason, username)
+                new PlantDeletionLog(plant.getName(), plant.getVariety().getName(), deletionReason, username, id)
         );
 
+        plantConditionLogRepository.backfillOriginalPlantId(id);
+        plantConditionLogRepository.nullifyPlantReference(id);
+        plantRelocationLogRepository.deleteByPlant_Id(id);
         removalLogRepository.findByPlant_IdIn(List.of(id)).forEach(removalLogRepository::delete);
         plantPriceRepository.deleteByPlant_Id(id);
         plantRepository.delete(plant);

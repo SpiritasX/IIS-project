@@ -11,9 +11,12 @@ public class PlantConditionLog {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = true)
     @JoinColumn(name = "plant_id")
     private Plant plant;
+
+    @Column(name = "original_plant_id")
+    private Long originalPlantId;
 
     private Integer conditionState;
     private String conditionDescription;
@@ -31,6 +34,7 @@ public class PlantConditionLog {
     public PlantConditionLog(Plant plant, Integer conditionState, String conditionDescription,
                               String color, Double height, String changedBy) {
         this.plant = plant;
+        this.originalPlantId = plant.getId();
         this.conditionState = conditionState;
         this.conditionDescription = conditionDescription;
         this.color = color;
@@ -41,6 +45,8 @@ public class PlantConditionLog {
 
     public Long getId() { return id; }
     public Plant getPlant() { return plant; }
+    public void setPlant(Plant plant) { this.plant = plant; }
+    public Long getOriginalPlantId() { return originalPlantId; }
     public Integer getConditionState() { return conditionState; }
     public String getConditionDescription() { return conditionDescription; }
     public String getColor() { return color; }
