@@ -8,7 +8,7 @@ public record AddPlantLotRequest(
         Long sectorId,
         Long quantity,
         String name,
-        String propagationMethod,
+        String lifecycleStage,
         LocalDate hatchingDate,
         String color,
         Double height,

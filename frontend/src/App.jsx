@@ -29,7 +29,9 @@ import RequestsPage from './pages/RequestsPage'
 import SignUpPage from './pages/SignUpPage'
 import StaffRequestsPage from './pages/StaffRequestsPage'
 import * as adminLocationsApi from './api/adminLocations'
+import * as adminVarietiesApi from './api/adminVarieties'
 import * as locationsApi from './api/locations'
+import * as varietiesApi from './api/varieties'
 
 function App() {
   return (
@@ -139,7 +141,15 @@ function App() {
             path="/botanist/varieties"
             element={
               <ProtectedRoute allowedRoles={['BOTANIST']}>
-                <VarietiesPage />
+                <VarietiesPage api={varietiesApi} basePath="/botanist" />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/varieties"
+            element={
+              <ProtectedRoute allowedRoles={['ADMIN']}>
+                <VarietiesPage api={adminVarietiesApi} basePath="/admin" />
               </ProtectedRoute>
             }
           />

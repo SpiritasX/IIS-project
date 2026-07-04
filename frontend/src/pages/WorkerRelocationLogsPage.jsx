@@ -8,6 +8,7 @@ import {
   startRelocation,
   updateRelocationState,
 } from '../api/plants'
+import { getSites } from '../api/worker'
 import WorkerSidebar from '../components/worker/WorkerSidebar'
 import PageTitle from '../components/home/PageTitle'
 import SearchBar from '../components/home/SearchBar'
@@ -36,6 +37,9 @@ function WorkerRelocationLogsPage() {
   const navigate = useNavigate()
   const { logout } = useAuth()
 
+  const [sites, setSites] = useState([])
+  const [selectedSiteId, setSelectedSiteId] = useState(null)
+
   const [plants, setPlants] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -55,6 +59,7 @@ function WorkerRelocationLogsPage() {
 
   useEffect(() => {
     let ignore = false
+    getSites().then((r) => { if (!ignore) setSites(r.data) }).catch(() => {})
     getPlants()
       .then((res) => { if (!ignore) setPlants(res.data) })
       .catch(() => { if (!ignore) setError('Failed to load plants.') })
@@ -88,7 +93,7 @@ function WorkerRelocationLogsPage() {
     e.stopPropagation()
     setEditingId(p.id)
     setExpandedId(p.id)
-    setEditForm({ siteId: '', storageSpaceId: '', sectorId: '' })
+    setEditForm({ siteId: selectedSiteId ? String(selectedSiteId) : '', storageSpaceId: '', sectorId: '' })
     setSectors([])
     setEditError('')
     try {
@@ -163,23 +168,22 @@ function WorkerRelocationLogsPage() {
     }
   }
 
-  const uniqueSites = [...new Map(
-    storageSpaces.filter((ss) => ss.siteId).map((ss) => [ss.siteId, { id: ss.siteId, name: ss.siteName }])
-  ).values()]
-
   const filteredSpaces = editForm.siteId
     ? storageSpaces.filter((ss) => String(ss.siteId) === String(editForm.siteId))
     : storageSpaces
 
-  const filtered = searchTerm
-    ? plants.filter((p) =>
-        p.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.varietyName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.latinName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.speciesName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.categoryName?.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    : plants
+  const selectedSiteName = selectedSiteId ? sites.find((s) => s.id === selectedSiteId)?.name : null
+
+  const filtered = plants
+    .filter((p) => !selectedSiteName || p.siteName === selectedSiteName)
+    .filter((p) =>
+      !searchTerm ||
+      p.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.varietyName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.latinName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.speciesName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.categoryName?.toLowerCase().includes(searchTerm.toLowerCase())
+    )
 
   return (
     <main className="home-page">
@@ -200,7 +204,7 @@ function WorkerRelocationLogsPage() {
       <PageTitle label="Relocation logs" onBack={handleLogout} />
 
       <section className="home-body">
-        <WorkerSidebar onSiteChange={() => {}} selectedSiteId={null} sites={[]} />
+        <WorkerSidebar onSiteChange={setSelectedSiteId} selectedSiteId={selectedSiteId} sites={sites} />
 
         <div className="varieties-content">
           <section className="varieties-list-card" aria-labelledby="plants-heading">
@@ -233,6 +237,12 @@ function WorkerRelocationLogsPage() {
                     const isOpen = expandedId === p.id
                     const isEditing = editingId === p.id
                     const logs = relocationLogs[p.id]
+                    const selectedSector = isEditing && editForm.sectorId
+                      ? sectors.find((s) => String(s.id) === String(editForm.sectorId))
+                      : null
+                    const capacityExceeded = selectedSector?.capacity != null
+                      && p.currentQuantity != null
+                      && Number(p.currentQuantity) > Number(selectedSector.capacity)
                     return (
                       <>
                         <tr
@@ -271,7 +281,7 @@ function WorkerRelocationLogsPage() {
                                   <span style={{ fontWeight: 600, color: 'var(--color-text-secondary)' }}>Site</span>
                                   <select className="variety-select" onChange={handleSiteChange} style={inputSm} value={editForm.siteId}>
                                     <option value="">All sites</option>
-                                    {uniqueSites.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                    {sites.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
                                   </select>
                                 </label>
                                 <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -285,13 +295,21 @@ function WorkerRelocationLogsPage() {
                                   <span style={{ fontWeight: 600, color: 'var(--color-text-secondary)' }}>Sector *</span>
                                   <select className="variety-select" disabled={sectors.length === 0} onChange={(e) => setEditForm((f) => ({ ...f, sectorId: e.target.value }))} style={inputSm} value={editForm.sectorId}>
                                     <option value="">Select sector</option>
-                                    {sectors.map((s) => <option key={s.id} value={s.id}>{s.name}{s.capacity ? ` (cap: ${s.capacity})` : ''}</option>)}
+                                    {sectors.map((s) => {
+                                      const tooSmall = s.capacity != null && p.currentQuantity != null && Number(p.currentQuantity) > Number(s.capacity)
+                                      return <option key={s.id} value={s.id}>{tooSmall ? '⚠ ' : ''}{s.name}{s.capacity != null ? ` (cap: ${s.capacity})` : ''}</option>
+                                    })}
                                   </select>
                                 </label>
                               </div>
-                              {editError && <p className="variety-form-error" role="alert" style={{ marginTop: 8 }}>{editError}</p>}
+                              {capacityExceeded && (
+                                <p className="variety-form-error" role="alert" style={{ marginTop: 8 }}>
+                                  Sector capacity ({selectedSector.capacity}) is less than the quantity being transferred ({p.currentQuantity}).
+                                </p>
+                              )}
+                              {!capacityExceeded && editError && <p className="variety-form-error" role="alert" style={{ marginTop: 8 }}>{editError}</p>}
                               <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-                                <button className="variety-submit-button" disabled={editSubmitting || !editForm.sectorId} onClick={(e) => saveEdit(p.id, e)} type="button" style={btnSm}>
+                                <button className="variety-submit-button" disabled={editSubmitting || !editForm.sectorId || capacityExceeded} onClick={(e) => saveEdit(p.id, e)} type="button" style={btnSm}>
                                   {editSubmitting ? 'Saving…' : 'Start relocation'}
                                 </button>
                                 <button className="variety-submit-button" onClick={cancelEdit} type="button" style={{ ...btnSm, background: 'var(--color-text-secondary)' }}>Cancel</button>

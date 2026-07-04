@@ -4,5 +4,6 @@ public record UpdatePlantConditionRequest(
         Integer state,
         String conditionDescription,
         String color,
-        Double height
+        Double height,
+        String lifecycleStage
 ) {}

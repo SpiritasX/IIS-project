@@ -2,6 +2,7 @@ package com.example.iis.service;
 
 import com.example.iis.dto.AddVarietyRequest;
 import com.example.iis.dto.CategoryResponse;
+import com.example.iis.dto.UpdateVarietyRequest;
 import com.example.iis.dto.CategoryTreeItem;
 import com.example.iis.dto.SpeciesResponse;
 import com.example.iis.dto.SpeciesTreeItem;
@@ -98,6 +99,25 @@ public class PlantVarietyService {
         );
         variety.setLatinName(request.latinName());
 
+        return toResponse(varietyRepository.save(variety));
+    }
+
+    @Transactional
+    public VarietyResponse updateVariety(Long id, UpdateVarietyRequest request) {
+        PlantVariety variety = varietyRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Variety not found"));
+        if (request.name() != null && !request.name().isBlank()) {
+            variety.setName(request.name().trim());
+        }
+        variety.setLatinName(request.latinName());
+        variety.setHumidity(request.humidity());
+        variety.setSoil(request.soil());
+        variety.setInstructions(request.instructions());
+        if (request.storageSpaceTypeId() != null) {
+            StorageSpaceType storageSpaceType = storageSpaceTypeRepository.findById(request.storageSpaceTypeId())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Storage space type not found"));
+            variety.setStorageSpaceType(storageSpaceType);
+        }
         return toResponse(varietyRepository.save(variety));
     }
 

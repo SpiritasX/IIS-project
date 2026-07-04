@@ -12,6 +12,10 @@ export function addVariety(data) {
   return api.post('/botanist/varieties', data)
 }
 
+export function updateVariety(id, data) {
+  return api.put(`/botanist/varieties/${id}`, data)
+}
+
 export function getCategories() {
   return api.get('/botanist/taxonomy/categories')
 }

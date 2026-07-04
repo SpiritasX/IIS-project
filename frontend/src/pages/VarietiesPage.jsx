@@ -1,23 +1,6 @@
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import {
-  addVariety,
-  createCategory,
-  createSpecies,
-  createType,
-  deleteCategory,
-  deleteSpecies,
-  deleteType,
-  getCategories,
-  getStorageSpaces,
-  getSpeciesByType,
-  getTaxonomyTree,
-  getTypesByCategory,
-  getVarieties,
-  renameCategory,
-  renameSpecies,
-  renameType,
-} from '../api/varieties'
+import AdminSidebar from '../components/admin/AdminSidebar'
 import BotanistSidebar from '../components/botanist/BotanistSidebar'
 import PageTitle from '../components/home/PageTitle'
 import SearchBar from '../components/home/SearchBar'
@@ -40,9 +23,10 @@ const EMPTY_FORM = {
   storageSpaceTypeId: '',
 }
 
-function VarietiesPage() {
+function VarietiesPage({ basePath = '/botanist', api }) {
   const navigate = useNavigate()
   const { logout } = useAuth()
+  const Sidebar = basePath === '/admin' ? AdminSidebar : BotanistSidebar
 
   const [varieties, setVarieties] = useState([])
   const [categories, setCategories] = useState([])
@@ -57,6 +41,17 @@ function VarietiesPage() {
 
   const [searchTerm, setSearchTerm] = useState('')
   const [loadingList, setLoadingList] = useState(true)
+
+  // Variety tree expand state (separate from taxonomy tree)
+  const [vCats, setVCats] = useState(new Set())
+  const [vTypes, setVTypes] = useState(new Set())
+  const [vSpecies, setVSpecies] = useState(new Set())
+
+  // Variety inline edit state
+  const [editingVarietyId, setEditingVarietyId] = useState(null)
+  const [varietyEditForm, setVarietyEditForm] = useState({})
+  const [varietyEditError, setVarietyEditError] = useState('')
+  const [varietyEditSubmitting, setVarietyEditSubmitting] = useState(false)
 
   // Taxonomy tree state
   const [categoryTree, setCategoryTree] = useState([])
@@ -75,7 +70,7 @@ function VarietiesPage() {
 
   async function refreshTree() {
     try {
-      const res = await getTaxonomyTree()
+      const res = await api.getTaxonomyTree()
       setCategoryTree(res.data)
     } catch {}
   }
@@ -85,7 +80,7 @@ function VarietiesPage() {
     async function load() {
       try {
         const [varRes, catRes, locRes, treeRes] = await Promise.all([
-          getVarieties(), getCategories(), getStorageSpaces(), getTaxonomyTree()
+          api.getVarieties(), api.getCategories(), api.getStorageSpaces(), api.getTaxonomyTree()
         ])
         if (!ignore) {
           setVarieties(varRes.data)
@@ -110,7 +105,7 @@ function VarietiesPage() {
       return
     }
     let ignore = false
-    getTypesByCategory(form.categoryId).then((res) => {
+    api.getTypesByCategory(form.categoryId).then((res) => {
       if (!ignore) {
         setTypes(res.data)
         setSpecies([])
@@ -127,7 +122,7 @@ function VarietiesPage() {
       return
     }
     let ignore = false
-    getSpeciesByType(form.typeId).then((res) => {
+    api.getSpeciesByType(form.typeId).then((res) => {
       if (!ignore) {
         setSpecies(res.data)
         setForm((prev) => ({ ...prev, speciesId: '' }))
@@ -152,7 +147,7 @@ function VarietiesPage() {
     setSubmitting(true)
     setFormError('')
     try {
-      const res = await addVariety({
+      const res = await api.addVariety({
         name: form.name.trim(),
         latinName: form.latinName.trim() || null,
         humidity: form.humidity ? Number(form.humidity) : null,
@@ -197,6 +192,63 @@ function VarietiesPage() {
     })
   }
 
+  function toggleVCat(id) {
+    setVCats((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
+  }
+  function toggleVType(id) {
+    setVTypes((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
+  }
+  function toggleVSpecies(id) {
+    setVSpecies((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
+  }
+
+  function startEditVariety(v) {
+    setEditingVarietyId(v.id)
+    setVarietyEditForm({
+      name: v.name,
+      latinName: v.latinName ?? '',
+      humidity: v.humidity != null ? String(v.humidity) : '',
+      soil: v.soil ?? '',
+      instructions: v.instructions ?? '',
+      storageSpaceTypeId: String(v.storageSpaceTypeId),
+    })
+    setVarietyEditError('')
+  }
+
+  function cancelEditVariety() {
+    setEditingVarietyId(null)
+    setVarietyEditForm({})
+    setVarietyEditError('')
+  }
+
+  function handleVarietyEditField(e) {
+    const { name, value } = e.target
+    setVarietyEditForm((prev) => ({ ...prev, [name]: value }))
+    setVarietyEditError('')
+  }
+
+  async function saveVariety() {
+    if (!varietyEditForm.name?.trim()) { setVarietyEditError('Variety name is required.'); return }
+    setVarietyEditSubmitting(true)
+    setVarietyEditError('')
+    try {
+      const res = await api.updateVariety(editingVarietyId, {
+        name: varietyEditForm.name.trim(),
+        latinName: varietyEditForm.latinName.trim() || null,
+        humidity: varietyEditForm.humidity ? Number(varietyEditForm.humidity) : null,
+        soil: varietyEditForm.soil || null,
+        instructions: varietyEditForm.instructions.trim() || null,
+        storageSpaceTypeId: varietyEditForm.storageSpaceTypeId ? Number(varietyEditForm.storageSpaceTypeId) : null,
+      })
+      setVarieties((prev) => prev.map((v) => (v.id === editingVarietyId ? res.data : v)))
+      cancelEditVariety()
+    } catch (err) {
+      setVarietyEditError(err.response?.data?.message ?? 'Failed to save changes.')
+    } finally {
+      setVarietyEditSubmitting(false)
+    }
+  }
+
   async function handleTreeAction(action) {
     setTreeSubmitting(true)
     setTreeError('')
@@ -204,7 +256,7 @@ function VarietiesPage() {
       await action()
       await refreshTree()
       // Also refresh categories for the add-variety form dropdowns
-      const catRes = await getCategories()
+      const catRes = await api.getCategories()
       setCategories(catRes.data)
     } catch (err) {
       setTreeError(err.response?.data?.message ?? 'Operation failed.')
@@ -228,29 +280,29 @@ function VarietiesPage() {
     if (!editingNode) return
     const { level, id } = editingNode
     await handleTreeAction(async () => {
-      if (level === 'cat') await renameCategory(id, editName)
-      else if (level === 'type') await renameType(id, editName)
-      else await renameSpecies(id, editName)
+      if (level === 'cat') await api.renameCategory(id, editName)
+      else if (level === 'type') await api.renameType(id, editName)
+      else await api.renameSpecies(id, editName)
       cancelEdit()
     })
   }
 
   async function handleDeleteCat(id) {
-    await handleTreeAction(() => deleteCategory(id))
+    await handleTreeAction(() => api.deleteCategory(id))
   }
 
   async function handleDeleteType(id) {
-    await handleTreeAction(() => deleteType(id))
+    await handleTreeAction(() => api.deleteType(id))
   }
 
   async function handleDeleteSpecies(id) {
-    await handleTreeAction(() => deleteSpecies(id))
+    await handleTreeAction(() => api.deleteSpecies(id))
   }
 
   async function handleAddCat() {
     if (!newCatName.trim()) return
     await handleTreeAction(async () => {
-      await createCategory(newCatName.trim())
+      await api.createCategory(newCatName.trim())
       setNewCatName('')
       setAddingCat(false)
     })
@@ -259,7 +311,7 @@ function VarietiesPage() {
   async function handleAddType(catId) {
     if (!newTypeName.trim()) return
     await handleTreeAction(async () => {
-      await createType(catId, newTypeName.trim())
+      await api.createType(catId, newTypeName.trim())
       setNewTypeName('')
       setAddingTypeToCat(null)
     })
@@ -268,7 +320,7 @@ function VarietiesPage() {
   async function handleAddSpecies(typeId) {
     if (!newSpeciesName.trim()) return
     await handleTreeAction(async () => {
-      await createSpecies(typeId, newSpeciesName.trim())
+      await api.createSpecies(typeId, newSpeciesName.trim())
       setNewSpeciesName('')
       setAddingSpeciesToType(null)
     })
@@ -292,7 +344,7 @@ function VarietiesPage() {
   return (
     <main className="home-page">
       <header className="home-header botanist-header">
-        <button aria-label="Back to dashboard" className="home-logo-placeholder" onClick={() => navigate('/botanist')} type="button">
+        <button aria-label="Back to dashboard" className="home-logo-placeholder" onClick={() => navigate(basePath)} type="button">
           <span aria-hidden="true" />
         </button>
         <div className="home-header-controls">
@@ -303,7 +355,7 @@ function VarietiesPage() {
       <PageTitle label="Varieties" onBack={handleLogout} />
 
       <section className="home-body">
-        <BotanistSidebar onSiteChange={() => {}} selectedSiteId={null} sites={[]} />
+        <Sidebar onSiteChange={() => {}} selectedSiteId={null} sites={[]} />
 
         <div className="varieties-content">
           {/* ── Add variety form ── */}
@@ -388,7 +440,7 @@ function VarietiesPage() {
             </form>
           </section>
 
-          {/* ── Varieties list ── */}
+          {/* ── Varieties list (hierarchical) ── */}
           <section aria-labelledby="varieties-list-heading" className="varieties-list-card">
             <h2 className="variety-form-heading" id="varieties-list-heading">
               Registered varieties <span className="varieties-count">({filtered.length})</span>
@@ -397,34 +449,159 @@ function VarietiesPage() {
               <p className="varieties-empty">Loading varieties…</p>
             ) : filtered.length === 0 ? (
               <p className="varieties-empty">{searchTerm ? 'No varieties match your search.' : 'No varieties registered yet.'}</p>
-            ) : (
-              <table className="varieties-table">
-                <thead>
-                  <tr>
-                    <th>Variety</th>
-                    <th>Latin name</th>
-                    <th>Species</th>
-                    <th>Subcategory</th>
-                    <th>Category</th>
-                    <th>Humidity</th>
-                    <th>Soil</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map((v) => (
-                    <tr key={v.id}>
-                      <td className="varieties-name">{v.name}</td>
-                      <td style={{ fontStyle: 'italic', color: 'var(--color-text-secondary)' }}>{v.latinName ?? '—'}</td>
-                      <td>{v.speciesName}</td>
-                      <td>{v.typeName}</td>
-                      <td><span className="variety-category-badge">{v.categoryName}</span></td>
-                      <td>{v.humidity != null ? `${v.humidity}%` : '—'}</td>
-                      <td>{v.soil ?? '—'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
+            ) : (() => {
+              // Build category → type → species tree from flat varieties
+              const tree = {}
+              filtered.forEach((v) => {
+                if (!tree[v.categoryId]) tree[v.categoryId] = { name: v.categoryName, types: {} }
+                const cat = tree[v.categoryId]
+                if (!cat.types[v.typeId]) cat.types[v.typeId] = { name: v.typeName, species: {} }
+                const tp = cat.types[v.typeId]
+                if (!tp.species[v.speciesId]) tp.species[v.speciesId] = { name: v.speciesName, varieties: [] }
+                tp.species[v.speciesId].varieties.push(v)
+              })
+              const expandAll = searchTerm.length > 0
+
+              return Object.entries(tree).map(([catId, catData]) => {
+                const catOpen = expandAll || vCats.has(Number(catId))
+                return (
+                  <div key={catId} style={{ marginBottom: 6 }}>
+                    {/* Category row */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderBottom: '1px solid var(--color-border, #e5e7eb)', cursor: 'pointer' }} onClick={() => toggleVCat(Number(catId))}>
+                      <span style={{ fontSize: 12, color: 'var(--color-text-secondary)', width: 16 }}>{catOpen ? '▼' : '▶'}</span>
+                      <span style={{ fontWeight: 600, fontSize: 14, flex: 1 }}>{catData.name}</span>
+                    </div>
+
+                    {catOpen && (
+                      <div style={{ paddingLeft: 24 }}>
+                        {Object.entries(catData.types).map(([typeId, typeData]) => {
+                          const typeOpen = expandAll || vTypes.has(Number(typeId))
+                          return (
+                            <div key={typeId} style={{ marginTop: 4 }}>
+                              {/* Type row */}
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', borderBottom: '1px solid var(--color-border, #f3f4f6)', cursor: 'pointer' }} onClick={() => toggleVType(Number(typeId))}>
+                                <span style={{ fontSize: 11, color: 'var(--color-text-secondary)', width: 14 }}>{typeOpen ? '▼' : '▶'}</span>
+                                <span style={{ fontSize: 13, flex: 1 }}>{typeData.name}</span>
+                              </div>
+
+                              {typeOpen && (
+                                <div style={{ paddingLeft: 22 }}>
+                                  {Object.entries(typeData.species).map(([speciesId, speciesData]) => {
+                                    const spOpen = expandAll || vSpecies.has(Number(speciesId))
+                                    return (
+                                      <div key={speciesId} style={{ marginTop: 4 }}>
+                                        {/* Species row */}
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '3px 0', cursor: 'pointer' }} onClick={() => toggleVSpecies(Number(speciesId))}>
+                                          <span style={{ fontSize: 11, color: 'var(--color-text-secondary)', width: 14 }}>{spOpen ? '▼' : '▶'}</span>
+                                          <span style={{ fontSize: 13, flex: 1 }}>
+                                            {speciesData.name}
+                                            <span className="varieties-count" style={{ marginLeft: 6 }}>({speciesData.varieties.length})</span>
+                                          </span>
+                                        </div>
+
+                                        {spOpen && (
+                                          <div style={{ paddingLeft: 22, marginTop: 4 }}>
+                                            <table className="varieties-table">
+                                              <thead>
+                                                <tr>
+                                                  <th>Variety</th>
+                                                  <th>Latin name</th>
+                                                  <th>Humidity</th>
+                                                  <th>Soil</th>
+                                                  <th>Storage type</th>
+                                                  <th style={{ width: 60 }}></th>
+                                                </tr>
+                                              </thead>
+                                              <tbody>
+                                                {speciesData.varieties.map((v) => (
+                                                  <React.Fragment key={v.id}>
+                                                    <tr>
+                                                      <td className="varieties-name">{v.name}</td>
+                                                      <td style={{ fontStyle: 'italic', color: 'var(--color-text-secondary)' }}>{v.latinName ?? '—'}</td>
+                                                      <td>{v.humidity != null ? `${v.humidity}%` : '—'}</td>
+                                                      <td>{v.soil ?? '—'}</td>
+                                                      <td>{v.storageSpaceTypeName}</td>
+                                                      <td>
+                                                        {editingVarietyId === v.id ? (
+                                                          <button className="variety-submit-button" onClick={cancelEditVariety} type="button" style={{ ...btnSm, background: 'var(--color-text-secondary)' }}>Cancel</button>
+                                                        ) : (
+                                                          <button className="variety-submit-button" onClick={() => startEditVariety(v)} type="button" style={btnSm}>Edit</button>
+                                                        )}
+                                                      </td>
+                                                    </tr>
+                                                    {editingVarietyId === v.id && (
+                                                      <tr>
+                                                        <td colSpan={6} style={{ padding: '12px 0' }}>
+                                                          <div style={{ background: 'var(--color-surface, #f9fafb)', border: '1px solid var(--color-border, #e5e7eb)', borderRadius: 8, padding: '16px' }}>
+                                                            <div className="variety-form-row variety-form-row-2" style={{ marginBottom: 10 }}>
+                                                              <div className="variety-field">
+                                                                <label className="variety-label" htmlFor={`ve-name-${v.id}`}>Variety name *</label>
+                                                                <input className="variety-input" id={`ve-name-${v.id}`} name="name" onChange={handleVarietyEditField} type="text" value={varietyEditForm.name ?? ''} />
+                                                              </div>
+                                                              <div className="variety-field">
+                                                                <label className="variety-label" htmlFor={`ve-latin-${v.id}`}>Latin name</label>
+                                                                <input className="variety-input" id={`ve-latin-${v.id}`} name="latinName" onChange={handleVarietyEditField} type="text" value={varietyEditForm.latinName ?? ''} />
+                                                              </div>
+                                                            </div>
+                                                            <div className="variety-form-row variety-form-row-2" style={{ marginBottom: 10 }}>
+                                                              <div className="variety-field">
+                                                                <label className="variety-label" htmlFor={`ve-hum-${v.id}`}>Humidity (%)</label>
+                                                                <input className="variety-input" id={`ve-hum-${v.id}`} max="100" min="0" name="humidity" onChange={handleVarietyEditField} step="1" type="number" value={varietyEditForm.humidity ?? ''} />
+                                                              </div>
+                                                              <div className="variety-field">
+                                                                <label className="variety-label" htmlFor={`ve-soil-${v.id}`}>Soil type</label>
+                                                                <select className="variety-select" id={`ve-soil-${v.id}`} name="soil" onChange={handleVarietyEditField} value={varietyEditForm.soil ?? ''}>
+                                                                  <option value="">None</option>
+                                                                  {SOIL_TYPES.map((s) => <option key={s} value={s}>{s}</option>)}
+                                                                </select>
+                                                              </div>
+                                                            </div>
+                                                            <div className="variety-form-row" style={{ marginBottom: 10 }}>
+                                                              <div className="variety-field">
+                                                                <label className="variety-label" htmlFor={`ve-storage-${v.id}`}>Storage space type</label>
+                                                                <select className="variety-select" id={`ve-storage-${v.id}`} name="storageSpaceTypeId" onChange={handleVarietyEditField} value={varietyEditForm.storageSpaceTypeId ?? ''}>
+                                                                  <option value="">Select storage space type</option>
+                                                                  {storageSpaces.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+                                                                </select>
+                                                              </div>
+                                                            </div>
+                                                            <div className="variety-form-row" style={{ marginBottom: 10 }}>
+                                                              <div className="variety-field">
+                                                                <label className="variety-label" htmlFor={`ve-instr-${v.id}`}>Care instructions</label>
+                                                                <textarea className="variety-textarea" id={`ve-instr-${v.id}`} name="instructions" onChange={handleVarietyEditField} rows={3} value={varietyEditForm.instructions ?? ''} />
+                                                              </div>
+                                                            </div>
+                                                            {varietyEditError && <p className="variety-form-error" role="alert" style={{ marginBottom: 8 }}>{varietyEditError}</p>}
+                                                            <div style={{ display: 'flex', gap: 8 }}>
+                                                              <button className="variety-submit-button" disabled={varietyEditSubmitting} onClick={saveVariety} type="button" style={btnSm}>
+                                                                {varietyEditSubmitting ? 'Saving…' : 'Save'}
+                                                              </button>
+                                                              <button className="variety-submit-button" onClick={cancelEditVariety} type="button" style={{ ...btnSm, background: 'var(--color-text-secondary)' }}>Cancel</button>
+                                                            </div>
+                                                          </div>
+                                                        </td>
+                                                      </tr>
+                                                    )}
+                                                  </React.Fragment>
+                                                ))}
+                                              </tbody>
+                                            </table>
+                                          </div>
+                                        )}
+                                      </div>
+                                    )
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )
+              })
+            })()}
           </section>
 
           {/* ── Taxonomy tree ── */}

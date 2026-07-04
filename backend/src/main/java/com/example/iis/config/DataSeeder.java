@@ -130,7 +130,8 @@ public class DataSeeder {
             return sites.get(0);
         }
 
-        return null;
+        NurserySite seed = new NurserySite("Novi Sad", 45.2671, 19.8335);
+        return nurserySiteRepository.save(seed);
     }
 
     private void seedCatalog(

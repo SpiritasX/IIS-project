@@ -6,6 +6,7 @@ public record PlantConditionLogEntry(
         String conditionDescription,
         String color,
         Double height,
+        String lifecycleStage,
         String changedAt,
         String changedBy
 ) {}

@@ -14,7 +14,7 @@ public class Plant {
     private Long id;
     private String name;
     private String description;
-    private String propagationMethod;
+    private String lifecycleStage;
     private String status;
     private LocalDate hatchingDate;
     private String color;
@@ -50,9 +50,9 @@ public class Plant {
         this.variety = variety;
     }
 
-    public Plant(String name, String description, String propagationMethod, String status, PlantVariety variety) {
+    public Plant(String name, String description, String lifecycleStage, String status, PlantVariety variety) {
         this(name, description, status, variety);
-        this.propagationMethod = propagationMethod;
+        this.lifecycleStage = lifecycleStage;
     }
 
     public Long getId() {
@@ -75,12 +75,12 @@ public class Plant {
         this.description = description;
     }
 
-    public String getPropagationMethod() {
-        return propagationMethod;
+    public String getLifecycleStage() {
+        return lifecycleStage;
     }
 
-    public void setPropagationMethod(String propagationMethod) {
-        this.propagationMethod = propagationMethod;
+    public void setLifecycleStage(String lifecycleStage) {
+        this.lifecycleStage = lifecycleStage;
     }
 
     public String getStatus() {

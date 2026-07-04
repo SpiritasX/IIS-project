@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getDeletionLog, getDeletionLogConditionHistory, getPlantConditionLogs, getPlants } from '../api/plants'
+import { getSites } from '../api/worker'
 import WorkerSidebar from '../components/worker/WorkerSidebar'
 import PageTitle from '../components/home/PageTitle'
 import SearchBar from '../components/home/SearchBar'
@@ -20,6 +21,9 @@ function WorkerHealthLogsPage() {
   const navigate = useNavigate()
   const { logout } = useAuth()
 
+  const [sites, setSites] = useState([])
+  const [selectedSiteId, setSelectedSiteId] = useState(null)
+
   const [plants, setPlants] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -37,6 +41,7 @@ function WorkerHealthLogsPage() {
 
   useEffect(() => {
     let ignore = false
+    getSites().then((r) => { if (!ignore) setSites(r.data) }).catch(() => {})
     getPlants()
       .then((res) => { if (!ignore) setPlants(res.data) })
       .catch(() => { if (!ignore) setError('Failed to load plants.') })
@@ -81,15 +86,18 @@ function WorkerHealthLogsPage() {
     setExpandedId((prev) => (prev === id ? null : id))
   }
 
-  const filtered = searchTerm
-    ? plants.filter((p) =>
-        p.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.varietyName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.latinName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.speciesName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.categoryName?.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    : plants
+  const selectedSiteName = selectedSiteId ? sites.find((s) => s.id === selectedSiteId)?.name : null
+
+  const filtered = plants
+    .filter((p) => !selectedSiteName || p.siteName === selectedSiteName)
+    .filter((p) =>
+      !searchTerm ||
+      p.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.varietyName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.latinName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.speciesName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.categoryName?.toLowerCase().includes(searchTerm.toLowerCase())
+    )
 
   return (
     <main className="home-page">
@@ -114,7 +122,7 @@ function WorkerHealthLogsPage() {
       <PageTitle label="Health logs" onBack={handleLogout} />
 
       <section className="home-body">
-        <WorkerSidebar onSiteChange={() => {}} selectedSiteId={null} sites={[]} />
+        <WorkerSidebar onSiteChange={setSelectedSiteId} selectedSiteId={selectedSiteId} sites={sites} />
 
         <div className="varieties-content">
           <section className="varieties-list-card" aria-labelledby="plants-heading">
@@ -142,6 +150,7 @@ function WorkerHealthLogsPage() {
                     <th>Species</th>
                     <th>Category</th>
                     <th>Condition</th>
+                    <th>Life cycle</th>
                     <th>Qty</th>
                     <th>Location</th>
                   </tr>
@@ -172,6 +181,7 @@ function WorkerHealthLogsPage() {
                           <td>{p.speciesName}</td>
                           <td><span className="variety-category-badge">{p.categoryName}</span></td>
                           <td>{p.state != null ? `${p.state}/5` : '—'}</td>
+                          <td>{p.lifecycleStage ?? '—'}</td>
                           <td>{p.currentQuantity ?? '—'}</td>
                           <td style={{ fontSize: 13 }}>
                             {p.siteName ? (
@@ -188,11 +198,15 @@ function WorkerHealthLogsPage() {
                         {isOpen && (
                           <tr key={`${p.id}-detail`} style={{ background: 'var(--color-bg-soft, #f9fafb)' }}>
                             <td />
-                            <td colSpan={7} style={{ paddingBottom: 16, paddingTop: 4 }}>
+                            <td colSpan={8} style={{ paddingBottom: 16, paddingTop: 4 }}>
                               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px 24px', fontSize: 13 }}>
                                 <DetailField label="Condition" value={p.state != null ? `${p.state}/5` : null} />
                                 <DetailField label="Color" value={p.color} />
                                 <DetailField label="Height (cm)" value={p.height} />
+                                <div>
+                                  <span style={{ fontWeight: 600, color: 'var(--color-text-secondary)' }}>Part of life cycle: </span>
+                                  <span>{p.lifecycleStage ?? '—'}</span>
+                                </div>
                                 <DetailField label="Sector" value={p.sectorName} />
                                 <DetailField label="Storage space" value={p.storageSpaceName} />
                                 <DetailField label="Site" value={p.siteName} />
@@ -216,6 +230,7 @@ function WorkerHealthLogsPage() {
                                       <tr>
                                         <th>Date &amp; time</th>
                                         <th>Condition</th>
+                                        <th>Life cycle</th>
                                         <th>Notes</th>
                                         <th>Color</th>
                                         <th>Height (cm)</th>
@@ -227,6 +242,7 @@ function WorkerHealthLogsPage() {
                                         <tr key={log.id}>
                                           <td>{formatTs(log.changedAt)}</td>
                                           <td>{log.conditionState != null ? `${log.conditionState}/5` : '—'}</td>
+                                          <td>{log.lifecycleStage ?? '—'}</td>
                                           <td>{log.conditionDescription ?? '—'}</td>
                                           <td>{log.color ?? '—'}</td>
                                           <td>{log.height ?? '—'}</td>

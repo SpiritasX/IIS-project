@@ -22,6 +22,7 @@ public class PlantConditionLog {
     private String conditionDescription;
     private String color;
     private Double height;
+    private String lifecycleStage;
 
     @Column(nullable = false)
     private Instant changedAt;
@@ -32,13 +33,14 @@ public class PlantConditionLog {
     protected PlantConditionLog() {}
 
     public PlantConditionLog(Plant plant, Integer conditionState, String conditionDescription,
-                              String color, Double height, String changedBy) {
+                              String color, Double height, String lifecycleStage, String changedBy) {
         this.plant = plant;
         this.originalPlantId = plant.getId();
         this.conditionState = conditionState;
         this.conditionDescription = conditionDescription;
         this.color = color;
         this.height = height;
+        this.lifecycleStage = lifecycleStage;
         this.changedBy = changedBy;
         this.changedAt = Instant.now();
     }
@@ -51,6 +53,7 @@ public class PlantConditionLog {
     public String getConditionDescription() { return conditionDescription; }
     public String getColor() { return color; }
     public Double getHeight() { return height; }
+    public String getLifecycleStage() { return lifecycleStage; }
     public Instant getChangedAt() { return changedAt; }
     public String getChangedBy() { return changedBy; }
 }

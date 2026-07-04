@@ -23,3 +23,11 @@ export function getRelocationLogs(siteId) {
 export function getDeletionReasonStats() {
   return api.get('/admin/dashboard/deletion-reasons')
 }
+
+export function getConditionDistribution(siteId) {
+  return api.get('/admin/dashboard/condition-distribution', { params: siteId != null ? { siteId } : {} })
+}
+
+export function getPlantsNeedingAttention(siteId) {
+  return api.get('/admin/dashboard/plants-needing-attention', { params: siteId != null ? { siteId } : {} })
+}

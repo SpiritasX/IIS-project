@@ -8,6 +8,7 @@ import {
   getPlants,
   updatePlantCondition,
 } from '../api/botanistPlants'
+import { getSites } from '../api/botanist'
 import BotanistSidebar from '../components/botanist/BotanistSidebar'
 import PageTitle from '../components/home/PageTitle'
 import SearchBar from '../components/home/SearchBar'
@@ -34,18 +35,24 @@ function formatTs(iso) {
   return d.toLocaleString('sr-RS', { dateStyle: 'short', timeStyle: 'short' })
 }
 
+const LIFECYCLE_OPTIONS = ['Seme', 'Mladica', 'Zrela biljka']
+
 function emptyEditForm(p) {
   return {
     state: p.state ?? '',
     conditionDescription: p.conditionDescription ?? '',
     color: p.color ?? '',
     height: p.height ?? '',
+    lifecycleStage: p.lifecycleStage ?? '',
   }
 }
 
 function BotanistHealthLogsPage() {
   const navigate = useNavigate()
   const { logout } = useAuth()
+
+  const [sites, setSites] = useState([])
+  const [selectedSiteId, setSelectedSiteId] = useState(null)
 
   const [plants, setPlants] = useState([])
   const [loading, setLoading] = useState(true)
@@ -74,6 +81,7 @@ function BotanistHealthLogsPage() {
 
   useEffect(() => {
     let ignore = false
+    getSites().then((r) => { if (!ignore) setSites(r.data) }).catch(() => {})
     getPlants()
       .then((res) => { if (!ignore) setPlants(res.data) })
       .catch(() => { if (!ignore) setError('Failed to load plants.') })
@@ -156,6 +164,7 @@ function BotanistHealthLogsPage() {
         conditionDescription: editForm.conditionDescription.trim() || null,
         color: editForm.color.trim() || null,
         height: editForm.height !== '' ? Number(editForm.height) : null,
+        lifecycleStage: editForm.lifecycleStage || null,
       })
       setPlants((prev) => prev.map((p) => (p.id === id ? res.data : p)))
       setConditionLogs((prev) => ({ ...prev, [id]: undefined }))
@@ -203,15 +212,18 @@ function BotanistHealthLogsPage() {
     }
   }
 
-  const filtered = searchTerm
-    ? plants.filter((p) =>
-        p.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.varietyName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.latinName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.speciesName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.categoryName?.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    : plants
+  const selectedSiteName = selectedSiteId ? sites.find((s) => s.id === selectedSiteId)?.name : null
+
+  const filtered = plants
+    .filter((p) => !selectedSiteName || p.siteName === selectedSiteName)
+    .filter((p) =>
+      !searchTerm ||
+      p.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.varietyName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.latinName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.speciesName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.categoryName?.toLowerCase().includes(searchTerm.toLowerCase())
+    )
 
   return (
     <main className="home-page">
@@ -236,7 +248,7 @@ function BotanistHealthLogsPage() {
       <PageTitle label="Health logs" onBack={handleLogout} />
 
       <section className="home-body">
-        <BotanistSidebar onSiteChange={() => {}} selectedSiteId={null} sites={[]} />
+        <BotanistSidebar onSiteChange={setSelectedSiteId} selectedSiteId={selectedSiteId} sites={sites} />
 
         <div className="varieties-content">
           <section className="varieties-list-card" aria-labelledby="plants-heading">
@@ -265,6 +277,7 @@ function BotanistHealthLogsPage() {
                     <th>Species</th>
                     <th>Category</th>
                     <th>Condition</th>
+                    <th>Life cycle</th>
                     <th>Qty</th>
                     <th>Location</th>
                     <th>Actions</th>
@@ -298,6 +311,7 @@ function BotanistHealthLogsPage() {
                           <td>{p.speciesName}</td>
                           <td><span className="variety-category-badge">{p.categoryName}</span></td>
                           <td>{p.state != null ? `${p.state}/5` : '—'}</td>
+                          <td>{p.lifecycleStage ?? '—'}</td>
                           <td>{p.currentQuantity ?? '—'}</td>
                           <td style={{ fontSize: 13 }}>
                             {p.siteName ? (
@@ -320,11 +334,15 @@ function BotanistHealthLogsPage() {
                         {isOpen && !isEditing && (
                           <tr key={`${p.id}-detail`} style={{ background: 'var(--color-bg-soft, #f9fafb)' }}>
                             <td />
-                            <td colSpan={8} style={{ paddingBottom: 16, paddingTop: 4 }}>
+                            <td colSpan={9} style={{ paddingBottom: 16, paddingTop: 4 }}>
                               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px 24px', fontSize: 13 }}>
                                 <DetailField label="Condition" value={p.state != null ? `${p.state}/5` : null} />
                                 <DetailField label="Color" value={p.color} />
                                 <DetailField label="Height (cm)" value={p.height} />
+                                <div>
+                                  <span style={{ fontWeight: 600, color: 'var(--color-text-secondary)' }}>Part of life cycle: </span>
+                                  <span>{p.lifecycleStage ?? '—'}</span>
+                                </div>
                                 <DetailField label="Sector" value={p.sectorName} />
                                 <DetailField label="Storage space" value={p.storageSpaceName} />
                                 <DetailField label="Site" value={p.siteName} />
@@ -348,6 +366,7 @@ function BotanistHealthLogsPage() {
                                       <tr>
                                         <th>Date &amp; time</th>
                                         <th>Condition</th>
+                                        <th>Life cycle</th>
                                         <th>Notes</th>
                                         <th>Color</th>
                                         <th>Height (cm)</th>
@@ -359,6 +378,7 @@ function BotanistHealthLogsPage() {
                                         <tr key={log.id}>
                                           <td>{formatTs(log.changedAt)}</td>
                                           <td>{log.conditionState != null ? `${log.conditionState}/5` : '—'}</td>
+                                          <td>{log.lifecycleStage ?? '—'}</td>
                                           <td>{log.conditionDescription ?? '—'}</td>
                                           <td>{log.color ?? '—'}</td>
                                           <td>{log.height ?? '—'}</td>
@@ -378,7 +398,7 @@ function BotanistHealthLogsPage() {
                         {isDeleting && (
                           <tr key={`${p.id}-delete`} style={{ background: 'var(--color-bg-soft, #f9fafb)' }}>
                             <td />
-                            <td colSpan={8} style={{ paddingBottom: 16, paddingTop: 12 }} onClick={(e) => e.stopPropagation()}>
+                            <td colSpan={9} style={{ paddingBottom: 16, paddingTop: 12 }} onClick={(e) => e.stopPropagation()}>
                               <p style={{ margin: '0 0 10px', fontWeight: 600, fontSize: 13 }}>
                                 Select reason for deleting <em>{p.name}</em>:
                               </p>
@@ -404,17 +424,24 @@ function BotanistHealthLogsPage() {
                         {isEditing && (
                           <tr key={`${p.id}-edit`} style={{ background: 'var(--color-bg-soft, #f9fafb)' }}>
                             <td />
-                            <td colSpan={8} style={{ paddingBottom: 16, paddingTop: 8 }}>
+                            <td colSpan={9} style={{ paddingBottom: 16, paddingTop: 8 }}>
                               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px 24px', fontSize: 13 }}>
                                 <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                                   <span style={{ fontWeight: 600, color: 'var(--color-text-secondary)' }}>Condition (1–5)</span>
                                   <select className="variety-select" name="state" onChange={handleEditField} style={inputSm} value={editForm.state}>
-                                    <option value="">Not rated</option>
-                                    <option value="1">1 — Poor</option>
-                                    <option value="2">2 — Fair</option>
-                                    <option value="3">3 — Good</option>
-                                    <option value="4">4 — Very good</option>
-                                    <option value="5">5 — Excellent</option>
+                                    <option value="">Nije ocenjeno</option>
+                                    <option value="1">1 — Uvenuće</option>
+                                    <option value="2">2 — Vrlo loše</option>
+                                    <option value="3">3 — Potrebna nega</option>
+                                    <option value="4">4 — Stabilno</option>
+                                    <option value="5">5 — Pristino</option>
+                                  </select>
+                                </label>
+                                <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                  <span style={{ fontWeight: 600, color: 'var(--color-text-secondary)' }}>Part of life cycle</span>
+                                  <select className="variety-select" name="lifecycleStage" onChange={handleEditField} style={inputSm} value={editForm.lifecycleStage}>
+                                    {!p.lifecycleStage && <option value="">— not set —</option>}
+                                    {LIFECYCLE_OPTIONS.slice(Math.max(0, LIFECYCLE_OPTIONS.indexOf(p.lifecycleStage ?? ''))).map((o) => <option key={o} value={o}>{o}</option>)}
                                   </select>
                                 </label>
                                 <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -503,6 +530,7 @@ function BotanistHealthLogsPage() {
                                     <tr>
                                       <th>Date &amp; time</th>
                                       <th>Condition</th>
+                                      <th>Life cycle</th>
                                       <th>Notes</th>
                                       <th>Color</th>
                                       <th>Height (cm)</th>
@@ -514,6 +542,7 @@ function BotanistHealthLogsPage() {
                                       <tr key={log.id}>
                                         <td>{formatTs(log.changedAt)}</td>
                                         <td>{log.conditionState != null ? `${log.conditionState}/5` : '—'}</td>
+                                        <td>{log.lifecycleStage ?? '—'}</td>
                                         <td>{log.conditionDescription ?? '—'}</td>
                                         <td>{log.color ?? '—'}</td>
                                         <td>{log.height ?? '—'}</td>

@@ -9,7 +9,7 @@ public record PlantLotResponse(
         String unitName,
         String parcelName,
         Long quantity,
-        String propagationMethod,
+        String lifecycleStage,
         LocalDate hatchingDate,
         String color,
         Double height,

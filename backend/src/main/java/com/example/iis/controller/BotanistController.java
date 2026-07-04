@@ -1,7 +1,9 @@
 package com.example.iis.controller;
 
 import com.example.iis.dto.AddVarietyRequest;
+import com.example.iis.dto.UpdateVarietyRequest;
 import com.example.iis.dto.CategoryResponse;
+import com.example.iis.dto.PlantRelocationLogEntry;
 import com.example.iis.dto.DeletePlantRequest;
 import com.example.iis.dto.DeletionLogEntry;
 import com.example.iis.dto.DeletionReasonStatsPoint;
@@ -9,6 +11,8 @@ import com.example.iis.dto.PlantConditionLogEntry;
 import com.example.iis.dto.PlantDetailResponse;
 import com.example.iis.dto.UpdatePlantConditionRequest;
 import com.example.iis.dto.CategoryTreeItem;
+import com.example.iis.dto.ConditionDistributionPoint;
+import com.example.iis.dto.ConditionLogEntry;
 import com.example.iis.dto.DashboardLogEntry;
 import com.example.iis.dto.DashboardStatsResponse;
 import com.example.iis.dto.NurserySiteResponse;
@@ -93,6 +97,26 @@ public class BotanistController {
         return ResponseEntity.ok(service.getDeletionReasonStats());
     }
 
+    @GetMapping("/dashboard/condition-distribution")
+    public ResponseEntity<List<ConditionDistributionPoint>> getConditionDistribution(@RequestParam(required = false) Long siteId) {
+        return ResponseEntity.ok(service.getConditionDistribution(siteId));
+    }
+
+    @GetMapping("/dashboard/plants-needing-attention")
+    public ResponseEntity<List<ConditionLogEntry>> getPlantsNeedingAttention(@RequestParam(required = false) Long siteId) {
+        return ResponseEntity.ok(service.getPlantsNeedingAttention(siteId));
+    }
+
+    @GetMapping("/dashboard/recent-conditions")
+    public ResponseEntity<List<ConditionLogEntry>> getRecentConditions(@RequestParam(required = false) Long siteId) {
+        return ResponseEntity.ok(service.getRecentConditionChanges(siteId));
+    }
+
+    @GetMapping("/relocations/active")
+    public ResponseEntity<List<PlantRelocationLogEntry>> getActiveRelocations() {
+        return ResponseEntity.ok(plantService.getActiveRelocations());
+    }
+
     @PutMapping("/plants/{id}/condition")
     public ResponseEntity<PlantDetailResponse> updatePlantCondition(@PathVariable Long id, @RequestBody UpdatePlantConditionRequest request) {
         return ResponseEntity.ok(plantService.updatePlantCondition(id, request));
@@ -127,6 +151,11 @@ public class BotanistController {
     @PostMapping("/varieties")
     public ResponseEntity<VarietyResponse> addVariety(@RequestBody AddVarietyRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(varietyService.addVariety(request));
+    }
+
+    @PutMapping("/varieties/{id}")
+    public ResponseEntity<VarietyResponse> updateVariety(@PathVariable Long id, @RequestBody UpdateVarietyRequest request) {
+        return ResponseEntity.ok(varietyService.updateVariety(id, request));
     }
 
     @GetMapping("/taxonomy/categories")

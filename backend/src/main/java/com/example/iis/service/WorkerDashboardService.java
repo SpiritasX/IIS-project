@@ -101,6 +101,7 @@ public class WorkerDashboardService {
 
         Map<String, Set<Long>> plantsByUnit = new HashMap<>();
         for (RelocationHistory rh : active) {
+            if (rh.getSector() == null || rh.getSector().getStorageSpace() == null) continue;
             String unitName = rh.getSector().getStorageSpace().getName();
             plantsByUnit.computeIfAbsent(unitName, k -> new HashSet<>()).add(rh.getPlant().getId());
         }
@@ -131,7 +132,7 @@ public class WorkerDashboardService {
                         rh.getStartTime(),
                         rh.getEndTime(),
                         rh.getPlant().getName(),
-                        rh.getSector().getName(),
+                        rh.getSector() != null ? rh.getSector().getName() : null,
                         rh.getReason(),
                         rh.getInStock()
                 ))

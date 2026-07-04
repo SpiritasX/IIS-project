@@ -23,3 +23,19 @@ export function getDashboardLogs(siteId) {
 export function getDeletionReasonStats() {
   return api.get('/botanist/dashboard/deletion-reasons')
 }
+
+export function getConditionDistribution(siteId) {
+  return api.get('/botanist/dashboard/condition-distribution', { params: siteId != null ? { siteId } : {} })
+}
+
+export function getPlantsNeedingAttention(siteId) {
+  return api.get('/botanist/dashboard/plants-needing-attention', { params: siteId != null ? { siteId } : {} })
+}
+
+export function getRecentConditions(siteId) {
+  return api.get('/botanist/dashboard/recent-conditions', { params: siteId != null ? { siteId } : {} })
+}
+
+export function getActiveRelocations() {
+  return api.get('/botanist/relocations/active')
+}

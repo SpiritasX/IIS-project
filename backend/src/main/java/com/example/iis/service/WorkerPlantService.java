@@ -107,13 +107,13 @@ public class WorkerPlantService {
             Sector sector = rh != null ? rh.getSector() : null;
             return new PlantDetailResponse(
                     p.getId(), p.getName(), p.getDescription(), p.getState(), p.getConditionDescription(),
-                    p.getPropagationMethod(), p.getHatchingDate(), p.getColor(), p.getHeight(),
+                    p.getLifecycleStage(), p.getHatchingDate(), p.getColor(), p.getHeight(),
                     v.getId(), v.getName(), v.getLatinName(),
                     v.getHumidity(), v.getSoil(), v.getInstructions(),
                     v.getStorageSpaceType() != null ? v.getStorageSpaceType().getName() : null,
                     sp.getName(), sp.getType().getName(), sp.getType().getCategory().getName(),
                     sector != null ? sector.getName() : null,
-                    sector != null ? sector.getStorageSpace().getName() : null,
+                    sector != null && sector.getStorageSpace() != null ? sector.getStorageSpace().getName() : null,
                     rh != null && rh.getNurserySite() != null ? rh.getNurserySite().getName() : null,
                     rh != null ? rh.getInStock() : null
             );
@@ -135,8 +135,10 @@ public class WorkerPlantService {
     public List<StorageSpaceResponse> getCompatibleStorageSpaces(Long varietyId) {
         PlantVariety variety = varietyRepository.findById(varietyId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Variety not found"));
-        String requiredType = variety.getStorageSpaceType().getName();
-        return storageSpaceRepository.findByType(requiredType).stream()
+        List<StorageSpace> spaces = variety.getStorageSpaceType() != null
+                ? storageSpaceRepository.findByType(variety.getStorageSpaceType().getName())
+                : storageSpaceRepository.findAll();
+        return spaces.stream()
                 .map(u -> new StorageSpaceResponse(
                         u.getId(), u.getName(), u.getType(),
                         u.getNurserySite() != null ? u.getNurserySite().getId() : null,
@@ -178,7 +180,7 @@ public class WorkerPlantService {
                 : variety.getName() + " lot";
 
         Plant plant = new Plant(plantName, null,
-                request.propagationMethod() != null ? request.propagationMethod() : null,
+                request.lifecycleStage() != null ? request.lifecycleStage() : null,
                 "Available", variety);
         if (request.state() != null && (request.state() < 1 || request.state() > 5)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "State must be between 1 and 5");
@@ -196,6 +198,15 @@ public class WorkerPlantService {
         if (site != null) rh.setNurserySite(site);
         relocationHistoryRepository.save(rh);
 
+        if (request.state() != null || request.lifecycleStage() != null ||
+                request.color() != null || request.height() != null || request.conditionDescription() != null) {
+            String createdBy = SecurityContextHolder.getContext().getAuthentication().getName();
+            plantConditionLogRepository.save(new PlantConditionLog(
+                    plant, request.state(), request.conditionDescription(),
+                    request.color(), request.height(), request.lifecycleStage(), createdBy
+            ));
+        }
+
         Optional<Long> activeStock = relocationHistoryRepository
                 .findActiveStockByPlantIds(List.of(plant.getId()))
                 .stream().findFirst().map(v -> v.getAvailableQuantity());
@@ -205,7 +216,7 @@ public class WorkerPlantService {
                 variety.getName(),
                 storageSpace.getName(), sector.getName(),
                 activeStock.orElse(request.quantity()),
-                plant.getPropagationMethod(),
+                plant.getLifecycleStage(),
                 plant.getHatchingDate(), plant.getColor(), plant.getHeight(),
                 plant.getState(), plant.getConditionDescription()
         );
@@ -221,7 +232,6 @@ public class WorkerPlantService {
         if (request.name() != null && !request.name().isBlank()) {
             plant.setName(request.name().trim());
         }
-        plant.setPropagationMethod(request.propagationMethod());
         plant.setHatchingDate(request.hatchingDate());
         plant.setColor(request.color());
         plant.setHeight(request.height());
@@ -268,7 +278,7 @@ public class WorkerPlantService {
         Long responseQuantity = updatedQuantity != null ? updatedQuantity : (rh != null ? rh.getInStock() : null);
         return new PlantDetailResponse(
                 plant.getId(), plant.getName(), plant.getDescription(), plant.getState(), plant.getConditionDescription(),
-                plant.getPropagationMethod(), plant.getHatchingDate(), plant.getColor(), plant.getHeight(),
+                plant.getLifecycleStage(), plant.getHatchingDate(), plant.getColor(), plant.getHeight(),
                 v.getId(), v.getName(), v.getLatinName(),
                 v.getHumidity(), v.getSoil(), v.getInstructions(),
                 v.getStorageSpaceType() != null ? v.getStorageSpaceType().getName() : null,
@@ -316,15 +326,28 @@ public class WorkerPlantService {
         if (request.state() != null && (request.state() < 1 || request.state() > 5)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "State must be between 1 and 5");
         }
+        if (request.lifecycleStage() != null) {
+            java.util.List<String> stages = java.util.List.of("Seme", "Mladica", "Zrela biljka");
+            String current = plant.getLifecycleStage();
+            if (current != null) {
+                int currentIdx = stages.indexOf(current);
+                int newIdx = stages.indexOf(request.lifecycleStage());
+                if (currentIdx >= 0 && newIdx >= 0 && newIdx < currentIdx) {
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                            "Lifecycle stage cannot go back to '" + request.lifecycleStage() + "'");
+                }
+            }
+        }
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         plant.setState(request.state());
         plant.setConditionDescription(request.conditionDescription());
         plant.setColor(request.color());
         plant.setHeight(request.height());
+        if (request.lifecycleStage() != null) plant.setLifecycleStage(request.lifecycleStage());
         plant = plantRepository.save(plant);
         plantConditionLogRepository.save(new PlantConditionLog(
                 plant, request.state(), request.conditionDescription(),
-                request.color(), request.height(), username
+                request.color(), request.height(), request.lifecycleStage(), username
         ));
 
         Map<Long, RelocationHistory> activeByPlant = relocationHistoryRepository.findByEndTimeIsNull()
@@ -340,7 +363,7 @@ public class WorkerPlantService {
         Sector sector = rh != null ? rh.getSector() : null;
         return new PlantDetailResponse(
                 plant.getId(), plant.getName(), plant.getDescription(), plant.getState(), plant.getConditionDescription(),
-                plant.getPropagationMethod(), plant.getHatchingDate(), plant.getColor(), plant.getHeight(),
+                plant.getLifecycleStage(), plant.getHatchingDate(), plant.getColor(), plant.getHeight(),
                 v.getId(), v.getName(), v.getLatinName(),
                 v.getHumidity(), v.getSoil(), v.getInstructions(),
                 v.getStorageSpaceType() != null ? v.getStorageSpaceType().getName() : null,
@@ -356,7 +379,7 @@ public class WorkerPlantService {
         return plantConditionLogRepository.findByPlant_IdOrderByChangedAtDesc(plantId).stream()
                 .map(l -> new PlantConditionLogEntry(
                         l.getId(), l.getConditionState(), l.getConditionDescription(),
-                        l.getColor(), l.getHeight(),
+                        l.getColor(), l.getHeight(), l.getLifecycleStage(),
                         l.getChangedAt().toString(), l.getChangedBy()
                 ))
                 .toList();
@@ -383,7 +406,7 @@ public class WorkerPlantService {
                 .stream()
                 .map(l -> new PlantConditionLogEntry(
                         l.getId(), l.getConditionState(), l.getConditionDescription(),
-                        l.getColor(), l.getHeight(),
+                        l.getColor(), l.getHeight(), l.getLifecycleStage(),
                         l.getChangedAt().toString(), l.getChangedBy()
                 ))
                 .toList();
@@ -421,9 +444,13 @@ public class WorkerPlantService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Plant not found"));
         Sector toSector = sectorRepository.findById(request.sectorId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Sector not found"));
-        Sector fromSector = relocationHistoryRepository.findFirstByPlant_IdAndEndTimeIsNull(plantId)
-                .map(RelocationHistory::getSector)
-                .orElse(null);
+        java.util.Optional<RelocationHistory> activeOpt = relocationHistoryRepository.findFirstByPlant_IdAndEndTimeIsNull(plantId);
+        Sector fromSector = activeOpt.map(RelocationHistory::getSector).orElse(null);
+        Long quantity = activeOpt.map(RelocationHistory::getInStock).orElse(0L);
+        if (toSector.getCapacity() != null && quantity != null && quantity > toSector.getCapacity()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Sector capacity (" + toSector.getCapacity() + ") is less than the quantity being transferred (" + quantity + ")");
+        }
         PlantRelocationLog log = plantRelocationLogRepository.save(
                 new PlantRelocationLog(plant, fromSector, toSector, username)
         );

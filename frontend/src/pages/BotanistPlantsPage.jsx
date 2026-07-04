@@ -147,7 +147,10 @@ function BotanistPlantsPage() {
                                 <DetailField label="Sector" value={p.sectorName} />
                                 <DetailField label="Storage type" value={p.storageSpaceTypeName} />
                                 <DetailField label="Condition" value={p.state != null ? `${p.state}/5` : null} />
-                                <DetailField label="Propagation" value={p.propagationMethod} />
+                                <div>
+                                  <span style={{ fontWeight: 600, color: 'var(--color-text-secondary)' }}>Part of life cycle: </span>
+                                  <span>{p.lifecycleStage ?? '—'}</span>
+                                </div>
                                 <DetailField label="Hatching date" value={p.hatchingDate} />
                                 <DetailField label="Color" value={p.color} />
                                 <DetailField label="Height (cm)" value={p.height} />

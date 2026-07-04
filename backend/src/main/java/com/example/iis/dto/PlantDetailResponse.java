@@ -8,7 +8,7 @@ public record PlantDetailResponse(
         String description,
         Integer state,
         String conditionDescription,
-        String propagationMethod,
+        String lifecycleStage,
         LocalDate hatchingDate,
         String color,
         Double height,
