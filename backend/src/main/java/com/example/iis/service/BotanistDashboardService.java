@@ -1,15 +1,22 @@
 package com.example.iis.service;
 
+import com.example.iis.dto.ConditionDistributionPoint;
+import com.example.iis.dto.ConditionLogEntry;
 import com.example.iis.dto.DashboardLogEntry;
 import com.example.iis.dto.DashboardStatsResponse;
+import com.example.iis.dto.DeletionReasonStatsPoint;
 import com.example.iis.dto.NurserySiteResponse;
 import com.example.iis.dto.RelocationDataPoint;
 import com.example.iis.dto.StockDataPoint;
+import com.example.iis.model.DeletionReason;
 import com.example.iis.model.HealthLog;
+import com.example.iis.model.PlantConditionLog;
 import com.example.iis.model.RelocationHistory;
 import com.example.iis.model.RemovalLog;
 import com.example.iis.repository.HealthLogRepository;
 import com.example.iis.repository.NurserySiteRepository;
+import com.example.iis.repository.PlantConditionLogRepository;
+import com.example.iis.repository.PlantDeletionLogRepository;
 import com.example.iis.repository.RelocationHistoryRepository;
 import com.example.iis.repository.RemovalLogRepository;
 import org.springframework.stereotype.Service;
@@ -17,35 +24,56 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 @Service
 @Transactional(readOnly = true)
 public class BotanistDashboardService {
 
+    private static final String[] CONDITION_LABELS = {null, "Uvenuće", "Jako loše", "Potrebna nega", "Stabilno", "Pristino"};
+
     private final NurserySiteRepository nurserySiteRepository;
     private final RelocationHistoryRepository relocationHistoryRepository;
     private final HealthLogRepository healthLogRepository;
     private final RemovalLogRepository removalLogRepository;
+    private final PlantDeletionLogRepository plantDeletionLogRepository;
+    private final PlantConditionLogRepository plantConditionLogRepository;
 
     public BotanistDashboardService(
             NurserySiteRepository nurserySiteRepository,
             RelocationHistoryRepository relocationHistoryRepository,
             HealthLogRepository healthLogRepository,
-            RemovalLogRepository removalLogRepository
+            RemovalLogRepository removalLogRepository,
+            PlantDeletionLogRepository plantDeletionLogRepository,
+            PlantConditionLogRepository plantConditionLogRepository
     ) {
         this.nurserySiteRepository = nurserySiteRepository;
         this.relocationHistoryRepository = relocationHistoryRepository;
         this.healthLogRepository = healthLogRepository;
         this.removalLogRepository = removalLogRepository;
+        this.plantDeletionLogRepository = plantDeletionLogRepository;
+        this.plantConditionLogRepository = plantConditionLogRepository;
+    }
+
+    public List<DeletionReasonStatsPoint> getDeletionReasonStats() {
+        Map<DeletionReason, Long> counts = new EnumMap<>(DeletionReason.class);
+        for (Object[] row : plantDeletionLogRepository.countGroupedByReason()) {
+            counts.put((DeletionReason) row[0], (Long) row[1]);
+        }
+        return Arrays.stream(DeletionReason.values())
+                .map(r -> new DeletionReasonStatsPoint(r.getLabel(), counts.getOrDefault(r, 0L)))
+                .toList();
     }
 
     public List<NurserySiteResponse> getSites() {
         return nurserySiteRepository.findAll().stream()
-                .map(s -> new NurserySiteResponse(s.getId(), s.getName(), s.getAddress()))
+                .map(s -> new NurserySiteResponse(s.getId(), s.getName(), s.getAddress(), null))
                 .toList();
     }
 
@@ -128,5 +156,60 @@ public class BotanistDashboardService {
                 .sorted(Comparator.comparing(DashboardLogEntry::timestamp).reversed())
                 .limit(20)
                 .toList();
+    }
+
+    public List<ConditionDistributionPoint> getConditionDistribution(Long siteId) {
+        List<Long> plantIds = activePlantIds(siteId);
+        if (plantIds.isEmpty()) {
+            return IntStream.rangeClosed(1, 5)
+                    .mapToObj(s -> new ConditionDistributionPoint(s, CONDITION_LABELS[s], 0L))
+                    .toList();
+        }
+        List<PlantConditionLog> latest = plantConditionLogRepository.findLatestPerPlants(plantIds);
+        Map<Integer, Long> counts = latest.stream()
+                .filter(l -> l.getConditionState() != null)
+                .collect(Collectors.groupingBy(PlantConditionLog::getConditionState, Collectors.counting()));
+        return IntStream.rangeClosed(1, 5)
+                .mapToObj(s -> new ConditionDistributionPoint(s, CONDITION_LABELS[s], counts.getOrDefault(s, 0L)))
+                .toList();
+    }
+
+    public List<ConditionLogEntry> getPlantsNeedingAttention(Long siteId) {
+        List<Long> plantIds = activePlantIds(siteId);
+        if (plantIds.isEmpty()) return List.of();
+        return plantConditionLogRepository.findLatestPerPlants(plantIds).stream()
+                .filter(l -> l.getConditionState() != null && l.getConditionState() <= 3)
+                .sorted(Comparator.comparingInt(PlantConditionLog::getConditionState))
+                .map(this::toConditionLogEntry)
+                .toList();
+    }
+
+    public List<ConditionLogEntry> getRecentConditionChanges(Long siteId) {
+        List<Long> plantIds = activePlantIds(siteId);
+        if (plantIds.isEmpty()) return List.of();
+        return plantConditionLogRepository.findTop20ByPlant_IdInOrderByChangedAtDesc(plantIds).stream()
+                .filter(l -> l.getConditionState() != null)
+                .map(this::toConditionLogEntry)
+                .toList();
+    }
+
+    private ConditionLogEntry toConditionLogEntry(PlantConditionLog l) {
+        int state = l.getConditionState();
+        return new ConditionLogEntry(
+                l.getPlant().getId(),
+                l.getPlant().getName(),
+                l.getPlant().getVariety().getName(),
+                state,
+                state >= 1 && state <= 5 ? CONDITION_LABELS[state] : String.valueOf(state),
+                l.getConditionDescription(),
+                l.getChangedAt().toString(),
+                l.getChangedBy()
+        );
+    }
+
+    private List<Long> activePlantIds(Long siteId) {
+        return siteId != null
+                ? relocationHistoryRepository.findActivePlantIdsBySite(siteId)
+                : relocationHistoryRepository.findAllActivePlantIds();
     }
 }

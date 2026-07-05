@@ -4,9 +4,9 @@ const sidebarItems = [
   { label: 'Profile', path: '/botanist' },
   { label: 'Requests', path: '/botanist' },
   { label: 'Reports', path: '/botanist' },
-  { label: 'Locations', path: '/botanist' },
-  { label: 'Plants', path: '/botanist/varieties' },
-  { label: 'Health logs', path: '/botanist' },
+  { label: 'Varieties', path: '/botanist/varieties' },
+  { label: 'Plants', path: '/botanist/plants' },
+  { label: 'Health logs', path: '/botanist/health-logs' },
   { label: 'Relocation logs', path: '/botanist' },
 ]
 

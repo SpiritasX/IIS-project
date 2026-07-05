@@ -3,6 +3,7 @@ package com.example.iis.dto;
 public record VarietyResponse(
         Long id,
         String name,
+        String latinName,
         Double humidity,
         String soil,
         String instructions,

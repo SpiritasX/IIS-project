@@ -14,12 +14,13 @@ public class Plant {
     private Long id;
     private String name;
     private String description;
-    private String propagationMethod;
+    private String lifecycleStage;
     private String status;
     private LocalDate hatchingDate;
     private String color;
     private Double height;
-    private String state;
+    private Integer state;
+    private String conditionDescription;
 
     @OneToMany(mappedBy = "plant", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<RelocationHistory> relocationHistory = new ArrayList<>();
@@ -49,9 +50,9 @@ public class Plant {
         this.variety = variety;
     }
 
-    public Plant(String name, String description, String propagationMethod, String status, PlantVariety variety) {
+    public Plant(String name, String description, String lifecycleStage, String status, PlantVariety variety) {
         this(name, description, status, variety);
-        this.propagationMethod = propagationMethod;
+        this.lifecycleStage = lifecycleStage;
     }
 
     public Long getId() {
@@ -62,6 +63,10 @@ public class Plant {
         return name;
     }
 
+    public void setName(String name) {
+        this.name = name;
+    }
+
     public String getDescription() {
         return description;
     }
@@ -70,12 +75,12 @@ public class Plant {
         this.description = description;
     }
 
-    public String getPropagationMethod() {
-        return propagationMethod;
+    public String getLifecycleStage() {
+        return lifecycleStage;
     }
 
-    public void setPropagationMethod(String propagationMethod) {
-        this.propagationMethod = propagationMethod;
+    public void setLifecycleStage(String lifecycleStage) {
+        this.lifecycleStage = lifecycleStage;
     }
 
     public String getStatus() {
@@ -110,12 +115,20 @@ public class Plant {
         this.height = height;
     }
 
-    public String getState() {
+    public Integer getState() {
         return state;
     }
 
-    public void setState(String state) {
+    public void setState(Integer state) {
         this.state = state;
+    }
+
+    public String getConditionDescription() {
+        return conditionDescription;
+    }
+
+    public void setConditionDescription(String conditionDescription) {
+        this.conditionDescription = conditionDescription;
     }
 
     public List<RelocationHistory> getRelocationHistory() {

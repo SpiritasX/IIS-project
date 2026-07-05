@@ -1,4 +1,4 @@
 package com.example.iis.dto;
 
-public record NurserySiteResponse(Long id, String name, String address) {
+public record NurserySiteResponse(Long id, String name, String address, Long storageSpacesCount) {
 }

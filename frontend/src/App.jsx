@@ -4,11 +4,19 @@ import AuthProvider from './contexts/AuthProvider'
 import CartProvider from './contexts/CartProvider'
 import AdminOrderAnalysisPage from './pages/AdminOrderAnalysisPage'
 import AdminDashboardPage from './pages/AdminDashboardPage'
+import AdminPlantsPage from './pages/AdminPlantsPage'
+import AdminHealthLogsPage from './pages/AdminHealthLogsPage'
+import AdminRelocationLogsPage from './pages/AdminRelocationLogsPage'
 import AddAdminPlantsPage from './pages/AddAdminPlantsPage'
 import AddNurserySitePage from './pages/AddNurserySitePage'
 import BotanistDashboardPage from './pages/BotanistDashboardPage'
+import BotanistHealthLogsPage from './pages/BotanistHealthLogsPage'
+import BotanistPlantsPage from './pages/BotanistPlantsPage'
 import VarietiesPage from './pages/VarietiesPage'
 import WorkerDashboardPage from './pages/WorkerDashboardPage'
+import WorkerPlantsPage from './pages/WorkerPlantsPage'
+import WorkerHealthLogsPage from './pages/WorkerHealthLogsPage'
+import WorkerRelocationLogsPage from './pages/WorkerRelocationLogsPage'
 import AddPlantsPage from './pages/AddPlantsPage'
 import StorageSpacesPage from './pages/StorageSpacesPage'
 import AddStorageSpacePage from './pages/AddStorageSpacePage'
@@ -22,7 +30,9 @@ import RequestsPage from './pages/RequestsPage'
 import SignUpPage from './pages/SignUpPage'
 import StaffRequestsPage from './pages/StaffRequestsPage'
 import * as adminLocationsApi from './api/adminLocations'
+import * as adminVarietiesApi from './api/adminVarieties'
 import * as locationsApi from './api/locations'
+import * as varietiesApi from './api/varieties'
 
 function App() {
   return (
@@ -76,6 +86,14 @@ function App() {
             path="/admin/plants"
             element={
               <ProtectedRoute allowedRoles={['ADMIN']}>
+                <AdminPlantsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/plants/add"
+            element={
+              <ProtectedRoute allowedRoles={['ADMIN']}>
                 <AddAdminPlantsPage />
               </ProtectedRoute>
             }
@@ -124,7 +142,31 @@ function App() {
             path="/botanist/varieties"
             element={
               <ProtectedRoute allowedRoles={['BOTANIST']}>
-                <VarietiesPage />
+                <VarietiesPage api={varietiesApi} basePath="/botanist" />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/varieties"
+            element={
+              <ProtectedRoute allowedRoles={['ADMIN']}>
+                <VarietiesPage api={adminVarietiesApi} basePath="/admin" />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/botanist/plants"
+            element={
+              <ProtectedRoute allowedRoles={['BOTANIST']}>
+                <BotanistPlantsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/botanist/health-logs"
+            element={
+              <ProtectedRoute allowedRoles={['BOTANIST']}>
+                <BotanistHealthLogsPage />
               </ProtectedRoute>
             }
           />
@@ -138,6 +180,14 @@ function App() {
           />
           <Route
             path="/worker/plants"
+            element={
+              <ProtectedRoute allowedRoles={['WORKER']}>
+                <WorkerPlantsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/worker/plants/add"
             element={
               <ProtectedRoute allowedRoles={['WORKER']}>
                 <AddPlantsPage />
@@ -207,6 +257,38 @@ function App() {
                   title="Worker Requests"
                   variant="worker"
                 />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/worker/health-logs"
+            element={
+              <ProtectedRoute allowedRoles={['WORKER']}>
+                <WorkerHealthLogsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/worker/relocation-logs"
+            element={
+              <ProtectedRoute allowedRoles={['WORKER']}>
+                <WorkerRelocationLogsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/health-logs"
+            element={
+              <ProtectedRoute allowedRoles={['ADMIN']}>
+                <AdminHealthLogsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/relocation-logs"
+            element={
+              <ProtectedRoute allowedRoles={['ADMIN']}>
+                <AdminRelocationLogsPage />
               </ProtectedRoute>
             }
           />

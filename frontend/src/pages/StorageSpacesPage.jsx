@@ -176,6 +176,7 @@ function StorageSpacesPage({ api, basePath }) {
                     <tr>
                       <th>Name</th>
                       <th>Address</th>
+                      <th>Storage spaces</th>
                       <th>Actions</th>
                     </tr>
                   </thead>
@@ -198,6 +199,7 @@ function StorageSpacesPage({ api, basePath }) {
                           {site.name}
                         </td>
                         <td>{site.address ?? '—'}</td>
+                        <td>{site.storageSpacesCount ?? 0}</td>
                         <td onClick={(e) => e.stopPropagation()}>
                           <button
                             className="variety-submit-button btn-danger"

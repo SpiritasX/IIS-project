@@ -1,6 +1,17 @@
 package com.example.iis.controller;
 
 import com.example.iis.dto.AddPlantLotRequest;
+import com.example.iis.dto.DeletePlantRequest;
+import com.example.iis.dto.DeletionLogEntry;
+import com.example.iis.dto.DeletionReasonStatsPoint;
+import com.example.iis.dto.PlantConditionLogEntry;
+import com.example.iis.dto.PlantDetailResponse;
+import com.example.iis.dto.PlantHealthLogEntry;
+import com.example.iis.dto.PlantRelocationEntry;
+import com.example.iis.dto.PlantRelocationLogEntry;
+import com.example.iis.dto.StartRelocationRequest;
+import com.example.iis.dto.UpdatePlantRequest;
+import com.example.iis.dto.UpdateRelocationStateRequest;
 import com.example.iis.dto.CreateSectorRequest;
 import com.example.iis.dto.CreateStorageSpaceRequest;
 import com.example.iis.dto.UpdateSectorRequest;
@@ -80,6 +91,11 @@ public class WorkerController {
         return ResponseEntity.ok(service.getRelocationLogs(siteId));
     }
 
+    @GetMapping("/plants/all")
+    public ResponseEntity<List<PlantDetailResponse>> getPlants() {
+        return ResponseEntity.ok(plantService.getPlants());
+    }
+
     @GetMapping("/plants/varieties")
     public ResponseEntity<List<VarietyResponse>> getVarieties() {
         return ResponseEntity.ok(plantService.getVarieties());
@@ -98,6 +114,67 @@ public class WorkerController {
     @PostMapping("/plants")
     public ResponseEntity<PlantLotResponse> addPlantLot(@RequestBody AddPlantLotRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(plantService.addPlantLot(request));
+    }
+
+    @PutMapping("/plants/{id}")
+    public ResponseEntity<PlantDetailResponse> updatePlant(@PathVariable Long id, @RequestBody UpdatePlantRequest request) {
+        return ResponseEntity.ok(plantService.updatePlant(id, request));
+    }
+
+    @DeleteMapping("/plants/{id}")
+    public ResponseEntity<Void> deletePlant(@PathVariable Long id, @RequestBody DeletePlantRequest request) {
+        plantService.deletePlant(id, request.reason());
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/dashboard/deletion-reasons")
+    public ResponseEntity<List<DeletionReasonStatsPoint>> getDeletionReasonStats() {
+        return ResponseEntity.ok(service.getDeletionReasonStats());
+    }
+
+    @GetMapping("/plants/{id}/health-logs")
+    public ResponseEntity<List<PlantHealthLogEntry>> getPlantHealthLogs(@PathVariable Long id) {
+        return ResponseEntity.ok(plantService.getPlantHealthLogs(id));
+    }
+
+    @GetMapping("/plants/{id}/relocation-history")
+    public ResponseEntity<List<PlantRelocationEntry>> getPlantRelocationHistory(@PathVariable Long id) {
+        return ResponseEntity.ok(plantService.getPlantRelocationHistory(id));
+    }
+
+    @GetMapping("/plants/{id}/condition-logs")
+    public ResponseEntity<List<PlantConditionLogEntry>> getPlantConditionLogs(@PathVariable Long id) {
+        return ResponseEntity.ok(plantService.getPlantConditionLogs(id));
+    }
+
+    @GetMapping("/plants/deletion-log")
+    public ResponseEntity<List<DeletionLogEntry>> getDeletionLog() {
+        return ResponseEntity.ok(plantService.getAllDeletionLogs());
+    }
+
+    @GetMapping("/plants/deletion-log/{id}/condition-history")
+    public ResponseEntity<List<PlantConditionLogEntry>> getDeletionLogConditionHistory(@PathVariable Long id) {
+        return ResponseEntity.ok(plantService.getConditionHistoryForDeletionLog(id));
+    }
+
+    @PostMapping("/plants/{id}/relocate")
+    public ResponseEntity<PlantRelocationLogEntry> startRelocation(@PathVariable Long id, @RequestBody StartRelocationRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(plantService.startRelocation(id, request));
+    }
+
+    @PutMapping("/relocations/{id}/state")
+    public ResponseEntity<PlantRelocationLogEntry> updateRelocationState(@PathVariable Long id, @RequestBody UpdateRelocationStateRequest request) {
+        return ResponseEntity.ok(plantService.updateRelocationState(id, request));
+    }
+
+    @GetMapping("/plants/{id}/relocation-logs")
+    public ResponseEntity<List<PlantRelocationLogEntry>> getPlantRelocationLogs(@PathVariable Long id) {
+        return ResponseEntity.ok(plantService.getPlantRelocationLogs(id));
+    }
+
+    @GetMapping("/relocations/active")
+    public ResponseEntity<List<PlantRelocationLogEntry>> getActiveRelocations() {
+        return ResponseEntity.ok(plantService.getActiveRelocations());
     }
 
     @GetMapping("/storage-space-types")

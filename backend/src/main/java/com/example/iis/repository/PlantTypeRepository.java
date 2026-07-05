@@ -7,4 +7,6 @@ import java.util.List;
 
 public interface PlantTypeRepository extends JpaRepository<PlantType, Long> {
     List<PlantType> findByCategory_Id(Long categoryId);
+    boolean existsByName(String name);
+    boolean existsByCategory_Id(Long categoryId);
 }

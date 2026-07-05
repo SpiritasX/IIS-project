@@ -36,6 +36,10 @@ public class PlantSpecies {
         return name;
     }
 
+    public void setName(String name) {
+        this.name = name;
+    }
+
     public PlantType getType() {
         return type;
     }

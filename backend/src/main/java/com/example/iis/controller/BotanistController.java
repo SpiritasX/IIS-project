@@ -1,28 +1,44 @@
 package com.example.iis.controller;
 
 import com.example.iis.dto.AddVarietyRequest;
+import com.example.iis.dto.UpdateVarietyRequest;
 import com.example.iis.dto.CategoryResponse;
+import com.example.iis.dto.PlantRelocationLogEntry;
+import com.example.iis.dto.DeletePlantRequest;
+import com.example.iis.dto.DeletionLogEntry;
+import com.example.iis.dto.DeletionReasonStatsPoint;
+import com.example.iis.dto.PlantConditionLogEntry;
+import com.example.iis.dto.PlantDetailResponse;
+import com.example.iis.dto.UpdatePlantConditionRequest;
+import com.example.iis.dto.CategoryTreeItem;
+import com.example.iis.dto.ConditionDistributionPoint;
+import com.example.iis.dto.ConditionLogEntry;
 import com.example.iis.dto.DashboardLogEntry;
-import com.example.iis.dto.StorageSpaceResponse;
 import com.example.iis.dto.DashboardStatsResponse;
 import com.example.iis.dto.NurserySiteResponse;
 import com.example.iis.dto.RelocationDataPoint;
 import com.example.iis.dto.SpeciesResponse;
 import com.example.iis.dto.StockDataPoint;
+import com.example.iis.dto.StorageSpaceTypeResponse;
 import com.example.iis.dto.TypeResponse;
 import com.example.iis.dto.VarietyResponse;
 import com.example.iis.service.BotanistDashboardService;
 import com.example.iis.service.PlantVarietyService;
+import com.example.iis.service.WorkerPlantService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/botanist")
@@ -30,10 +46,12 @@ public class BotanistController {
 
     private final BotanistDashboardService service;
     private final PlantVarietyService varietyService;
+    private final WorkerPlantService plantService;
 
-    public BotanistController(BotanistDashboardService service, PlantVarietyService varietyService) {
+    public BotanistController(BotanistDashboardService service, PlantVarietyService varietyService, WorkerPlantService plantService) {
         this.service = service;
         this.varietyService = varietyService;
+        this.plantService = plantService;
     }
 
     @GetMapping("/sites")
@@ -69,6 +87,62 @@ public class BotanistController {
         return ResponseEntity.ok(service.getRecentLogs(siteId));
     }
 
+    @GetMapping("/plants/all")
+    public ResponseEntity<List<PlantDetailResponse>> getPlants() {
+        return ResponseEntity.ok(plantService.getPlants());
+    }
+
+    @GetMapping("/dashboard/deletion-reasons")
+    public ResponseEntity<List<DeletionReasonStatsPoint>> getDeletionReasonStats() {
+        return ResponseEntity.ok(service.getDeletionReasonStats());
+    }
+
+    @GetMapping("/dashboard/condition-distribution")
+    public ResponseEntity<List<ConditionDistributionPoint>> getConditionDistribution(@RequestParam(required = false) Long siteId) {
+        return ResponseEntity.ok(service.getConditionDistribution(siteId));
+    }
+
+    @GetMapping("/dashboard/plants-needing-attention")
+    public ResponseEntity<List<ConditionLogEntry>> getPlantsNeedingAttention(@RequestParam(required = false) Long siteId) {
+        return ResponseEntity.ok(service.getPlantsNeedingAttention(siteId));
+    }
+
+    @GetMapping("/dashboard/recent-conditions")
+    public ResponseEntity<List<ConditionLogEntry>> getRecentConditions(@RequestParam(required = false) Long siteId) {
+        return ResponseEntity.ok(service.getRecentConditionChanges(siteId));
+    }
+
+    @GetMapping("/relocations/active")
+    public ResponseEntity<List<PlantRelocationLogEntry>> getActiveRelocations() {
+        return ResponseEntity.ok(plantService.getActiveRelocations());
+    }
+
+    @PutMapping("/plants/{id}/condition")
+    public ResponseEntity<PlantDetailResponse> updatePlantCondition(@PathVariable Long id, @RequestBody UpdatePlantConditionRequest request) {
+        return ResponseEntity.ok(plantService.updatePlantCondition(id, request));
+    }
+
+    @GetMapping("/plants/{id}/condition-logs")
+    public ResponseEntity<List<PlantConditionLogEntry>> getPlantConditionLogs(@PathVariable Long id) {
+        return ResponseEntity.ok(plantService.getPlantConditionLogs(id));
+    }
+
+    @GetMapping("/plants/deletion-log")
+    public ResponseEntity<List<DeletionLogEntry>> getDeletionLog() {
+        return ResponseEntity.ok(plantService.getAllDeletionLogs());
+    }
+
+    @GetMapping("/plants/deletion-log/{id}/condition-history")
+    public ResponseEntity<List<PlantConditionLogEntry>> getDeletionLogConditionHistory(@PathVariable Long id) {
+        return ResponseEntity.ok(plantService.getConditionHistoryForDeletionLog(id));
+    }
+
+    @DeleteMapping("/plants/{id}")
+    public ResponseEntity<Void> deletePlant(@PathVariable Long id, @RequestBody DeletePlantRequest request) {
+        plantService.deletePlant(id, request.reason());
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/varieties")
     public ResponseEntity<List<VarietyResponse>> getVarieties() {
         return ResponseEntity.ok(varietyService.getAllVarieties());
@@ -77,6 +151,11 @@ public class BotanistController {
     @PostMapping("/varieties")
     public ResponseEntity<VarietyResponse> addVariety(@RequestBody AddVarietyRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(varietyService.addVariety(request));
+    }
+
+    @PutMapping("/varieties/{id}")
+    public ResponseEntity<VarietyResponse> updateVariety(@PathVariable Long id, @RequestBody UpdateVarietyRequest request) {
+        return ResponseEntity.ok(varietyService.updateVariety(id, request));
     }
 
     @GetMapping("/taxonomy/categories")
@@ -95,7 +174,62 @@ public class BotanistController {
     }
 
     @GetMapping("/taxonomy/storage-spaces")
-    public ResponseEntity<List<StorageSpaceResponse>> getStorageSpaces() {
+    public ResponseEntity<List<StorageSpaceTypeResponse>> getStorageSpaces() {
         return ResponseEntity.ok(varietyService.getStorageSpaces());
+    }
+
+    @GetMapping("/taxonomy/tree")
+    public ResponseEntity<List<CategoryTreeItem>> getCategoryTree() {
+        return ResponseEntity.ok(varietyService.getCategoryTree());
+    }
+
+    @PostMapping("/taxonomy/categories")
+    public ResponseEntity<CategoryResponse> createCategory(@RequestBody Map<String, String> body) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(varietyService.createCategory(body.get("name")));
+    }
+
+    @PutMapping("/taxonomy/categories/{id}")
+    public ResponseEntity<CategoryResponse> renameCategory(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        return ResponseEntity.ok(varietyService.renameCategory(id, body.get("name")));
+    }
+
+    @DeleteMapping("/taxonomy/categories/{id}")
+    public ResponseEntity<Void> deleteCategory(@PathVariable Long id) {
+        varietyService.deleteCategory(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/taxonomy/types")
+    public ResponseEntity<TypeResponse> createType(@RequestBody Map<String, Object> body) {
+        Long categoryId = Long.valueOf(body.get("categoryId").toString());
+        return ResponseEntity.status(HttpStatus.CREATED).body(varietyService.createType(categoryId, (String) body.get("name")));
+    }
+
+    @PutMapping("/taxonomy/types/{id}")
+    public ResponseEntity<TypeResponse> renameType(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        return ResponseEntity.ok(varietyService.renameType(id, body.get("name")));
+    }
+
+    @DeleteMapping("/taxonomy/types/{id}")
+    public ResponseEntity<Void> deleteType(@PathVariable Long id) {
+        varietyService.deleteType(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/taxonomy/species")
+    public ResponseEntity<SpeciesResponse> createSpecies(@RequestBody Map<String, Object> body) {
+        Long typeId = Long.valueOf(body.get("typeId").toString());
+        return ResponseEntity.status(HttpStatus.CREATED).body(varietyService.createSpecies(typeId, (String) body.get("name")));
+    }
+
+    @PutMapping("/taxonomy/species/{id}")
+    public ResponseEntity<SpeciesResponse> renameSpecies(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        return ResponseEntity.ok(varietyService.renameSpecies(id, body.get("name")));
+    }
+
+    @DeleteMapping("/taxonomy/species/{id}")
+    public ResponseEntity<Void> deleteSpecies(@PathVariable Long id) {
+        varietyService.deleteSpecies(id);
+        return ResponseEntity.noContent().build();
     }
 }

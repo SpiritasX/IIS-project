@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface PlantPriceRepository extends JpaRepository<PlantPrice, Long> {
+    void deleteByPlant_Id(Long plantId);
     @Query("""
             select price from PlantPrice price
             join fetch price.plant plant

@@ -5,9 +5,10 @@ const sidebarItems = [
   { label: 'Requests', path: '/admin/requests' },
   { label: 'Reports', path: '/admin/order-analysis' },
   { label: 'Locations', path: '/admin/locations' },
+  { label: 'Varieties', path: '/admin/varieties' },
   { label: 'Plants', path: '/admin/plants' },
-  { label: 'Health logs', path: '/admin' },
-  { label: 'Relocation logs', path: '/admin' },
+  { label: 'Health logs', path: '/admin/health-logs' },
+  { label: 'Relocation logs', path: '/admin/relocation-logs' },
 ]
 
 function AdminSidebar({ sites, selectedSiteId, onSiteChange }) {

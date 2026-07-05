@@ -6,6 +6,7 @@ import {
   getSectors,
   getVarieties,
 } from '../api/adminPlants'
+import { getSites } from '../api/admin'
 import AdminSidebar from '../components/admin/AdminSidebar'
 import PageTitle from '../components/home/PageTitle'
 import SearchBar from '../components/home/SearchBar'
@@ -14,7 +15,7 @@ import '../styles/home.css'
 import '../styles/botanist.css'
 import '../styles/varieties.css'
 
-const PROPAGATION_OPTIONS = ['Seed', 'Slip', 'Sapling', 'Cuttings', 'Grafting', 'Division']
+const LIFECYCLE_OPTIONS = ['Seme', 'Mladica', 'Zrela biljka']
 
 const EMPTY_FORM = {
   varietyId: '',
@@ -22,17 +23,20 @@ const EMPTY_FORM = {
   sectorId: '',
   quantity: '',
   name: '',
-  propagationMethod: '',
+  lifecycleStage: '',
   hatchingDate: '',
   color: '',
   height: '',
   state: '',
+  conditionDescription: '',
 }
 
 function AddAdminPlantsPage() {
   const navigate = useNavigate()
   const { logout } = useAuth()
 
+  const [sites, setSites] = useState([])
+  const [selectedSiteId, setSelectedSiteId] = useState(null)
   const [varieties, setVarieties] = useState([])
   const [storageSpaces, setStorageSpaces] = useState([])
   const [sectors, setSectors] = useState([])
@@ -49,6 +53,7 @@ function AddAdminPlantsPage() {
 
   useEffect(() => {
     let ignore = false
+    getSites().then((r) => { if (!ignore) setSites(r.data) }).catch(() => {})
     getVarieties()
       .then((res) => { if (!ignore) setVarieties(res.data) })
       .catch(() => {})
@@ -65,17 +70,22 @@ function AddAdminPlantsPage() {
       return
     }
     let ignore = false
-    getCompatibleStorageSpaces(form.varietyId).then((res) => {
-      if (!ignore) {
-        setStorageSpaces(res.data)
-        const variety = varieties.find((v) => String(v.id) === String(form.varietyId))
-        setRecommendedStorageSpaceType(variety?.storageSpaceTypeName ?? '')
-        setForm((prev) => ({ ...prev, storageSpaceId: res.data[0]?.id ?? '', sectorId: '' }))
-        setSectors([])
-      }
-    })
+    getCompatibleStorageSpaces(form.varietyId)
+      .then((res) => {
+        if (!ignore) {
+          const filtered = selectedSiteId
+            ? res.data.filter((s) => !s.siteId || s.siteId === selectedSiteId)
+            : res.data
+          setStorageSpaces(filtered)
+          const variety = varieties.find((v) => String(v.id) === String(form.varietyId))
+          setRecommendedStorageSpaceType(variety?.storageSpaceTypeName ?? '')
+          setForm((prev) => ({ ...prev, storageSpaceId: filtered[0]?.id ?? '', sectorId: '' }))
+          setSectors([])
+        }
+      })
+      .catch(() => {})
     return () => { ignore = true }
-  }, [form.varietyId])
+  }, [form.varietyId, selectedSiteId])
 
   useEffect(() => {
     if (!form.storageSpaceId) {
@@ -117,11 +127,12 @@ function AddAdminPlantsPage() {
         sectorId: Number(form.sectorId),
         quantity: Number(form.quantity),
         name: form.name.trim() || null,
-        propagationMethod: form.propagationMethod || null,
+        lifecycleStage: form.lifecycleStage || null,
         hatchingDate: form.hatchingDate || null,
         color: form.color.trim() || null,
         height: form.height ? Number(form.height) : null,
-        state: form.state.trim() || null,
+        state: form.state ? Number(form.state) : null,
+        conditionDescription: form.conditionDescription.trim() || null,
       })
       setLots((prev) => [res.data, ...prev])
       setForm(EMPTY_FORM)
@@ -173,7 +184,16 @@ function AddAdminPlantsPage() {
       <PageTitle label="Add Plants" onBack={handleLogout} />
 
       <section className="home-body">
-        <AdminSidebar onSiteChange={() => {}} selectedSiteId={null} sites={[]} />
+        <AdminSidebar
+          onSiteChange={(id) => {
+            setSelectedSiteId(id)
+            setForm((prev) => ({ ...prev, storageSpaceId: '', sectorId: '' }))
+            setStorageSpaces([])
+            setSectors([])
+          }}
+          selectedSiteId={selectedSiteId}
+          sites={sites}
+        />
 
         <div className="varieties-content">
           <section className="variety-form-card" aria-labelledby="add-plants-heading">
@@ -244,7 +264,7 @@ function AddAdminPlantsPage() {
                     <option value="">Select storage space</option>
                     {storageSpaces.map((u) => (
                       <option key={u.id} value={u.id}>
-                        {u.name} ({u.type})
+                        {u.siteName ? `${u.siteName} / ` : ''}{u.name} ({u.type})
                       </option>
                     ))}
                   </select>
@@ -290,18 +310,18 @@ function AddAdminPlantsPage() {
                 </div>
 
                 <div className="variety-field">
-                  <label className="variety-label" htmlFor="propagationMethod">
-                    Propagation method
+                  <label className="variety-label" htmlFor="lifecycleStage">
+                    Part of life cycle
                   </label>
                   <select
                     className="variety-select"
-                    id="propagationMethod"
-                    name="propagationMethod"
+                    id="lifecycleStage"
+                    name="lifecycleStage"
                     onChange={handleField}
-                    value={form.propagationMethod}
+                    value={form.lifecycleStage}
                   >
                     <option value="">Not specified</option>
-                    {PROPAGATION_OPTIONS.map((m) => (
+                    {LIFECYCLE_OPTIONS.map((m) => (
                       <option key={m} value={m}>{m}</option>
                     ))}
                   </select>
@@ -359,14 +379,36 @@ function AddAdminPlantsPage() {
                   <label className="variety-label" htmlFor="state">
                     State / condition
                   </label>
-                  <input
-                    className="variety-input"
+                  <select
+                    className="variety-select"
                     id="state"
                     name="state"
                     onChange={handleField}
-                    placeholder="e.g. Seedling, Healthy"
-                    type="text"
                     value={form.state}
+                  >
+                    <option value="">Nije ocenjeno</option>
+                    <option value="1">1 — Uvenuće</option>
+                    <option value="2">2 — Vrlo loše</option>
+                    <option value="3">3 — Potrebna nega</option>
+                    <option value="4">4 — Stabilno</option>
+                    <option value="5">5 — Pristino</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="variety-form-row">
+                <div className="variety-field">
+                  <label className="variety-label" htmlFor="conditionDescription">
+                    Condition description (optional)
+                  </label>
+                  <textarea
+                    className="variety-textarea"
+                    id="conditionDescription"
+                    name="conditionDescription"
+                    onChange={handleField}
+                    placeholder="Describe the plant's current condition…"
+                    rows={2}
+                    value={form.conditionDescription}
                   />
                 </div>
               </div>
@@ -405,7 +447,7 @@ function AddAdminPlantsPage() {
                     <th>Storage space</th>
                     <th>Sector</th>
                     <th>Qty</th>
-                    <th>Propagation</th>
+                    <th>Life cycle</th>
                     <th>State</th>
                   </tr>
                 </thead>
@@ -419,8 +461,8 @@ function AddAdminPlantsPage() {
                         <span className="variety-category-badge">{lot.parcelName}</span>
                       </td>
                       <td>{lot.quantity}</td>
-                      <td>{lot.propagationMethod ?? '—'}</td>
-                      <td>{lot.state ?? '—'}</td>
+                      <td>{lot.lifecycleStage ?? '—'}</td>
+                      <td>{lot.state != null ? `${lot.state}/5` : '—'}</td>
                     </tr>
                   ))}
                 </tbody>

@@ -159,10 +159,6 @@ public class LocationManagementService {
 
     public void delete(Long id) {
         StorageSpace space = findOrThrow(id);
-        if (plantVarietyRepository.existsByStorageSpaceType_Id(id)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Cannot delete: this storage space is used as a type by one or more plant varieties");
-        }
         for (Sector sector : space.getSectors()) {
             guardSectorDeletion(sector.getId());
         }

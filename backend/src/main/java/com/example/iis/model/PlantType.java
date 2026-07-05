@@ -36,6 +36,10 @@ public class PlantType {
         return name;
     }
 
+    public void setName(String name) {
+        this.name = name;
+    }
+
     public PlantCategory getCategory() {
         return category;
     }

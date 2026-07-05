@@ -7,8 +7,8 @@ const sidebarItems = [
   { label: 'Locations', path: '/worker/locations' },
   { label: 'Plants', path: '/worker/plants' },
   { label: 'Plant prices', path: '/worker/plant-prices' },
-  { label: 'Health logs', path: '/worker' },
-  { label: 'Relocation logs', path: '/worker' },
+  { label: 'Health logs', path: '/worker/health-logs' },
+  { label: 'Relocation logs', path: '/worker/relocation-logs' },
 ]
 
 function WorkerSidebar({ sites, selectedSiteId, onSiteChange }) {

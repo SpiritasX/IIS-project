@@ -19,3 +19,7 @@ export function getPlantCountByUnit(siteId) {
 export function getRelocationLogs(siteId) {
   return api.get('/worker/dashboard/relocation-logs', { params: siteId != null ? { siteId } : {} })
 }
+
+export function getDeletionReasonStats() {
+  return api.get('/worker/dashboard/deletion-reasons')
+}

@@ -51,4 +51,11 @@ public interface RelocationHistoryRepository extends JpaRepository<RelocationHis
     List<RelocationHistory> findTop20ByOrderByStartTimeDesc();
 
     boolean existsBySector_Id(Long sectorId);
+
+    java.util.Optional<RelocationHistory> findFirstByPlant_IdAndEndTimeIsNull(Long plantId);
+
+    @Query("SELECT COALESCE(SUM(rh.inStock), 0) FROM RelocationHistory rh WHERE rh.sector.id = :sectorId AND rh.endTime IS NULL")
+    Long sumActiveStockBySector(@Param("sectorId") Long sectorId);
+
+    List<RelocationHistory> findByPlant_IdOrderByStartTimeDesc(Long plantId);
 }

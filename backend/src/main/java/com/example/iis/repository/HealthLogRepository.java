@@ -10,4 +10,6 @@ public interface HealthLogRepository extends JpaRepository<HealthLog, Long> {
     List<HealthLog> findTop20ByPlant_IdInOrderByTimestampDesc(Collection<Long> plantIds);
 
     List<HealthLog> findTop20ByOrderByTimestampDesc();
+
+    List<HealthLog> findByPlant_IdOrderByTimestampDesc(Long plantId);
 }

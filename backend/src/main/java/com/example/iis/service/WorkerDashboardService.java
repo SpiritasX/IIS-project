@@ -1,11 +1,14 @@
 package com.example.iis.service;
 
+import com.example.iis.dto.DeletionReasonStatsPoint;
 import com.example.iis.dto.NurserySiteResponse;
 import com.example.iis.dto.PlantCountByUnitPoint;
 import com.example.iis.dto.RelocationLogEntry;
 import com.example.iis.dto.StockByVarietyPoint;
 import com.example.iis.dto.WorkerStatsResponse;
+import com.example.iis.model.DeletionReason;
 import com.example.iis.model.RelocationHistory;
+import com.example.iis.repository.PlantDeletionLogRepository;
 import com.example.iis.repository.StorageSpaceRepository;
 import com.example.iis.repository.NurserySiteRepository;
 import com.example.iis.repository.PlantRepository;
@@ -14,6 +17,8 @@ import com.example.iis.repository.RelocationHistoryRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Arrays;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -30,24 +35,28 @@ public class WorkerDashboardService {
     private final PlantVarietyRepository plantVarietyRepository;
     private final PlantRepository plantRepository;
     private final StorageSpaceRepository storageSpaceRepository;
+    private final PlantDeletionLogRepository plantDeletionLogRepository;
 
     public WorkerDashboardService(
             NurserySiteRepository nurserySiteRepository,
             RelocationHistoryRepository relocationHistoryRepository,
             PlantVarietyRepository plantVarietyRepository,
             PlantRepository plantRepository,
-            StorageSpaceRepository storageSpaceRepository
+            StorageSpaceRepository storageSpaceRepository,
+            PlantDeletionLogRepository plantDeletionLogRepository
     ) {
         this.nurserySiteRepository = nurserySiteRepository;
         this.relocationHistoryRepository = relocationHistoryRepository;
         this.plantVarietyRepository = plantVarietyRepository;
         this.plantRepository = plantRepository;
         this.storageSpaceRepository = storageSpaceRepository;
+        this.plantDeletionLogRepository = plantDeletionLogRepository;
     }
 
     public List<NurserySiteResponse> getSites() {
         return nurserySiteRepository.findAll().stream()
-                .map(s -> new NurserySiteResponse(s.getId(), s.getName(), s.getAddress()))
+                .map(s -> new NurserySiteResponse(s.getId(), s.getName(), s.getAddress(),
+                        storageSpaceRepository.countByNurserySite_Id(s.getId())))
                 .toList();
     }
 
@@ -92,6 +101,7 @@ public class WorkerDashboardService {
 
         Map<String, Set<Long>> plantsByUnit = new HashMap<>();
         for (RelocationHistory rh : active) {
+            if (rh.getSector() == null || rh.getSector().getStorageSpace() == null) continue;
             String unitName = rh.getSector().getStorageSpace().getName();
             plantsByUnit.computeIfAbsent(unitName, k -> new HashSet<>()).add(rh.getPlant().getId());
         }
@@ -99,6 +109,16 @@ public class WorkerDashboardService {
         return plantsByUnit.entrySet().stream()
                 .sorted(Map.Entry.comparingByKey())
                 .map(e -> new PlantCountByUnitPoint(e.getKey(), (long) e.getValue().size()))
+                .toList();
+    }
+
+    public List<DeletionReasonStatsPoint> getDeletionReasonStats() {
+        Map<DeletionReason, Long> counts = new EnumMap<>(DeletionReason.class);
+        for (Object[] row : plantDeletionLogRepository.countGroupedByReason()) {
+            counts.put((DeletionReason) row[0], (Long) row[1]);
+        }
+        return Arrays.stream(DeletionReason.values())
+                .map(r -> new DeletionReasonStatsPoint(r.getLabel(), counts.getOrDefault(r, 0L)))
                 .toList();
     }
 
@@ -112,7 +132,7 @@ public class WorkerDashboardService {
                         rh.getStartTime(),
                         rh.getEndTime(),
                         rh.getPlant().getName(),
-                        rh.getSector().getName(),
+                        rh.getSector() != null ? rh.getSector().getName() : null,
                         rh.getReason(),
                         rh.getInStock()
                 ))

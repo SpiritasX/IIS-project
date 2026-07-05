@@ -70,6 +70,11 @@ public class DataSeeder {
             Sector defaultSector = defaultStorageSpace.getSectors().get(0);
             NurserySite defaultSite = defaultStorageSpace.getNurserySite();
 
+            StorageSpaceType defaultSpaceType = storageSpaceTypeRepository.findAll().stream()
+                    .filter(t -> "Staklenik".equals(t.getName()))
+                    .findFirst()
+                    .orElseGet(() -> storageSpaceTypeRepository.save(new StorageSpaceType("Staklenik")));
+
             if (plantPriceRepository.count() == 0) {
                 seedCatalog(
                         plantCategoryRepository,
@@ -78,11 +83,11 @@ public class DataSeeder {
                         plantVarietyRepository,
                         plantRepository,
                         plantPriceRepository,
-                        defaultStorageSpace
+                        defaultSpaceType
                 );
             }
 
-            assignDefaultStorageSpaceToExistingVarieties(plantVarietyRepository, defaultStorageSpace);
+            assignDefaultStorageSpaceToExistingVarieties(plantVarietyRepository, defaultSpaceType);
             seedInitialStock(plantRepository, defaultSector, defaultSite, relocationHistoryRepository);
         };
     }
@@ -125,7 +130,8 @@ public class DataSeeder {
             return sites.get(0);
         }
 
-        return null;
+        NurserySite seed = new NurserySite("Novi Sad", 45.2671, 19.8335);
+        return nurserySiteRepository.save(seed);
     }
 
     private void seedCatalog(
@@ -135,7 +141,7 @@ public class DataSeeder {
             PlantVarietyRepository plantVarietyRepository,
             PlantRepository plantRepository,
             PlantPriceRepository plantPriceRepository,
-            StorageSpace defaultStorageSpace
+            StorageSpaceType defaultStorageSpaceType
     ) {
         PlantCategory flowers = plantCategoryRepository.save(new PlantCategory("Flowers"));
         PlantCategory herbs = plantCategoryRepository.save(new PlantCategory("Herbs"));
@@ -153,19 +159,19 @@ public class DataSeeder {
 
         PlantVariety lavender = plantVarietyRepository.save(new PlantVariety(
                 "English lavender", 45.0, "Well-drained alkaline soil",
-                "Keep in full sun and water sparingly.", lavenderSpecies, defaultStorageSpace));
+                "Keep in full sun and water sparingly.", lavenderSpecies, defaultStorageSpaceType));
         PlantVariety basil = plantVarietyRepository.save(new PlantVariety(
                 "Genovese basil", 60.0, "Rich, moist soil",
-                "Pinch top leaves often to encourage growth.", basilSpecies, defaultStorageSpace));
+                "Pinch top leaves often to encourage growth.", basilSpecies, defaultStorageSpaceType));
         PlantVariety olive = plantVarietyRepository.save(new PlantVariety(
                 "Arbequina olive", 40.0, "Sandy loam",
-                "Place in a warm bright spot and avoid overwatering.", oliveSpecies, defaultStorageSpace));
+                "Place in a warm bright spot and avoid overwatering.", oliveSpecies, defaultStorageSpaceType));
         PlantVariety mint = plantVarietyRepository.save(new PlantVariety(
                 "Spearmint", 65.0, "Moist garden soil",
-                "Trim runners and keep soil evenly moist.", mintSpecies, defaultStorageSpace));
+                "Trim runners and keep soil evenly moist.", mintSpecies, defaultStorageSpaceType));
         PlantVariety rose = plantVarietyRepository.save(new PlantVariety(
                 "Garden rose", 55.0, "Loamy soil",
-                "Prune spent blooms and water at the base.", roseSpecies, defaultStorageSpace));
+                "Prune spent blooms and water at the base.", roseSpecies, defaultStorageSpaceType));
 
         savePlantWithPrice(plantRepository, plantPriceRepository,
                 new Plant("Lavender starter", "Hardy young lavender plant with rich fragrance and strong roots.",
@@ -234,14 +240,14 @@ public class DataSeeder {
 
     private void assignDefaultStorageSpaceToExistingVarieties(
             PlantVarietyRepository plantVarietyRepository,
-            StorageSpace defaultStorageSpace
+            StorageSpaceType defaultSpaceType
     ) {
         List<PlantVariety> varieties = plantVarietyRepository.findAll();
         boolean changed = false;
 
         for (PlantVariety variety : varieties) {
             if (variety.getStorageSpaceType() == null) {
-                variety.setStorageSpaceType(defaultStorageSpace);
+                variety.setStorageSpaceType(defaultSpaceType);
                 changed = true;
             }
         }
