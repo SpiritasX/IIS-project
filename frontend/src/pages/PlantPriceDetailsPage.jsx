@@ -56,6 +56,10 @@ function formatDate(value) {
   }).format(date)
 }
 
+function formatEndDate(value) {
+  return value ? formatDate(value) : 'Active'
+}
+
 function formatChartDate(value) {
   if (!value) return ''
 
@@ -176,6 +180,52 @@ function LineTrendChart({ color, data, emptyLabel, legend, title, valueFormatter
   )
 }
 
+function PriceHistoryTable({ loading, plantName, prices }) {
+  const rows = [...prices].reverse()
+
+  return (
+    <section className="price-history-panel">
+      <div className="price-history-header">
+        <span className="price-select-label">Selected plant</span>
+        <h2 className="price-selected-plant-name">{plantName}</h2>
+      </div>
+
+      <div className="price-history-table-wrap">
+        <table className="price-history-table">
+          <thead>
+            <tr>
+              <th>Changed to</th>
+              <th>Start date</th>
+              <th>End date</th>
+              <th>Changed by</th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
+              <tr>
+                <td colSpan="4">Loading price history...</td>
+              </tr>
+            ) : rows.length > 0 ? (
+              rows.map((price) => (
+                <tr key={price.id}>
+                  <td>{formatNumber(price.price)}</td>
+                  <td>{formatDate(price.startTime)}</td>
+                  <td>{formatEndDate(price.endTime)}</td>
+                  <td>{price.changedByUsername ?? 'Dynamic'}</td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan="4">No price history for this plant.</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  )
+}
+
 function PlantPriceDetailsPage() {
   const navigate = useNavigate()
   const { logout, user } = useAuth()
@@ -293,8 +343,6 @@ function PlantPriceDetailsPage() {
       plant.status?.toLowerCase().includes(normalizedSearch)
     ))
   }, [plants, searchTerm])
-
-  const totalDemand = demandHistory.reduce((sum, item) => sum + toNumber(item.quantity), 0)
 
   async function handleLogout() {
     await logout()
@@ -424,37 +472,11 @@ function PlantPriceDetailsPage() {
         <WorkerSidebar onSiteChange={() => {}} selectedSiteId={null} sites={[]} />
 
         <div className="price-details-content">
-          <section className="price-details-hero">
-            <div className="price-plant-image" aria-hidden="true">
-              <span />
-            </div>
-
-            <div className="price-plant-summary">
-              <span className="price-select-label">Selected plant</span>
-              <h2 className="price-selected-plant-name">
-                {selectedPlant?.name ?? (loadingPlants ? 'Loading plants...' : 'No plant selected')}
-              </h2>
-
-              <div className="price-summary-grid">
-                <div>
-                  <span>Current price</span>
-                  <strong>{currentPrice ? formatNumber(currentPrice.price) : formatNumber(selectedPlant?.price)}</strong>
-                </div>
-                <div>
-                  <span>Active since</span>
-                  <strong>{formatDate(currentPrice?.startTime)}</strong>
-                </div>
-                <div>
-                  <span>Total demand</span>
-                  <strong>{formatNumber(totalDemand)}</strong>
-                </div>
-                <div>
-                  <span>Changed by</span>
-                  <strong>{currentPrice?.changedByUsername ?? 'Dynamic'}</strong>
-                </div>
-              </div>
-            </div>
-          </section>
+          <PriceHistoryTable
+            loading={loadingPlants || loadingDetails}
+            plantName={selectedPlant?.name ?? (loadingPlants ? 'Loading plants...' : 'No plant selected')}
+            prices={priceHistory}
+          />
 
           {pageError && <p className="price-message price-message-error" role="alert">{pageError}</p>}
           {actionError && <p className="price-message price-message-error" role="alert">{actionError}</p>}

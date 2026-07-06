@@ -86,7 +86,7 @@ public class PlantPriceService {
     }
 
     public List<PlantDemandResponse> plantDemandView(Long plantId) {
-        List<OrderHistoryItem> items = orderHistoryItemRepository.findByPlantPrice_Plant_IdAndOrderHistory_Offer_Status_Name(plantId, "Rezervacija");
+        List<OrderHistoryItem> items = orderHistoryItemRepository.findByPlantPrice_Plant_IdAndOrderHistory_Offer_Status_NameIn(plantId, List.of("Rezervacija", "Spremno", "Isporuka", "Isporuceno"));
 
         Map<String, Long> sumaPoMesecu = new TreeMap<>();
 

@@ -4,10 +4,14 @@ import com.example.iis.model.Admin;
 import com.example.iis.model.Botanist;
 import com.example.iis.model.CancellationReason;
 import com.example.iis.model.NurserySite;
+import com.example.iis.model.Offer;
 import com.example.iis.model.Sector;
 import com.example.iis.model.StorageSpace;
 import com.example.iis.model.StorageSpaceType;
 import com.example.iis.model.OfferStatus;
+import com.example.iis.model.OrderHistory;
+import com.example.iis.model.OrderHistoryItem;
+import com.example.iis.model.OrderItem;
 import com.example.iis.model.PhaseType;
 import com.example.iis.model.Plant;
 import com.example.iis.model.PlantCategory;
@@ -20,6 +24,8 @@ import com.example.iis.model.Worker;
 import com.example.iis.repository.AccountRepository;
 import com.example.iis.repository.CancellationReasonRepository;
 import com.example.iis.repository.NurserySiteRepository;
+import com.example.iis.repository.OfferRepository;
+import com.example.iis.repository.OrderHistoryItemRepository;
 import com.example.iis.repository.StorageSpaceRepository;
 import com.example.iis.repository.StorageSpaceTypeRepository;
 import com.example.iis.repository.OfferStatusRepository;
@@ -37,6 +43,9 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.util.Date;
 import java.util.List;
 
 @Configuration
@@ -57,7 +66,9 @@ public class DataSeeder {
             PlantRepository plantRepository,
             PlantPriceRepository plantPriceRepository,
             RelocationHistoryRepository relocationHistoryRepository,
-            PasswordEncoder passwordEncoder
+            PasswordEncoder passwordEncoder,
+            OfferRepository offerRepository,
+            OrderHistoryItemRepository orderHistoryItemRepository
     ) {
         return args -> {
             seedStaffAccounts(accountRepository, passwordEncoder);
@@ -89,7 +100,87 @@ public class DataSeeder {
 
             assignDefaultStorageSpaceToExistingVarieties(plantVarietyRepository, defaultSpaceType);
             seedInitialStock(plantRepository, defaultSector, defaultSite, relocationHistoryRepository);
+            seedBasilDemandTestData(
+                    plantRepository,
+                    plantPriceRepository,
+                    offerStatusRepository,
+                    offerRepository,
+                    orderHistoryItemRepository
+            );
         };
+    }
+
+    private void seedBasilDemandTestData(
+            PlantRepository plantRepository,
+            PlantPriceRepository plantPriceRepository,
+            OfferStatusRepository offerStatusRepository,
+            OfferRepository offerRepository,
+            OrderHistoryItemRepository orderHistoryItemRepository
+    ) {
+        Plant basil = plantRepository.findAll().stream()
+                .filter(plant -> "Basil seedling".equals(plant.getName()))
+                .findFirst()
+                .orElse(null);
+
+        if (basil == null) {
+            return;
+        }
+
+        PlantPrice basilPrice = plantPriceRepository
+                .findByPlant_IdAndEndTimeIsNull(basil.getId())
+                .orElse(null);
+
+        if (basilPrice == null) {
+            return;
+        }
+
+        saveDemandSnapshot(offerRepository, offerStatusRepository, orderHistoryItemRepository,
+                basilPrice, "Rezervacija", LocalDate.of(2026, 1, 12), 4);
+        saveDemandSnapshot(offerRepository, offerStatusRepository, orderHistoryItemRepository,
+                basilPrice, "Rezervacija", LocalDate.of(2026, 2, 9), 7);
+        saveDemandSnapshot(offerRepository, offerStatusRepository, orderHistoryItemRepository,
+                basilPrice, "Spremno", LocalDate.of(2026, 3, 15), 11);
+        saveDemandSnapshot(offerRepository, offerStatusRepository, orderHistoryItemRepository,
+                basilPrice, "Isporuka", LocalDate.of(2026, 4, 18), 15);
+        saveDemandSnapshot(offerRepository, offerStatusRepository, orderHistoryItemRepository,
+                basilPrice, "Rezervacija", LocalDate.of(2026, 5, 21), 9);
+    }
+
+    private void saveDemandSnapshot(
+            OfferRepository offerRepository,
+            OfferStatusRepository offerStatusRepository,
+            OrderHistoryItemRepository orderHistoryItemRepository,
+            PlantPrice plantPrice,
+            String statusName,
+            LocalDate date,
+            int quantity
+    ) {
+        Date changedAt = dateAtStartOfDay(date);
+
+        if (orderHistoryItemRepository
+                .existsByPlantPrice_Plant_IdAndOrderHistory_ChangedAtAndOrderHistory_Offer_Status_Name(
+                        plantPrice.getPlant().getId(),
+                        changedAt,
+                        statusName
+                )) {
+            return;
+        }
+
+        OfferStatus status = offerStatusRepository.findByName(statusName)
+                .orElseThrow();
+
+        Offer offer = new Offer(status, List.of(plantPrice));
+        offer.addItem(new OrderItem(plantPrice, quantity, quantity, quantity));
+
+        OrderHistory history = new OrderHistory(offer, changedAt);
+        history.addItem(new OrderHistoryItem(plantPrice, quantity));
+        offer.addOrderHistory(history);
+
+        offerRepository.save(offer);
+    }
+
+    private Date dateAtStartOfDay(LocalDate date) {
+        return Date.from(date.atStartOfDay(ZoneId.systemDefault()).toInstant());
     }
 
     private StorageSpace ensureDefaultStorageSpace(StorageSpaceRepository storageSpaceRepository,
