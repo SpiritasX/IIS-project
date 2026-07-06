@@ -30,6 +30,7 @@ import com.example.iis.repository.CancellationReasonRepository;
 import com.example.iis.repository.CustomerRepository;
 import com.example.iis.repository.OfferRepository;
 import com.example.iis.repository.OfferStatusRepository;
+import com.example.iis.repository.OrderItemRepository;
 import com.example.iis.repository.PhaseTypeRepository;
 import com.example.iis.repository.PlantPriceRepository;
 import com.example.iis.repository.ProcessRepository;
@@ -62,6 +63,11 @@ public class OrderService {
     private static final String PHASE_RESERVATION = "Rezervacija";
     private static final String PHASE_READY = "Spremno";
     private static final String PHASE_DELIVERY = "Isporuka";
+    private static final List<String> PRICE_LOCK_STATUSES = List.of(
+            STATUS_RESERVATION,
+            STATUS_READY,
+            STATUS_DELIVERY
+    );
 
     private static final String CUSTOMER_CANCELLATION_REASON = "Customer cancellation";
     private static final String STAFF_CANCELLATION_REASON = "Staff cancellation";
@@ -72,6 +78,7 @@ public class OrderService {
     private final CustomerRepository customerRepository;
     private final OfferRepository offerRepository;
     private final OfferStatusRepository offerStatusRepository;
+    private final OrderItemRepository orderItemRepository;
     private final PhaseTypeRepository phaseTypeRepository;
     private final PlantPriceRepository plantPriceRepository;
     private final ProcessRepository processRepository;
@@ -82,6 +89,7 @@ public class OrderService {
             CustomerRepository customerRepository,
             OfferRepository offerRepository,
             OfferStatusRepository offerStatusRepository,
+            OrderItemRepository orderItemRepository,
             PhaseTypeRepository phaseTypeRepository,
             PlantPriceRepository plantPriceRepository,
             ProcessRepository processRepository,
@@ -92,6 +100,7 @@ public class OrderService {
         this.customerRepository = customerRepository;
         this.offerRepository = offerRepository;
         this.offerStatusRepository = offerStatusRepository;
+        this.orderItemRepository = orderItemRepository;
         this.phaseTypeRepository = phaseTypeRepository;
         this.plantPriceRepository = plantPriceRepository;
         this.processRepository = processRepository;
@@ -110,7 +119,7 @@ public class OrderService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Customer not found"));
 
         Map<Long, Integer> requestedQuantities = normalizeItems(request.items());
-        Map<Long, PlantPrice> pricesById = loadPrices(requestedQuantities.keySet());
+        Map<Long, PlantPrice> pricesById = loadPrices(customerId, requestedQuantities.keySet());
         Map<Long, Long> stockByPlantId = stockByPlantId(pricesById.values());
 
         String deliveryAddress = request.deliveryAddress();
@@ -144,7 +153,7 @@ public class OrderService {
         processRepository.save(process);
 
         // ako je request u potpunosti ispunjen, automatski prihvati ponudu.
-        if (Boolean.TRUE.equals(request.autoAcceptIfUnchanged()) && offerMatchesRequest(savedOffer, requestedQuantities)) {
+        if (Boolean.TRUE.equals(request.autoAcceptIfUnchanged()) && offerMatchesRequest(savedOffer, requestedQuantities, pricesById)) {
             reserveStock(savedOffer);
             finishCurrentPhase(process);
             savedOffer.setStatus(status(STATUS_RESERVATION));
@@ -184,13 +193,13 @@ public class OrderService {
         requireCurrentPhase(process, PHASE_RESERVATION);
 
         Map<Long, Integer> updatedQuantities = normalizeItems(request == null ? null : request.items());
-        Map<Long, Integer> currentQuantities = currentQuantities(offer);
+        Map<Long, PlantPrice> pricesById = loadEditPrices(customerId, offer, updatedQuantities.keySet());
+        Map<Long, Integer> currentQuantities = currentQuantitiesByPlantId(offer);
+        Map<Long, Integer> updatedQuantitiesByPlantId = quantitiesByPlantId(updatedQuantities, pricesById);
 
-        if (currentQuantities.equals(updatedQuantities)) {
+        if (currentQuantities.equals(updatedQuantitiesByPlantId)) {
             return toResponse(offer, process);
         }
-
-        Map<Long, PlantPrice> pricesById = loadEditPrices(offer, updatedQuantities.keySet());
 
         restoreReservedStock(offer);
         offer.getItems().clear();
@@ -430,21 +439,12 @@ public class OrderService {
         }
     }
 
-    private boolean offerMatchesRequest(Offer offer, Map<Long, Integer> requestedQuantities) {
-        if (offer.getItems().size() != requestedQuantities.size()) {
-            return false;
-        }
-
-        for (OrderItem item : offer.getItems()) {
-            Long priceId = item.getPlantPrice().getId();
-            Integer requestedQuantity = requestedQuantities.get(priceId);
-
-            if (requestedQuantity == null || !requestedQuantity.equals(offeredQuantity(item))) {
-                return false;
-            }
-        }
-
-        return true;
+    private boolean offerMatchesRequest(
+            Offer offer,
+            Map<Long, Integer> requestedQuantities,
+            Map<Long, PlantPrice> pricesById
+    ) {
+        return offeredQuantitiesByPlantId(offer).equals(quantitiesByPlantId(requestedQuantities, pricesById));
     }
 
     private void restoreReservedStock(Offer offer) {
@@ -482,50 +482,100 @@ public class OrderService {
         return quantities;
     }
 
-    private Map<Long, Integer> currentQuantities(Offer offer) {
+    private Map<Long, Integer> currentQuantitiesByPlantId(Offer offer) {
         Map<Long, Integer> quantities = new LinkedHashMap<>();
         for (OrderItem item : offer.getItems()) {
-            quantities.put(item.getPlantPrice().getId(), reservedQuantity(item));
+            quantities.merge(item.getPlantPrice().getPlant().getId(), reservedQuantity(item), Integer::sum);
         }
         return quantities;
     }
 
-    private Map<Long, PlantPrice> loadEditPrices(Offer offer, Collection<Long> priceIds) {
-        Map<Long, PlantPrice> existingPrices = offer.getItems()
+    private Map<Long, Integer> offeredQuantitiesByPlantId(Offer offer) {
+        Map<Long, Integer> quantities = new LinkedHashMap<>();
+        for (OrderItem item : offer.getItems()) {
+            quantities.merge(item.getPlantPrice().getPlant().getId(), offeredQuantity(item), Integer::sum);
+        }
+        return quantities;
+    }
+
+    private Map<Long, Integer> quantitiesByPlantId(
+            Map<Long, Integer> quantitiesByPriceId,
+            Map<Long, PlantPrice> pricesById
+    ) {
+        Map<Long, Integer> quantities = new LinkedHashMap<>();
+
+        quantitiesByPriceId.forEach((priceId, quantity) -> {
+            PlantPrice price = pricesById.get(priceId);
+            if (price == null) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Plant price is required");
+            }
+            quantities.merge(price.getPlant().getId(), quantity, Integer::sum);
+        });
+
+        return quantities;
+    }
+
+    private Map<Long, PlantPrice> loadEditPrices(Long customerId, Offer offer, Collection<Long> priceIds) {
+        Map<Long, PlantPrice> existingPricesByPlantId = offer.getItems()
                 .stream()
-                .collect(Collectors.toMap(item -> item.getPlantPrice().getId(), OrderItem::getPlantPrice));
+                .collect(Collectors.toMap(
+                        item -> item.getPlantPrice().getPlant().getId(),
+                        OrderItem::getPlantPrice,
+                        (first, second) -> first,
+                        LinkedHashMap::new
+                ));
         Map<Long, PlantPrice> pricesById = new LinkedHashMap<>();
 
         for (Long priceId : priceIds) {
-            PlantPrice existingPrice = existingPrices.get(priceId);
+            PlantPrice price = plantPriceRepository.findById(priceId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Plant price not found"));
+
+            PlantPrice existingPrice = existingPricesByPlantId.get(price.getPlant().getId());
             if (existingPrice != null) {
                 pricesById.put(priceId, existingPrice);
                 continue;
             }
 
-            PlantPrice price = plantPriceRepository.findById(priceId)
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Plant price not found"));
-            if (price.getEndTime() != null) {
+            Optional<PlantPrice> lockedPrice = lockedPriceForCustomerAndPlant(customerId, price.getPlant().getId());
+            if (lockedPrice.isPresent()) {
+                pricesById.put(priceId, lockedPrice.get());
+            } else if (price.getEndTime() != null) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Plant price is no longer active");
+            } else {
+                pricesById.put(priceId, price);
             }
-            pricesById.put(priceId, price);
         }
 
         return pricesById;
     }
 
-    private Map<Long, PlantPrice> loadPrices(Collection<Long> priceIds) {
+    private Map<Long, PlantPrice> loadPrices(Long customerId, Collection<Long> priceIds) {
         Map<Long, PlantPrice> pricesById = new LinkedHashMap<>();
         for(Long priceId : priceIds) {
             PlantPrice price = plantPriceRepository.findById(priceId)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "plant price not found"));
-            if(price.getEndTime() != null) {
+
+            Optional<PlantPrice> lockedPrice = lockedPriceForCustomerAndPlant(customerId, price.getPlant().getId());
+            if (lockedPrice.isPresent()) {
+                pricesById.put(priceId, lockedPrice.get());
+            } else if(price.getEndTime() != null) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Plant price is no longer active");
+            } else {
+                pricesById.put(priceId, price);
             }
-            pricesById.put(priceId, price);
         }
 
         return pricesById;
+    }
+
+    private Optional<PlantPrice> lockedPriceForCustomerAndPlant(Long customerId, Long plantId) {
+        return orderItemRepository.findLockedPricesForCustomerAndPlant(
+                        customerId,
+                        plantId,
+                        PRICE_LOCK_STATUSES
+                )
+                .stream()
+                .findFirst();
     }
 
     private Map<Long, Long> stockByPlantId(Collection<PlantPrice> prices) {

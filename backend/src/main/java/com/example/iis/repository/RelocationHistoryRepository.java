@@ -57,5 +57,8 @@ public interface RelocationHistoryRepository extends JpaRepository<RelocationHis
     @Query("SELECT COALESCE(SUM(rh.inStock), 0) FROM RelocationHistory rh WHERE rh.sector.id = :sectorId AND rh.endTime IS NULL")
     Long sumActiveStockBySector(@Param("sectorId") Long sectorId);
 
+    @Query("SELECT COALESCE(SUM(rh.inStock), 0) FROM RelocationHistory rh WHERE rh.plant.id = :plantId AND rh.endTime IS NULL")
+    Long sumActiveStockByPlantId(@Param("plantId") Long plantId);
+
     List<RelocationHistory> findByPlant_IdOrderByStartTimeDesc(Long plantId);
 }

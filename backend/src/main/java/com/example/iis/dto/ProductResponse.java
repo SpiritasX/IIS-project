@@ -11,6 +11,7 @@ public record ProductResponse(
         BigDecimal price,
         String status,
         Long availableQuantity,
-        boolean available
+        boolean available,
+        boolean priceLocked
 ) {
 }

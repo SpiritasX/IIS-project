@@ -19,3 +19,7 @@ export function updatePlantPrice(plantId, data) {
 export function rollbackPlantPrice(plantId, data) {
   return api.post(`/price/update/${plantId}/rollback`, data)
 }
+
+export function recalculateDynamicPrices() {
+  return api.post('/price/recalculate-dynamic')
+}

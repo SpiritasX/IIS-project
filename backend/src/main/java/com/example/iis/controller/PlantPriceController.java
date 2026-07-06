@@ -1,13 +1,14 @@
 package com.example.iis.controller;
 
+import com.example.iis.dto.DynamicPriceUpdateResponse;
 import com.example.iis.dto.NewPlantPriceDto;
 import com.example.iis.dto.PlantDemandResponse;
 import com.example.iis.dto.PlantPriceResponse;
 import com.example.iis.dto.RollbackPriceDto;
 import com.example.iis.model.PlantPrice;
+import com.example.iis.service.DynamicPricingService;
 import com.example.iis.service.PlantPriceService;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.parameters.P;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -16,9 +17,11 @@ import java.util.List;
 @RequestMapping("/api/price")
 public class PlantPriceController {
     private PlantPriceService plantPriceService;
+    private DynamicPricingService dynamicPricingService;
 
-    public PlantPriceController(PlantPriceService plantPriceService){
+    public PlantPriceController(PlantPriceService plantPriceService, DynamicPricingService dynamicPricingService){
         this.plantPriceService = plantPriceService;
+        this.dynamicPricingService = dynamicPricingService;
     }
 
     @PostMapping("/update/{plantId}")
@@ -32,6 +35,12 @@ public class PlantPriceController {
         PlantPrice newPrice = plantPriceService.rollbackPlantPrice(plantId, request.changedById());
         return ResponseEntity.ok(PlantPriceResponse.from(newPrice));
     }
+
+    @PostMapping("/recalculate-dynamic")
+    public ResponseEntity<List<DynamicPriceUpdateResponse>> recalculateDynamicPrices() {
+        return ResponseEntity.ok(dynamicPricingService.recalculateAllPlantPrices());
+    }
+
     //@AuthenticationPrincipal umesto id u body-ju?
 
     @GetMapping("/{plantId}/history")

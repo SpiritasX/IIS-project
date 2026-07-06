@@ -2,6 +2,8 @@ package com.example.iis.repository;
 
 import com.example.iis.model.OrderHistoryItem;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.Collection;
 import java.util.Date;
@@ -19,5 +21,18 @@ public interface OrderHistoryItemRepository extends JpaRepository<OrderHistoryIt
             Long plantId,
             Date changedAt,
             String statusName
+    );
+
+    @Query("""
+            select coalesce(sum(item.quantity), 0)
+            from OrderHistoryItem item
+            where item.plantPrice.plant.id = :plantId
+              and item.orderHistory.changedAt >= :fromDate
+              and item.orderHistory.offer.status.name in :statusNames
+            """)
+    Long sumDemandForPlantSince(
+            @Param("plantId") Long plantId,
+            @Param("fromDate") Date fromDate,
+            @Param("statusNames") Collection<String> statusNames
     );
 }

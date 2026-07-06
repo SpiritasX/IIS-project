@@ -1,11 +1,13 @@
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney'
 import RestartAltIcon from '@mui/icons-material/RestartAlt'
+import TrendingUpIcon from '@mui/icons-material/TrendingUp'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   getCatalogPlants,
   getDemandHistory,
   getPriceHistory,
+  recalculateDynamicPrices,
   rollbackPlantPrice,
   updatePlantPrice,
 } from '../api/plantPrices'
@@ -244,6 +246,7 @@ function PlantPriceDetailsPage() {
   const [newPrice, setNewPrice] = useState('')
   const [savingPrice, setSavingPrice] = useState(false)
   const [rollingBack, setRollingBack] = useState(false)
+  const [recalculating, setRecalculating] = useState(false)
 
   useEffect(() => {
     let ignore = false
@@ -425,6 +428,25 @@ function PlantPriceDetailsPage() {
     }
   }
 
+  async function handleDynamicRecalculation() {
+    if (!selectedPlantId) return
+
+    setRecalculating(true)
+    setActionError('')
+    setActionSuccess('')
+
+    try {
+      const response = await recalculateDynamicPrices()
+      const changedCount = response.data.filter((item) => item.changed).length
+      await loadDetails(selectedPlantId, { silent: true })
+      setActionSuccess(`Dynamic pricing updated ${changedCount} plant price${changedCount === 1 ? '' : 's'}.`)
+    } catch (error) {
+      setActionError(statusMessage(error, 'Unable to recalculate dynamic prices.'))
+    } finally {
+      setRecalculating(false)
+    }
+  }
+
   return (
     <main className="home-page">
       <header className="home-header botanist-header">
@@ -511,6 +533,15 @@ function PlantPriceDetailsPage() {
           </section>
 
           <div className="price-actions">
+            <button
+              className="price-action-button"
+              disabled={!selectedPlantId || loadingDetails || recalculating}
+              onClick={handleDynamicRecalculation}
+              type="button"
+            >
+              <TrendingUpIcon fontSize="small" />
+              <span>{recalculating ? 'Recalculating...' : 'Recalculate prices'}</span>
+            </button>
             <button
               className="price-action-button"
               disabled={!selectedPlantId || loadingDetails}

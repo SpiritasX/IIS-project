@@ -6,6 +6,7 @@ import com.example.iis.model.PlantPrice;
 import com.example.iis.model.PlantSpecies;
 import com.example.iis.model.PlantType;
 import com.example.iis.model.PlantVariety;
+import com.example.iis.repository.OrderItemRepository;
 import com.example.iis.repository.PlantPriceRepository;
 import com.example.iis.repository.RelocationHistoryRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,6 +27,9 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class CatalogServiceTest {
     @Mock
+    private OrderItemRepository orderItemRepository;
+
+    @Mock
     private PlantPriceRepository plantPriceRepository;
 
     @Mock
@@ -35,7 +39,7 @@ class CatalogServiceTest {
 
     @BeforeEach
     void setUp() {
-        catalogService = new CatalogService(plantPriceRepository, relocationHistoryRepository);
+        catalogService = new CatalogService(orderItemRepository, plantPriceRepository, relocationHistoryRepository);
     }
 
     @Test
@@ -53,7 +57,7 @@ class CatalogServiceTest {
         when(stock.getAvailableQuantity()).thenReturn(12L);
         when(relocationHistoryRepository.findActiveStockByPlantIds(List.of(5L))).thenReturn(List.of(stock));
 
-        var products = catalogService.getProducts();
+        var products = catalogService.getProducts(null);
 
         assertEquals(1, products.size());
         assertEquals("Basil seedling", products.get(0).name());
